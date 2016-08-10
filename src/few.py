@@ -1,11 +1,144 @@
-# William La Cava
-# 2016 - 07 - 29
-# few: a feature engineering wrapper for sci-kitlearn
-#
-# imports
-#import scikit-learn
+"""
+Copyright 2016 William La Cava
+
+This file is part of the FEW library.
+
+The FEW library is free software: you can redistribute it and/or
+modify it under the terms of the GNU General Public License as published by the
+Free Software Foundation, either version 3 of the License, or (at your option)
+any later version.
+
+The FEW library is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+You should have received a copy of the GNU General Public License along with
+the FEW library. If not, see http://www.gnu.org/licenses/.
+
+"""
+
 import argparse
 from _version import __version__
+import population
+import evaluation as ev
+import selection as sel
+import variation as vary
+
+from sklearn import linear_model
+import numpy as np
+
+class FEW(object):
+    """ FEW uses GP to find a set of transformations from the original feature space
+    that produces the best performance for a given machine learner. """
+    def __init__(self, population_size=100, generations=100,
+                 mutation_rate=0.2, crossover_rate=0.8,
+                 machine_learner = 'lr', random_state=0, verbosity=0, scoring_function=None,
+                 disable_update_check=False):
+                # sets up GP.
+
+    # Save params to be recalled later by get_params()
+    self.params = locals()  # Must be placed before any local variable definitions
+    self.params.pop('self')
+
+    # Do not prompt the user to update during this session if they ever disabled the update check
+    if disable_update_check:
+        FEW.update_checked = True
+
+    # Prompt the user if their version is out of date
+    if not disable_update_check and not FEW.update_checked:
+        update_check('FEW', __version__)
+        FEW.update_checked = True
+
+    self._optimized_pipeline = None
+    self._training_features = None
+    self._training_labels = None
+    self.population_size = population_size
+    self.generations = generations
+    self.mutation_rate = mutation_rate
+    self.crossover_rate = crossover_rate
+    self.machine_learner = machine_learner
+    self.verbosity = verbosity
+
+    self.gp_generation = 0
+
+    # instantiate sklearn estimator according to specified machine learner
+    if (self.machine_learner.lower() == "lasso"):
+        ml = LassoLarsCV()
+    else:
+        ml = LassoLarsCV()
+    # Columns to always ignore when in an operator
+    self.non_feature_columns = ['class', 'group', 'guess']
+
+    def fit(self, features, labels):
+        """ Fit model to data """
+        # Create initial population
+        pop = population.init(population_size)
+
+        # Evaluate the entire population
+        X = list(map(ev.out, list(pop,features,labels)))
+        # calculate fitness of individuals
+        fitnesses = map(ev.fit, list(X,labels))
+        # Assign fitnesses to inidividuals in population
+        for ind, fit in zip(pop, fitnesses):
+            ind.fitness.values = fit
+
+        # for each generation g
+        for g in generations:
+            # use population output matrix as features for ML method
+            ml.fit(X,labels)
+            # Select the next generation individuals
+            offspring = selection.tournament(pop, len(pop))
+            # Clone the selected individuals
+            offspring = list(map(clone, offspring))
+
+            # Apply crossover and mutation on the offspring
+            for child1, child2 in zip(offspring[::2], offspring[1::2]):
+                if random.random() < crossover_rate:
+                    variation.mate(child1, child2)
+                    del child1.fitness.values
+                    del child2.fitness.values
+
+            for mutant in offspring:
+                if random.random() < mutation_rate:
+                    variation.mutate(mutant)
+                    del mutant.fitness.values
+
+            # Evaluate the individuals with an invalid fitness
+            invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+            fitnesses = list(map(eval.fit, invalid_ind))
+            for ind, fit in zip(invalid_ind, fitnesses):
+                ind.fitness.values = fit
+
+            # The population is entirely replaced by the offspring
+            pop[:] = offspring
+
+
+    def predict(self, testing_features):
+        """ predict on a holdout data set. """
+    def fit_predict(self, features, labels):
+        """Convenience function that fits a pipeline then predicts on the provided features
+
+        Parameters
+        ----------
+        features: array-like {n_samples, n_features}
+            Feature matrix
+        labels: array-like {n_samples}
+            List of class labels for prediction
+
+        Returns
+        ----------
+        array-like: {n_samples}
+            Predicted labels for the provided features
+
+        """
+        self.fit(features, labels)
+        return self.predict(features)
+
+    def score(self, testing_features, testing_labels):
+        """ estimates accuracy on testing set """
+    def get_params(self, deep=None):
+        """ returns parameters of the current FEW instance """
+    def export(self, output_file_name):
+        """ exports engineered features """
 
 def positive_integer(value):
     """Ensures that the provided value is a positive integer; throws an exception otherwise
@@ -56,7 +189,7 @@ def main():
                                                  'machine learning algorithms using genetic programming.',
                                      add_help=False)
 
-    parser.add_argument('INPUT_FILE', type=str, help='Data file to optimize the pipeline on; ensure that the class label column is labeled as "class".')
+    parser.add_argument('INPUT_FILE', type=str, help='Data file to run FEW on; ensure that the class label column is labeled as "class".')
 
     parser.add_argument('-h', '--help', action='help', help='Show this help message and exit.')
 
@@ -78,8 +211,8 @@ def main():
     parser.add_argument('-xr', action='store', dest='CROSSOVER_RATE', default=0.8,
                         type=float_range, help='GP crossover rate in the range [0.0, 1.0].')
 
-    parser.add_argument('-ml', action='store', dest='MACHINE_LEARNER', default='lr',
-                        type=str, help='ML algorithm to pair with features.')
+    parser.add_argument('-ml', action='store', dest='MACHINE_LEARNER', default='lasso',
+                        type=str, help='ML algorithm to pair with features. Default: Lasso')
 
     parser.add_argument('-s', action='store', dest='RANDOM_STATE', default=0,
                         type=int, help='Random number generator seed for reproducibility. Set this seed if you want your FEW run to be reproducible '
@@ -118,21 +251,21 @@ def main():
                                                          random_state=RANDOM_STATE)
 
     training_features = input_data.loc[training_indices].drop('class', axis=1).values
-    training_classes = input_data.loc[training_indices, 'class'].values
+    training_labels = input_data.loc[training_indices, 'class'].values
 
     testing_features = input_data.loc[testing_indices].drop('class', axis=1).values
-    testing_classes = input_data.loc[testing_indices, 'class'].values
+    testing_labels = input_data.loc[testing_indices, 'class'].values
 
     FEW = FEW(generations=args.GENERATIONS, population_size=args.POPULATION_SIZE,
                 mutation_rate=args.MUTATION_RATE, crossover_rate=args.CROSSOVER_RATE,
                 random_state=args.RANDOM_STATE, verbosity=args.VERBOSITY,
                 disable_update_check=args.DISABLE_UPDATE_CHECK)
 
-    FEW.fit(training_features, training_classes)
+    FEW.fit(training_features, training_labels)
 
     if args.VERBOSITY >= 1:
-        print('\nTraining accuracy: {}'.format(FEW.score(training_features, training_classes)))
-        print('Holdout accuracy: {}'.format(FEW.score(testing_features, testing_classes)))
+        print('\nTraining accuracy: {}'.format(FEW.score(training_features, training_labels)))
+        print('Holdout accuracy: {}'.format(FEW.score(testing_features, testing_labels)))
 
     if args.OUTPUT_FILE != '':
         FEW.export(args.OUTPUT_FILE)
