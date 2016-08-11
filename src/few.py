@@ -67,6 +67,8 @@ class FEW(object):
         # instantiate sklearn estimator according to specified machine learner
         if (self.machine_learner.lower() == "lasso"):
             ml = LassoLarsCV()
+        elif (self.machine_learner.lower() == "distance"):
+            ml = DistanceClassifier()
         else:
             ml = LassoLarsCV()
         # Columns to always ignore when in an operator
