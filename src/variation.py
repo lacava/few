@@ -15,3 +15,9 @@ You should have received a copy of the GNU General Public License along with
 the FEW library. If not, see http://www.gnu.org/licenses/.
 
 """
+
+def cross(I,J):
+    """ crossover between individuals I and J"""
+
+def mutate(I):
+    """ mutates individual I """

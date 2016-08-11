@@ -31,52 +31,58 @@ class FEW(object):
     that produces the best performance for a given machine learner. """
     def __init__(self, population_size=100, generations=100,
                  mutation_rate=0.2, crossover_rate=0.8,
-                 machine_learner = 'lr', random_state=0, verbosity=0, scoring_function=None,
+                 machine_learner = 'lasso', min_depth = 1, max_depth = 5, max_depth_init = 5,
+                 sel = 'tournament', random_state=0, verbosity=0, scoring_function=None,
                  disable_update_check=False):
                 # sets up GP.
 
-    # Save params to be recalled later by get_params()
-    self.params = locals()  # Must be placed before any local variable definitions
-    self.params.pop('self')
+        # Save params to be recalled later by get_params()
+        self.params = locals()  # Must be placed before any local variable definitions
+        # self.params.pop('self')
 
-    # Do not prompt the user to update during this session if they ever disabled the update check
-    if disable_update_check:
-        FEW.update_checked = True
+        # Do not prompt the user to update during this session if they ever disabled the update check
+        # if disable_update_check:
+        #     FEW.update_checked = True
 
-    # Prompt the user if their version is out of date
-    if not disable_update_check and not FEW.update_checked:
-        update_check('FEW', __version__)
-        FEW.update_checked = True
+        # Prompt the user if their version is out of date
+        # if not disable_update_check and not FEW.update_checked:
+        #     update_check('FEW', __version__)
+        #     FEW.update_checked = True
 
-    self._optimized_pipeline = None
-    self._training_features = None
-    self._training_labels = None
-    self.population_size = population_size
-    self.generations = generations
-    self.mutation_rate = mutation_rate
-    self.crossover_rate = crossover_rate
-    self.machine_learner = machine_learner
-    self.verbosity = verbosity
-
-    self.gp_generation = 0
-
-    # instantiate sklearn estimator according to specified machine learner
-    if (self.machine_learner.lower() == "lasso"):
-        ml = LassoLarsCV()
-    else:
-        ml = LassoLarsCV()
-    # Columns to always ignore when in an operator
-    self.non_feature_columns = ['class', 'group', 'guess']
+        self._optimized_estimator = None
+        self._training_features = None
+        self._training_labels = None
+        self.population_size = population_size
+        self.generations = generations
+        self.mutation_rate = mutation_rate
+        self.crossover_rate = crossover_rate
+        self.machine_learner = machine_learner
+        self.verbosity = verbosity
+        self.gp_generation = 0
+        self.min_depth = min_depth
+        self.max_depth = max_depth
+        self.max_depth_init = max_depth_init
+        # self.op_weight = op_weight
+        self.sel = sel
+        # instantiate sklearn estimator according to specified machine learner
+        if (self.machine_learner.lower() == "lasso"):
+            ml = LassoLarsCV()
+        else:
+            ml = LassoLarsCV()
+        # Columns to always ignore when in an operator
+        self.non_feature_columns = ['class', 'group', 'guess']
 
     def fit(self, features, labels):
         """ Fit model to data """
         # Create initial population
-        pop = population.init(population_size)
+        pop = population.init(population_size,features.shape[0],features.shape[1],min_depth, max_depth)
 
         # Evaluate the entire population
-        X = list(map(ev.out, list(pop,features,labels)))
+        # X represents a matrix of the population outputs (number os samples x population size)
+        pop.X = np.array(map(lambda I: ev.out(I,features,labels), pop.programs))
+
         # calculate fitness of individuals
-        fitnesses = map(ev.fit, list(X,labels))
+        fitnesses = map(lambda I: ev.fit(I,labels,machine_learner),pop.X)
         # Assign fitnesses to inidividuals in population
         for ind, fit in zip(pop, fitnesses):
             ind.fitness.values = fit
@@ -214,6 +220,21 @@ def main():
     parser.add_argument('-ml', action='store', dest='MACHINE_LEARNER', default='lasso',
                         type=str, help='ML algorithm to pair with features. Default: Lasso')
 
+    parser.add_argument('-min_depth', action='store', dest='MIN_DEPTH', default=1,
+                        type=int, help='Minimum length of GP programs.')
+
+    parser.add_argument('-max_depth', action='store', dest='MAX_DEPTH', default=1,
+                        type=int, help='Maximum number of nodes in GP programs.')
+
+    parser.add_argument('-max_depth_init', action='store', dest='MAX_DEPTH', default=1,
+                        type=int, help='Maximum number of nodes in initialized GP programs.')
+
+    # parser.add_argument('-op_weight', action='store', dest='MAX_DEPTH', default=1,
+    #                     type=int, help='Maximum number of nodes in initialized GP programs.')
+
+    parser.add_argument('-sel', action='store', dest='SEL', default='tournament',
+                        type=str, help='Selection method (tournament)')
+
     parser.add_argument('-s', action='store', dest='RANDOM_STATE', default=0,
                         type=int, help='Random number generator seed for reproducibility. Set this seed if you want your FEW run to be reproducible '
                                        'with the same seed and data set in the future.')
@@ -258,7 +279,8 @@ def main():
 
     FEW = FEW(generations=args.GENERATIONS, population_size=args.POPULATION_SIZE,
                 mutation_rate=args.MUTATION_RATE, crossover_rate=args.CROSSOVER_RATE,
-                random_state=args.RANDOM_STATE, verbosity=args.VERBOSITY,
+                machine_learner = args.MACHINE_LEARNER, min_depth = args.MIN_DEPTH, max_depth = args.MAX_DEPTH,
+                sel = args.SEL, random_state=args.RANDOM_STATE, verbosity=args.VERBOSITY,
                 disable_update_check=args.DISABLE_UPDATE_CHECK)
 
     FEW.fit(training_features, training_labels)

@@ -15,3 +15,8 @@ You should have received a copy of the GNU General Public License along with
 the FEW library. If not, see http://www.gnu.org/licenses/.
 
 """
+
+def tournament(pop,tourn_size):
+    """ conducts tournament selection of size tourn_size, returning len(pop)
+    individuals. """
+    
