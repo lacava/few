@@ -19,7 +19,30 @@ import numpy as np
 
 def out(I,features,labels):
     """computes the output for individual I """
+    stack_float = []
     # evaulate stack over rows of features,labels
-    return np.zeros(len(labels))
+    for e in I.stack:
+        eval(e,features,stack_float)
+
+    return stack_float[-1]
+
 def fit():
     """computes fitness of individual I """
+def eval(node, features, stack_float):
+    if len(stack_float) >= n[1]:
+        stack_float.append(eval_dict(n,features,stack_float))
+
+def eval_dict(n,features,stack_float):
+
+    return {
+        '+': stack_float.pop() + stack_float.pop(),
+        '-': stack_float.pop() - stack_float.pop(),
+        '*': stack_float.pop() * stack_float.pop(),
+        '/': stack_float.pop() / stack_float.pop(),
+        'sin': sin(stack_float.pop()),
+        'cos': cos(stack_float.pop()),
+        'exp': exp(stack_float.pop()),
+        'log': log(stack_float.pop()),
+        'n':  features[:,n[2]],
+        'erc': np.ones(features.shape[0])*n[2]
+    }[n[0]]

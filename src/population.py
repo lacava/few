@@ -50,8 +50,8 @@ def init(population_size,n_samples,n_features,min_len,max_len):
     term_set = []
     # numbers represent column indices of features
     for i in np.arange(n_features):
-        term_set.append((i,1)) # features
-        term_set.append((np.random.rand(),1)) # ephemeral random constants
+        term_set.append(('n',1,i)) # features
+        term_set.append(('erc',1,np.random.rand())) # ephemeral random constants
 
 
     for I in pop.programs:
