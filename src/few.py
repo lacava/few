@@ -25,6 +25,7 @@ import variation as vary
 
 from sklearn import linear_model
 import numpy as np
+import pandas as pd
 
 class FEW(object):
     """ FEW uses GP to find a set of transformations from the original feature space

@@ -24,6 +24,7 @@ def ind(object):
 
         self.fitness = fitness
         self.stack = stack
+    def get_depth():
 
 def pop(object):
     """ class representing population """
