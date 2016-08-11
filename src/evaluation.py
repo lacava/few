@@ -17,17 +17,6 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 """
 import numpy as np
 
-def out(I,features,labels):
-    """computes the output for individual I """
-    stack_float = []
-    # evaulate stack over rows of features,labels
-    for e in I.stack:
-        eval(e,features,stack_float)
-
-    return stack_float[-1]
-
-def fit():
-    """computes fitness of individual I """
 def eval(node, features, stack_float):
     if len(stack_float) >= n[1]:
         stack_float.append(eval_dict(n,features,stack_float))
@@ -46,3 +35,20 @@ def eval_dict(n,features,stack_float):
         'n':  features[:,n[2]],
         'erc': np.ones(features.shape[0])*n[2]
     }[n[0]]
+
+def out(I,features,labels):
+    """computes the output for individual I """
+    stack_float = []
+    # evaulate stack over rows of features,labels
+    for e in I.stack:
+        eval(e,features,stack_float)
+
+    return stack_float[-1]
+
+def fitness(yhat,labels,machine_learner):
+    """computes fitness of individual output yhat.
+    yhat: output of a program.
+    labels: correct outputs
+    machine_learner: machine learner from sklearn. """
+    return np.sum((yhat-labels)**2)
+    

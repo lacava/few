@@ -38,25 +38,15 @@ def pop(object):
         for i in pop_size:
             self.programs.append(ind())
 
-def init(population_size,n_samples,n_features,min_len,max_len):
+def init(population_size,n_samples,n_features,min_len,max_len,p):
     """ initializes population of features as GP stacks. """
     pop = pop(population_size,n_samples)
     # build programs
     typ = 'f'
-    #
-    # function set
-    func_set = [('+',2),('-',2),('*',2),('/',2),('sin',1),('cos',1),('exp',1),('log',1)]
-    # terminal set
-    term_set = []
-    # numbers represent column indices of features
-    for i in np.arange(n_features):
-        term_set.append(('n',1,i)) # features
-        term_set.append(('erc',1,np.random.rand())) # ephemeral random constants
-
-
+    # make programs
     for I in pop.programs:
         depth = np.random.randint(min_depth,max_depth)
-        make_program(I,proglen,1,typ)
+        make_program(I,depth,1,typ)
 
     return pop
 

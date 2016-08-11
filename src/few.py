@@ -72,17 +72,27 @@ class FEW(object):
         # Columns to always ignore when in an operator
         self.non_feature_columns = ['class', 'group', 'guess']
 
+        # function set
+        self.func_set = [('+',2),('-',2),('*',2),('/',2),('sin',1),('cos',1),('exp',1),('log',1)]
+        # terminal set
+        self.term_set = []
+        # numbers represent column indices of features
+        for i in np.arange(n_features):
+            term_set.append(('n',0,i)) # features
+            term_set.append(('erc',0,np.random.rand())) # ephemeral random constants
+
     def fit(self, features, labels):
         """ Fit model to data """
         # Create initial population
-        pop = population.init(population_size,features.shape[0],features.shape[1],min_depth, max_depth)
+        pop = population.init(population_size,features.shape[0],features.shape[1],
+        min_depth, max_depth, func_set, term_set)
 
         # Evaluate the entire population
         # X represents a matrix of the population outputs (number os samples x population size)
         pop.X = np.array(map(lambda I: ev.out(I,features,labels), pop.programs))
 
         # calculate fitness of individuals
-        fitnesses = map(lambda I: ev.fit(I,labels,machine_learner),pop.X)
+        fitnesses = map(lambda I: ev.fitness(I,labels,machine_learner),pop.X)
         # Assign fitnesses to inidividuals in population
         for ind, fit in zip(pop, fitnesses):
             ind.fitness.values = fit
@@ -99,13 +109,13 @@ class FEW(object):
             # Apply crossover and mutation on the offspring
             for child1, child2 in zip(offspring[::2], offspring[1::2]):
                 if random.random() < crossover_rate:
-                    variation.mate(child1, child2)
+                    variation.cross(child1, child2)
                     del child1.fitness.values
                     del child2.fitness.values
 
             for mutant in offspring:
                 if random.random() < mutation_rate:
-                    variation.mutate(mutant)
+                    variation.mutate(mutant,func_set,term_set)
                     del mutant.fitness.values
 
             # Evaluate the individuals with an invalid fitness

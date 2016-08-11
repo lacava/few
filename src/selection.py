@@ -19,4 +19,7 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 def tournament(pop,tourn_size):
     """ conducts tournament selection of size tourn_size, returning len(pop)
     individuals. """
-    
+    winners = []
+    for i in np.arange(tourn_size):
+        winners.append(pop[np.argmin(np.random.choice(pop,tourn_size).fitness)[0]])
+    return winners
