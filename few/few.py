@@ -18,10 +18,10 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 
 import argparse
 from _version import __version__
-import population
-import evaluation as ev
-import selection as sel
-import variation as vary
+from .population import ind, pop, init, make_program
+from .variation import cross, mutate
+from .selection import tournament
+
 
 from sklearn import linear_model
 import numpy as np

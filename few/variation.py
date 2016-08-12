@@ -16,7 +16,7 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 
 """
 import numpy as np
-import population
+from .population import make_program, ind
 
 def cross(I,J):
     """subtree-like swap crossover between individuals I and J."""
@@ -59,4 +59,4 @@ def mutate(I,func_set,term_set):
 
     # swap mutation
     depth = 1
-    newpiece = population.make_program(population.ind(),depth,func_set,term_set)
+    newpiece = make_program([],func_set,term_set,depth)

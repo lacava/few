@@ -18,6 +18,8 @@ setup(
     url='https://github.com/lacava/few',
     license='GNU/GPLv3',
     entry_points={'console_scripts': ['few=few:main', ]},
+    test_suite='nose.collector',
+    tests_require=['nose'],
     description=('Feature Engineering Wrapper'),
     long_description='''
 A feature engineering wrapper for scikitlearn based on genetic programming.
@@ -29,7 +31,7 @@ e-mail: lacava@mail.med.upenn.edu
 This project is hosted at https://github.com/lacava/few
 ''',
     zip_safe=True,
-    install_requires=['numpy', 'scipy', 'pandas', 'scikit-learn', 'deap', 'update_checker', 'tqdm'],
+    install_requires=['numpy', 'scipy', 'pandas', 'scikit-learn', 'update_checker', 'tqdm'],
     classifiers=[
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',

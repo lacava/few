@@ -51,7 +51,7 @@ def init(population_size,n_samples,n_features,min_len,max_len,p):
 
 def make_program(I,func_set,term_set,max_d):
 	""" makes a program stack. """
-	if max_d == 0 or np.random.rand() < len(term_set)/(len(term_set)+len(func_set)):
+	if max_d == 0 or np.random.rand() < float(len(term_set))/(len(term_set)+len(func_set)):
 		I.append(np.random.choice(term_set))
 	else:
 		I.append(np.random.choice(func_set))
