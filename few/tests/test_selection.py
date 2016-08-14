@@ -15,4 +15,7 @@ You should have received a copy of the GNU General Public License along with
 the FEW library. If not, see http://www.gnu.org/licenses/.
 
 """
-# unit tests for selection methods. 
+from few.population import ind, Pop, init
+# unit tests for selection methods.
+def test_tournament_shapes():
+    pop = Pop()

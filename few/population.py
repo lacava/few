@@ -24,17 +24,19 @@ class ind(object):
 		self.fitness = fitness
 		self.stack = stack
 
-class pop(object):
+class Pop(object):
 	""" class representing population """
 	def __init__(self,pop_size=100,n_samples=1):
 		""" initializes population of inds of size pop_size """
+		print("pop_size:",pop_size)
+		print("n_samples:",n_samples)
 		self.programs = []
 		# initialize empty output matrix
-		self.X = np.array(n_samples,pop_size)
+		self.X = np.empty([n_samples,pop_size],dtype=float)
 		# initialize empty error matrix
-		self.E = np.array(n_samples,pop_size)
+		self.E = np.empty([n_samples,pop_size],dtype=float)
 		# initialize population programs
-		for i in pop_size:
+		for i in np.arange(pop_size):
 			self.programs.append(ind())
 
 def init(population_size,n_samples,n_features,min_len,max_len,p):
@@ -52,9 +54,9 @@ def init(population_size,n_samples,n_features,min_len,max_len,p):
 def make_program(I,func_set,term_set,max_d):
 	""" makes a program stack. """
 	if max_d == 0 or np.random.rand() < float(len(term_set))/(len(term_set)+len(func_set)):
-		I.append(np.random.choice(term_set))
+		I.append(term_set[np.random.choice(len(term_set))])
 	else:
-		I.append(np.random.choice(func_set))
+		I.append(func_set[np.random.choice(len(func_set))])
 		for i in np.arange(I[-1][1]):
 			make_program(I,func_set,term_set,max_d-1)
 	# return in post-fix notation

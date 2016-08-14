@@ -18,7 +18,7 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 
 import argparse
 from _version import __version__
-from .population import ind, pop, init, make_program
+from .population import ind, Pop, init, make_program
 from .variation import cross, mutate
 from .selection import tournament
 
@@ -87,7 +87,7 @@ class FEW(object):
     def fit(self, features, labels):
         """ Fit model to data """
         # Create initial population
-        pop = population.init(population_size,features.shape[0],features.shape[1],
+        pop = init(population_size,features.shape[0],features.shape[1],
         min_depth, max_depth, func_set, term_set)
 
         # Evaluate the entire population
