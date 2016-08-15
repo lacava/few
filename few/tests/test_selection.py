@@ -16,6 +16,38 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 
 """
 from few.population import ind, Pop, init
+from few.selection import tournament
+import numpy as np
 # unit tests for selection methods.
 def test_tournament_shapes():
-    pop = Pop()
+    """ tournament selection returns correct shape """
+    pop = Pop(257)
+    offspring = tournament(pop,2)
+    assert len(offspring) == 257
+
+    offspring = tournament(pop,5)
+    assert len(offspring) == 257
+
+    # smaller popsize than tournament size
+    pop = Pop(2)
+    offspring = tournament(pop,5)
+    assert len(offspring) == 2;
+    # pop.individuals[0].fitness = 10;
+    # pop.individuals[1].fitness = 2;
+# 
+# def test_tournament_winners_are_better():
+#     """ test tournament win conditions """
+#     # in a tournament with replacement, there aren't many guarantees regarding
+#     # the fitness structure of the resulting population. but we can say that the
+#     # average fitness of the population should be at least as good as the
+#     # parents
+#     pop = Pop(5)
+#     pop.individuals[0].fitness = 0
+#     pop.individuals[1].fitness = 1
+#     pop.individuals[2].fitness = 1
+#     pop.individuals[3].fitness = 1
+#     pop.individuals[4].fitness = 1
+#
+#     offspring = tournament(pop,100)
+#
+#     assert all(a.fitness == 0 for a in offspring)

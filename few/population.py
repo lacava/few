@@ -46,22 +46,22 @@ def init(population_size,n_samples,func_set,term_set,min_depth,max_depth):
 	typ = 'f'
 	# make programs
 	for I in pop.individuals:
-		depth = np.random.randint(min_depth,max_depth)
-		print("hex(id(I)):",hex(id(I)))
+		depth = np.random.randint(min_depth,max_depth+1)
+		# print("hex(id(I)):",hex(id(I)))
 		# depth = 2;
-		print("initial I.stack:",I.stack)
+		# print("initial I.stack:",I.stack)
 		make_program(I.stack,func_set,term_set,depth)
 		# print(I.stack)
 		I.stack = list(reversed(I.stack))
 
-		print(I.stack)
+		# print(I.stack)
 
 	return pop
 
 def make_program(stack,func_set,term_set,max_d):
 	""" makes a program stack. """
-	print("stack:",stack,"max d:",max_d)
-	if max_d == 0 or np.random.rand() < float(len(term_set))/(len(term_set)+len(func_set)):
+	# print("stack:",stack,"max d:",max_d)
+	if max_d == 0: #or np.random.rand() < float(len(term_set))/(len(term_set)+len(func_set)):
 		stack.append(term_set[np.random.choice(len(term_set))])
 	else:
 		stack.append(func_set[np.random.choice(len(func_set))])

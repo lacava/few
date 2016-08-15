@@ -17,31 +17,32 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 """
 import numpy as np
 
-def eval(node, features, stack_float):
+eval_dict = {
+    '+': lambda n,features,stack_float: stack_float.pop() + stack_float.pop(),
+    '-': lambda n,features,stack_float: stack_float.pop() - stack_float.pop(),
+    '*': lambda n,features,stack_float: stack_float.pop() * stack_float.pop(),
+    '/': lambda n,features,stack_float: stack_float.pop() / stack_float.pop(),
+    'sin': lambda n,features,stack_float: np.sin(stack_float.pop()),
+    'cos': lambda n,features,stack_float: np.cos(stack_float.pop()),
+    'exp': lambda n,features,stack_float: np.exp(stack_float.pop()),
+    'log': lambda n,features,stack_float: np.log(stack_float.pop()),
+    'x':  lambda n,features,stack_float: features[:,n[2]],
+    'k': lambda n,features,stack_float: np.ones(features.shape[0])*n[2]
+}
+
+def eval(n, features, stack_float):
+
     if len(stack_float) >= n[1]:
-        stack_float.append(eval_dict(n,features,stack_float))
-
-def eval_dict(n,features,stack_float):
-
-    return {
-        '+': stack_float.pop() + stack_float.pop(),
-        '-': stack_float.pop() - stack_float.pop(),
-        '*': stack_float.pop() * stack_float.pop(),
-        '/': stack_float.pop() / stack_float.pop(),
-        'sin': sin(stack_float.pop()),
-        'cos': cos(stack_float.pop()),
-        'exp': exp(stack_float.pop()),
-        'log': log(stack_float.pop()),
-        'n':  features[:,n[2]],
-        'erc': np.ones(features.shape[0])*n[2]
-    }[n[0]]
+        stack_float.append(eval_dict[n[0]](n,features,stack_float))
 
 def out(I,features,labels):
     """computes the output for individual I """
     stack_float = []
+    print("stack:",I.stack)
     # evaulate stack over rows of features,labels
-    for e in I.stack:
-        eval(e,features,stack_float)
+    for n in I.stack:
+        eval(n,features,stack_float)
+        # print("stack_float:",stack_float)
 
     return stack_float[-1]
 
@@ -51,4 +52,3 @@ def fitness(yhat,labels,machine_learner):
     labels: correct outputs
     machine_learner: machine learner from sklearn. """
     return np.sum((yhat-labels)**2)
-    

@@ -19,19 +19,19 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 import numpy as np
 
 from few.variation import cross, mutate
+from few.tests.test_population import is_valid_program
 
 def test_cross_makes_valid_program():
     """ crossover makes valid programs """
     # np.random.seed(65)
     # I = (a+b)*x
-    I = [('a',0,1),('b',0,2),('+',2),('x',0,3),('*',2)]
+    p1 = [('a',0,1),('b',0,2),('+',2),('x',0,3),('*',2)]
     # J = (x/z)-(n*b)
-    J = [('x',0,1),('z',0,2),('/',2),('n',0,3),('b',0,4),('*',2),('-',2)]
+    p2 = [('x',0,1),('z',0,2),('/',2),('n',0,3),('b',0,4),('*',2),('-',2)]
 
     for i in np.arange(1000):
-        cross(I,J)
-        assert sum(a[1] for a in I) +1 == len(I)
-        assert sum(a[1] for a in J) +1 == len(J)
+        cross(p1,p2)
+        assert is_valid_program(p1) and is_valid_program(p2)
 
 def test_mutate_makes_valid_program():
     """ mutation makes valid programs """
@@ -43,7 +43,9 @@ def test_mutate_makes_valid_program():
         term_set.append(('n',0,i)) # features
         term_set.append(('erc',0,np.random.rand())) # ephemeral random constants
 
-    I = [('n',0,5),('n',0,6),('/',2),('n',0,7),('n',0,8),('*',2),('-',2)]
+    p = [('n',0,5),('n',0,6),('/',2),('n',0,7),('n',0,8),('*',2),('-',2)]
     for i in np.arange(1000):
-        mutate(I,func_set,term_set)
-        assert sum(a[1] for a in I) +1 == len(I)
+        mutate(p,func_set,term_set)
+        assert is_valid_program(p)
+
+    

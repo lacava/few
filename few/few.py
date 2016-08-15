@@ -87,12 +87,12 @@ class FEW(object):
     def fit(self, features, labels):
         """ Fit model to data """
         # Create initial population
-        pop = init(population_size,features.shape[0],features.shape[1],
-        min_depth, max_depth, func_set, term_set)
+        pop = init(population_size,features.shape[0],
+        func_set, term_set,min_depth, max_depth, )
 
         # Evaluate the entire population
         # X represents a matrix of the population outputs (number os samples x population size)
-        pop.X = np.array(map(lambda I: ev.out(I,features,labels), pop.programs))
+        pop.X = np.array(map(lambda I: out(I,features,labels), pop.programs))
 
         # calculate fitness of individuals
         fitnesses = map(lambda I: ev.fitness(I,labels,machine_learner),pop.X)

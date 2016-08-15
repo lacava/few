@@ -6,3 +6,6 @@ This file is part of the FEW library.
 License: GPL 3
 """
 from .test_variation import test_cross_makes_valid_program, test_mutate_makes_valid_program
+from .test_population import test_pop_shape, test_pop_init
+from .test_selection import test_tournament_shapes #, test_tournament_winners_are_better
+from .test_evaluation import test_out_shapes, test_out_is_correct

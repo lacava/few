@@ -15,11 +15,22 @@ You should have received a copy of the GNU General Public License along with
 the FEW library. If not, see http://www.gnu.org/licenses/.
 
 """
+import numpy as np
 
 def tournament(pop,tourn_size):
     """ conducts tournament selection of size tourn_size, returning len(pop)
     individuals. """
     winners = []
-    for i in np.arange(tourn_size):
-        winners.append(pop[np.argmin(np.random.choice(pop,tourn_size).fitness)[0]])
+    for i in np.arange(len(pop.individuals)):
+        # sample pool with replacement
+        pool_i = np.random.choice(len(pop.individuals),size=tourn_size)
+        pool = []
+        for i in pool_i:
+            pool.append(pop.individuals[i].fitness)
+
+        winners.append(pop.individuals[pool_i[np.argmin(pool)]])
+    print("size winners:",len(winners))
+    for index,i in enumerate(winners):
+        print("fitness "+str(index)+":",i.fitness)
+
     return winners
