@@ -21,6 +21,7 @@ import numpy as np
 from few.variation import cross, mutate
 
 def test_cross_makes_valid_program():
+    """ crossover makes valid programs """
     # np.random.seed(65)
     # I = (a+b)*x
     I = [('a',0,1),('b',0,2),('+',2),('x',0,3),('*',2)]
@@ -33,7 +34,7 @@ def test_cross_makes_valid_program():
         assert sum(a[1] for a in J) +1 == len(J)
 
 def test_mutate_makes_valid_program():
-
+    """ mutation makes valid programs """
     func_set = [('+',2),('-',2),('*',2),('/',2),('sin',1),('cos',1),('exp',1),('log',1)]
     # terminal set
     term_set = [('x',0),('z',0),('n',0),('b',0)]

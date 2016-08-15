@@ -81,8 +81,8 @@ class FEW(object):
         self.term_set = []
         # numbers represent column indices of features
         for i in np.arange(n_features):
-            term_set.append(('n',0,i)) # features
-            term_set.append(('erc',0,np.random.rand())) # ephemeral random constants
+            term_set.append(('x'+str(i),0,i)) # features
+            term_set.append(('k'+str(i),0,np.random.rand())) # ephemeral random constants
 
     def fit(self, features, labels):
         """ Fit model to data """

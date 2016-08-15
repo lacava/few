@@ -22,7 +22,7 @@ class ind(object):
 	def __init__(self,fitness = -1,stack = []):
 		""" initializes empty individual with invalid fitness. """
 		self.fitness = fitness
-		self.stack = stack
+		self.stack = stack[:]
 
 class Pop(object):
 	""" class representing population """
@@ -30,34 +30,42 @@ class Pop(object):
 		""" initializes population of inds of size pop_size """
 		print("pop_size:",pop_size)
 		print("n_samples:",n_samples)
-		self.programs = []
+		self.individuals = []
 		# initialize empty output matrix
 		self.X = np.empty([n_samples,pop_size],dtype=float)
 		# initialize empty error matrix
 		self.E = np.empty([n_samples,pop_size],dtype=float)
 		# initialize population programs
 		for i in np.arange(pop_size):
-			self.programs.append(ind())
+			self.individuals.append(ind())
 
-def init(population_size,n_samples,n_features,min_len,max_len,p):
+def init(population_size,n_samples,func_set,term_set,min_depth,max_depth):
 	""" initializes population of features as GP stacks. """
-	pop = pop(population_size,n_samples)
+	pop = Pop(population_size,n_samples)
 	# build programs
 	typ = 'f'
 	# make programs
-	for I in pop.programs:
+	for I in pop.individuals:
 		depth = np.random.randint(min_depth,max_depth)
-		make_program(I,depth,1,typ)
+		print("hex(id(I)):",hex(id(I)))
+		# depth = 2;
+		print("initial I.stack:",I.stack)
+		make_program(I.stack,func_set,term_set,depth)
+		# print(I.stack)
+		I.stack = list(reversed(I.stack))
+
+		print(I.stack)
 
 	return pop
 
-def make_program(I,func_set,term_set,max_d):
+def make_program(stack,func_set,term_set,max_d):
 	""" makes a program stack. """
+	print("stack:",stack,"max d:",max_d)
 	if max_d == 0 or np.random.rand() < float(len(term_set))/(len(term_set)+len(func_set)):
-		I.append(term_set[np.random.choice(len(term_set))])
+		stack.append(term_set[np.random.choice(len(term_set))])
 	else:
-		I.append(func_set[np.random.choice(len(func_set))])
-		for i in np.arange(I[-1][1]):
-			make_program(I,func_set,term_set,max_d-1)
-	# return in post-fix notation
-	return list(reversed(I))
+		stack.append(func_set[np.random.choice(len(func_set))])
+		for i in np.arange(stack[-1][1]):
+			make_program(stack,func_set,term_set,max_d-1)
+	# return stack
+	# print("current stack:",stack)
