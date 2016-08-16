@@ -29,8 +29,8 @@ def tournament(pop,tourn_size):
             pool.append(pop.individuals[i].fitness)
 
         winners.append(pop.individuals[pool_i[np.argmin(pool)]])
-    print("size winners:",len(winners))
-    for index,i in enumerate(winners):
-        print("fitness "+str(index)+":",i.fitness)
+    # print("size winners:",len(winners))
+    # for index,i in enumerate(winners):
+    #     print("fitness "+str(index)+":",i.fitness)
 
     return winners

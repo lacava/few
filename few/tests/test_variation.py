@@ -18,8 +18,8 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 # unit tests for variation methods.
 import numpy as np
 
-from few.variation import cross, mutate
 from few.tests.test_population import is_valid_program
+from few.variation import cross, mutate
 
 def test_cross_makes_valid_program():
     """ crossover makes valid programs """
@@ -47,5 +47,3 @@ def test_mutate_makes_valid_program():
     for i in np.arange(1000):
         mutate(p,func_set,term_set)
         assert is_valid_program(p)
-
-    

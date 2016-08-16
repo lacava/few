@@ -78,7 +78,7 @@ def test_out_is_correct():
     print("y2 passed")
     assert np.array_equal(y3, out(p3,X,Y))
     print("y3 passed")
-    print("y4:",y4,"y4hat:",out(p4,X,Y))
+    # print("y4:",y4,"y4hat:",out(p4,X,Y))
     assert np.array_equal(y4, out(p4,X,Y))
     print("y4 passed")
     assert np.array_equal(y5, out(p5,X,Y))

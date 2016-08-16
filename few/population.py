@@ -38,6 +38,9 @@ class Pop(object):
 		# initialize population programs
 		for i in np.arange(pop_size):
 			self.individuals.append(ind())
+	def clean_output(self):
+		self.X = self.X[~np.any(np.isnan(self.X) | np.isinf(self.X),axis=1)] #np.zeros(self.X.shape[1])
+		print("self.X.shape:",self.X.shape)
 
 def init(population_size,n_samples,func_set,term_set,min_depth,max_depth):
 	""" initializes population of features as GP stacks. """

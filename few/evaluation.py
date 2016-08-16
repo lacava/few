@@ -16,7 +16,7 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 
 """
 import numpy as np
-
+# evaluation functions. these can be sped up using a GPU!
 eval_dict = {
     '+': lambda n,features,stack_float: stack_float.pop() + stack_float.pop(),
     '-': lambda n,features,stack_float: stack_float.pop() - stack_float.pop(),
@@ -35,10 +35,10 @@ def eval(n, features, stack_float):
     if len(stack_float) >= n[1]:
         stack_float.append(eval_dict[n[0]](n,features,stack_float))
 
-def out(I,features,labels):
+def out(I,features,labels=None):
     """computes the output for individual I """
     stack_float = []
-    print("stack:",I.stack)
+    # print("stack:",I.stack)
     # evaulate stack over rows of features,labels
     for n in I.stack:
         eval(n,features,stack_float)

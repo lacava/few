@@ -72,4 +72,4 @@ def is_valid_program(p):
     # print("accu_arities:",accu_arities)
     # print("accu_len:",accu_len)
     # print("accu_arities < accu_len:",accu_arities<accu_len)
-    return all(check) and sum(a[1] for a in p) +1 == len(p)
+    return all(check) and sum(a[1] for a in p) +1 == len(p) and len(p)>0
