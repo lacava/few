@@ -26,7 +26,7 @@ def tournament(pop,tourn_size):
         pool_i = np.random.choice(len(pop.individuals),size=tourn_size)
         pool = []
         for i in pool_i:
-            pool.append(pop.individuals[i].fitness)
+            pool.append(np.mean(pop.individuals[i].fitness))
 
         winners.append(pop.individuals[pool_i[np.argmin(pool)]])
     # print("size winners:",len(winners))
@@ -34,3 +34,56 @@ def tournament(pop,tourn_size):
     #     print("fitness "+str(index)+":",i.fitness)
 
     return winners
+
+def lexicase(pop):
+    """ conducts lexicase selection for de-aggregated fitness vectors"""
+
+    winners = []
+
+    for i in np.arange(len(pop.individuals)):
+
+        candidates = pop.individuals
+        print("pop.individuals[0].fitness",pop.individuals[0].fitness)
+        cases = list(np.arange(len(pop.individuals[0].fitness)))
+        np.random.shuffle(cases)
+
+        while len(cases) > 0 and len(candidates) > 1:
+            # get elite fitness for case
+            best_val_for_case = min(map(lambda x: x.fitness[cases[0]], pop.individuals))
+            # filter individuals without an elite fitness on this case
+            candidates = list(filter(lambda x: x.fitness[cases[0]] == best_val_for_case, pop.individuals))
+            cases.pop(0)
+
+        winners.append(np.random.choice(candidates))
+
+    return winners
+
+def epsilon_lexicase(pop):
+    """ conducts epsilon lexicase selection for de-aggregated fitness vectors"""
+
+    winners = []
+
+    for i in np.arange(len(pop.individuals)):
+
+        candidates = pop.individuals
+        cases = list(range(len(pop.individuals[0].fitness)))
+        np.random.shuffle(cases)
+
+        while len(cases) > 0 and len(candidates) > 1:
+            # get elite fitness for case
+            best_val_for_case = min(map(lambda x: x.fitness[cases[0]], pop.individuals))
+
+            if not np.isinf(best_val_for_case):
+                mad_for_case = mad(np.asarray(list(map(lambda x: x.fitness[cases[0]], pop.individuals))))
+                # filter individuals without an elite+epsilon fitness on this case
+                candidates = list(filter(lambda x: x.fitness[cases[0]] <= best_val_for_case+mad_for_case, pop.individuals))
+
+            cases.pop(0)
+
+        winners.append(np.random.choice(candidates))
+
+    return winners
+
+def mad(x, axis=None):
+    """ median absolute deviation statistics """
+    return np.median(np.abs(x - np.median(x, axis)), axis)

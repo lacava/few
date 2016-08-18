@@ -16,12 +16,12 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 
 """
 # unit tests for evaluation methods.
-from few.evaluation import out
+from few.evaluation import out, safe, calc_fitness
 from few.population import init,ind
 from sklearn.datasets import load_boston
 import numpy as np
 def test_out_shapes():
-    """program output is correct size """
+    """test_evaluation.py: program output is correct size """
     # load test data set
     boston = load_boston()
     # boston.data = boston.data[::10]
@@ -40,15 +40,15 @@ def test_out_shapes():
     pop_size = 5;
     pop = init(5,boston.data.shape[0],func_set,term_set,1,2)
 
-    pop.X = np.asarray(list(map(lambda I: out(I,boston.data,boston.target), pop.individuals))).transpose()
+    pop.X = np.asarray(list(map(lambda I: out(I,boston.data,boston.target), pop.individuals)))
 
     #pop.X = out(pop.individuals[0],boston.data,boston.target)
     print("pop.X.shape:",pop.X.shape)
     print("boston.target.shape",boston.target.shape)
-    assert pop.X.shape == (boston.target.shape[0],pop_size)
+    assert pop.X.shape == (pop_size, boston.target.shape[0])
 
 def test_out_is_correct():
-    """ output matches known function outputs """
+    """test_evaluation.py: output matches known function outputs """
 
     boston = load_boston()
     n_features = boston.data.shape[1]
@@ -65,12 +65,13 @@ def test_out_is_correct():
     p4.stack =  [('x', 0, 12), ('sin', 1)]
     p5.stack = [('k', 0, 178.3), ('x', 0, 8), ('*', 2), ('x', 0, 7), ('cos', 1), ('+', 2)]
 
-    y1 = np.log(0.175) - (X[:,5] - X[:,4])
-    y2 = X[:,7]*X[:,8]
-    y3 = X[:,5]*X[:,7] / np.exp(X[:,0])
-    y4 = np.sin(X[:,12])
-    y5 = 178.3*X[:,8]+np.cos(X[:,7])
+    y1 = safe(np.log(0.175) - (X[:,5] - X[:,4]))
+    y2 = safe(X[:,7]*X[:,8])
+    y3 = safe(X[:,5]*X[:,7]/np.exp(X[:,0]))
+    y4 = safe(np.sin(X[:,12]))
+    y5 = safe(178.3*X[:,8]+np.cos(X[:,7]))
 
+    # y1,y2,y3,y4,y5 = safe(y1),safe(y2),safe(y3),safe(y4),safe(y5)
 
     assert np.array_equal(y1,out(p1,X,Y))
     print("y1 passed")
@@ -82,3 +83,35 @@ def test_out_is_correct():
     assert np.array_equal(y4, out(p4,X,Y))
     print("y4 passed")
     assert np.array_equal(y5, out(p5,X,Y))
+
+def test_calc_fitness_shape():
+    """test_evaluation.py: calc_fitness correct shapes """
+    # load test data set
+    boston = load_boston()
+    # boston.data = boston.data[::10]
+    # boston.target = boston.target[::10]
+    n_features = boston.data.shape[1]
+    # function set
+    func_set = [('+',2),('-',2),('*',2),('/',2),('sin',1),('cos',1),('exp',1),('log',1)]
+    # terminal set
+    term_set = []
+    # numbers represent column indices of features
+    for i in np.arange(n_features):
+        term_set.append(('x',0,i)) # features
+        # term_set.append(('k',0,np.random.rand())) # ephemeral random constants
+
+    # initialize population
+    pop_size = 5;
+    pop = init(5,boston.data.shape[0],func_set,term_set,1,2)
+
+    pop.X = np.asarray(list(map(lambda I: out(I,boston.data,boston.target), pop.individuals)))
+
+    fitnesses = calc_fitness(pop,boston.target,'mse')
+    assert len(fitnesses) == len(pop.individuals)
+
+    rel_fitnesses = calc_fitness(pop,boston.target,'mse_rel')
+    fitmat = np.asarray(rel_fitnesses)
+    print("fitmat.shape:",fitmat.shape)
+    assert len(rel_fitnesses) == len(pop.individuals)
+
+    assert fitmat.shape == (len(pop.individuals),len(pop.individuals)+1)

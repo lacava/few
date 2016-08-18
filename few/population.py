@@ -19,14 +19,14 @@ import numpy as np
 
 class ind(object):
 	""" class for features, represented as GP stacks."""
-	def __init__(self,fitness = -1,stack = []):
+	def __init__(self,fitness = [-1.0],stack = []):
 		""" initializes empty individual with invalid fitness. """
 		self.fitness = fitness
 		self.stack = stack[:]
 
 class Pop(object):
 	""" class representing population """
-	def __init__(self,pop_size=100,n_samples=1):
+	def __init__(self,pop_size=100,n_samples=1, fit = None):
 		""" initializes population of inds of size pop_size """
 		print("pop_size:",pop_size)
 		print("n_samples:",n_samples)
@@ -34,13 +34,14 @@ class Pop(object):
 		# initialize empty output matrix
 		self.X = np.empty([n_samples,pop_size],dtype=float)
 		# initialize empty error matrix
-		self.E = np.empty([n_samples,pop_size],dtype=float)
+		self.E = np.empty(0) #np.empty([n_samples,pop_size],dtype=float)
 		# initialize population programs
 		for i in np.arange(pop_size):
-			self.individuals.append(ind())
-	def clean_output(self):
-		self.X = self.X[~np.any(np.isnan(self.X) | np.isinf(self.X),axis=1)] #np.zeros(self.X.shape[1])
-		print("self.X.shape:",self.X.shape)
+			if fit is None:
+				self.individuals.append(ind())
+			else:
+				self.individuals.append(ind(fitness = [fit]))
+
 
 def init(population_size,n_samples,func_set,term_set,min_depth,max_depth):
 	""" initializes population of features as GP stacks. """

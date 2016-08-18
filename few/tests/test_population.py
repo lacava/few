@@ -21,28 +21,28 @@ from few.population import ind, Pop, init, make_program
 from itertools import accumulate
 # unit tests for population methods.
 def test_pop_shape():
-    """population class returns correct sizes """
+    """test_population.py: population class returns correct sizes """
     # pop = Pop(0)
     # assert len(pop) == 0
     pop = Pop(10)
     assert len(pop.individuals) == 10
     print("pop.X.shape",pop.X.shape)
     assert pop.X.shape == (1,10)
-    assert pop.E.shape == (1,10)
+    assert pop.E.shape == (0,)
 
 
     pop = Pop(73)
     assert len(pop.individuals) == 73
     assert pop.X.shape == (1,73)
-    assert pop.E.shape == (1,73)
+    assert pop.E.shape == (0,)
 
     pop = Pop(73,5)
     assert len(pop.individuals) == 73
     assert pop.X.shape == (5,73)
-    assert pop.E.shape == (5,73)
+    assert pop.E.shape == (0,)
 
 def test_pop_init():
-    """population initialization makes valid trees """
+    """test_population.py: population initialization makes valid trees """
     # define function set
     # function set
     func_set = [('+',2),('-',2),('*',2),('/',2),('sin',1),('cos',1),('exp',1),('log',1)]

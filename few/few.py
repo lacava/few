@@ -18,10 +18,10 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 
 import argparse
 from _version import __version__
-from .evaluation import out, fitness
+from .evaluation import out, calc_fitness
 from .population import ind, Pop, init, make_program
 from .variation import cross, mutate
-from .selection import tournament
+from .selection import tournament, lexicase, epsilon_lexicase
 
 
 from sklearn.linear_model import LassoLarsCV
@@ -31,6 +31,9 @@ import numpy as np
 import pandas as pd
 import warnings
 import copy
+import multiprocessing as mp
+
+NUM_THREADS = mp.cpu_count()
 
 class FEW(object):
     """ FEW uses GP to find a set of transformations from the original feature space
@@ -38,7 +41,7 @@ class FEW(object):
     def __init__(self, population_size=100, generations=100,
                  mutation_rate=0.2, crossover_rate=0.8,
                  machine_learner = 'lasso', min_depth = 1, max_depth = 5, max_depth_init = 5,
-                 sel = 'tournament', tourn_size = 2, random_state=0, verbosity=0, scoring_function=None,
+                 sel = 'tournament', tourn_size = 2, fit_choice = 'mse', random_state=0, verbosity=0, scoring_function=None,
                  disable_update_check=False):
                 # sets up GP.
 
@@ -69,17 +72,18 @@ class FEW(object):
         self.max_depth = max_depth
         self.max_depth_init = max_depth_init
         self._best_inds = None
-
+        self._fit_choice = fit_choice
         # self.op_weight = op_weight
         self.sel = sel
         self.tourn_size = tourn_size
         # instantiate sklearn estimator according to specified machine learner
         if (self.machine_learner.lower() == "lasso"):
-            self.ml = LassoLarsCV()
+            self.ml = LassoLarsCV(n_jobs=NUM_THREADS)
         elif (self.machine_learner.lower() == "distance"):
             self.ml = DistanceClassifier()
         else:
-            ml = LassoLarsCV()
+            self.ml = LassoLarsCV(n_jobs=NUM_THREADS)
+
         # Columns to always ignore when in an operator
         self.non_feature_columns = ['label', 'group', 'guess']
 
@@ -91,10 +95,7 @@ class FEW(object):
     def fit(self, features, labels):
         """ Fit model to data """
         # setup data
-
-        # Store the training features and classes for later use
-        self._training_features = features
-        self._training_classes = labels
+        # p = mp.Pool(NUM_THREADS)
 
 
 
@@ -128,6 +129,9 @@ class FEW(object):
         print("x_v shape:",x_v.shape)
         print("y_t shape:",y_t.shape)
         print("y_v shape:",y_v.shape)
+        # Store the training features and classes for later use
+        self._training_features = x_t
+        self._training_labels = y_t
 
         ####
 
@@ -151,24 +155,24 @@ class FEW(object):
         # pop.X = np.asarray(list(map(lambda I: out(I,x_t,labels), pop.individuals)))
         pop.X = self._transform(x_t,pop.individuals,y_t)
         # calculate fitness of individuals
-        fitnesses = list(map(lambda I: fitness(I,y_t,self.machine_learner),pop.X))
+        # fitnesses = list(map(lambda I: fitness(I,y_t,self.machine_learner),pop.X))
+        fitnesses = calc_fitness(pop,y_t,self._fit_choice)
         # print("fitnesses:",fitnesses)
         # Assign fitnesses to inidividuals in population
         for ind, fit in zip(pop.individuals, fitnesses):
-            if np.isnan(fit) or fit < 0:
-                fit = np.inf
-
+            fit[fit < 0] = 999999.666
+            fit[np.isnan(fit)] = 999999.666
+            fit[np.isinf(fit)] = 999999.666
+            ind.fitness = fit
         # for each generation g
         for g in np.arange(self.generations):
-            # clean output matrix (remove nans, infinity etc)
-            pop.X = self.clean(pop.X)
-            # use population output matrix as features for ML method
+            # print("X shape:",pop.X.shape)
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 self.ml.fit(pop.X.transpose(),y_t)
             # keep best model
             try:
-                tmp = self.ml.score(self.clean(self._transform(x_v,pop.individuals)).transpose(),y_v)
+                tmp = self.ml.score((self._transform(x_v,pop.individuals)).transpose(),y_v)
             except Exception:
                 tmp = 0
             if tmp > self._best_score:
@@ -179,7 +183,13 @@ class FEW(object):
                 print("best individuals updated")
 
             # Select the next generation individuals
-            offspring = tournament(pop, self.tourn_size)
+            if self.sel == 'tournament':
+                offspring = tournament(pop, self.tourn_size)
+            elif self.sel == 'lexicase':
+                offspring = lexicase(pop)
+            elif self.sel == 'epsilon_lexicase':
+                offspring = epsilon_lexicase(pop)
+
             # Clone the selected individuals
             #offspring = list(map(clone, offspring))
 
@@ -205,23 +215,30 @@ class FEW(object):
             pop.individuals[:] = offspring
             pop.X = self._transform(x_t,pop.individuals)
             # print("pop.X.shape:",pop.X.shape)
-            fitnesses = list(map(lambda I: fitness(I,y_t,self.machine_learner),pop.X))
+            # fitnesses = list(map(lambda I: fitness(I,y_t,self._fit_choice),pop.X))
+            fitnesses = calc_fitness(pop,y_t,self._fit_choice)
             # print("fitnesses:",fitnesses)
             # Assign fitnesses to inidividuals in population
             for ind, fit in zip(pop.individuals, fitnesses):
-                if np.isnan(fit) or fit < 0:
-                    fit = np.inf
+                fit[fit < 0] = np.inf
+                fit[np.isnan(fit)] = np.inf
                 ind.fitness = fit
 
         print("best score:",self._best_score)
         return self.score(features,labels)
 
     def _transform(self,x,inds,labels = None):
-        # return a transform of a feature vector using population outputs
+        """ return a transformation of x using population outputs """
         return np.asarray(list(map(lambda I: out(I,x,labels), inds)))
 
     def clean(self,x):
+        """ remove nan and inf rows from x """
         return x[~np.any(np.isnan(x) | np.isinf(x),axis=1)]
+
+    def clean_with_zeros(self,x):
+        """ set nan and inf rows from x to zero """
+        x[~np.any(np.isnan(x) | np.isinf(x),axis=1)] = 0
+        return x
 
     def predict(self, testing_features):
         """ predict on a holdout data set. """
@@ -230,7 +247,7 @@ class FEW(object):
         if self._best_inds is None:
             return self._best_estimator.predict(testing_features)
         else:
-            X_transform = self.clean(np.asarray(list(map(lambda I: out(I,testing_features), self._best_inds))))
+            X_transform = (np.asarray(list(map(lambda I: out(I,testing_features), self._best_inds))))
             return self._best_estimator.predict(X_transform.transpose())
 
     def fit_predict(self, features, labels):
