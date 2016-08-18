@@ -24,16 +24,15 @@ from .variation import cross, mutate
 from .selection import tournament, lexicase, epsilon_lexicase
 
 
-from sklearn.linear_model import LassoLarsCV
+from sklearn.linear_model import LassoLarsCV, LassoLars
 from sklearn.cross_validation import train_test_split
 from sklearn.metrics import r2_score
 import numpy as np
 import pandas as pd
 import warnings
 import copy
-import multiprocessing as mp
-
-NUM_THREADS = mp.cpu_count()
+# import multiprocessing as mp
+# NUM_THREADS = mp.cpu_count()
 
 class FEW(object):
     """ FEW uses GP to find a set of transformations from the original feature space
@@ -41,7 +40,8 @@ class FEW(object):
     def __init__(self, population_size=100, generations=100,
                  mutation_rate=0.2, crossover_rate=0.8,
                  machine_learner = 'lasso', min_depth = 1, max_depth = 5, max_depth_init = 5,
-                 sel = 'tournament', tourn_size = 2, fit_choice = 'mse', random_state=0, verbosity=0, scoring_function=None,
+                 sel = 'tournament', tourn_size = 2, fit_choice = 'mse', op_weight = False,
+                 random_state=0, verbosity=0, scoring_function=None,
                  disable_update_check=False):
                 # sets up GP.
 
@@ -73,16 +73,20 @@ class FEW(object):
         self.max_depth_init = max_depth_init
         self._best_inds = None
         self._fit_choice = fit_choice
+        self._op_weight = False
         # self.op_weight = op_weight
         self.sel = sel
+        if "lexicase" in sel and ("_vec" not in fit_choice or "_rel" not in fit_choice):
+            self._fit_choice += "_vec"
+
         self.tourn_size = tourn_size
         # instantiate sklearn estimator according to specified machine learner
         if (self.machine_learner.lower() == "lasso"):
-            self.ml = LassoLarsCV(n_jobs=NUM_THREADS)
+            self.ml = LassoLarsCV(n_jobs=-1)
         elif (self.machine_learner.lower() == "distance"):
             self.ml = DistanceClassifier()
         else:
-            self.ml = LassoLarsCV(n_jobs=NUM_THREADS)
+            self.ml = LassoLarsCV(n_jobs=-1)
 
         # Columns to always ignore when in an operator
         self.non_feature_columns = ['label', 'group', 'guess']
@@ -153,7 +157,7 @@ class FEW(object):
         # Evaluate the entire population
         # X represents a matrix of the population outputs (number os samples x population size)
         # pop.X = np.asarray(list(map(lambda I: out(I,x_t,labels), pop.individuals)))
-        pop.X = self._transform(x_t,pop.individuals,y_t)
+        pop.X = self.transform(x_t,pop.individuals,y_t)
         # calculate fitness of individuals
         # fitnesses = list(map(lambda I: fitness(I,y_t,self.machine_learner),pop.X))
         fitnesses = calc_fitness(pop,y_t,self._fit_choice)
@@ -172,7 +176,7 @@ class FEW(object):
                 self.ml.fit(pop.X.transpose(),y_t)
             # keep best model
             try:
-                tmp = self.ml.score((self._transform(x_v,pop.individuals)).transpose(),y_v)
+                tmp = self.ml.score((self.transform(x_v,pop.individuals)).transpose(),y_v)
             except Exception:
                 tmp = 0
             if tmp > self._best_score:
@@ -189,7 +193,8 @@ class FEW(object):
                 offspring = lexicase(pop)
             elif self.sel == 'epsilon_lexicase':
                 offspring = epsilon_lexicase(pop)
-
+            else:
+                warning("invalid selection method chosen!")
             # Clone the selected individuals
             #offspring = list(map(clone, offspring))
 
@@ -213,7 +218,7 @@ class FEW(object):
             #     ind.fitness.values = fit
             # The population is entirely replaced by the offspring
             pop.individuals[:] = offspring
-            pop.X = self._transform(x_t,pop.individuals)
+            pop.X = self.transform(x_t,pop.individuals)
             # print("pop.X.shape:",pop.X.shape)
             # fitnesses = list(map(lambda I: fitness(I,y_t,self._fit_choice),pop.X))
             fitnesses = calc_fitness(pop,y_t,self._fit_choice)
@@ -227,9 +232,9 @@ class FEW(object):
         print("best score:",self._best_score)
         return self.score(features,labels)
 
-    def _transform(self,x,inds,labels = None):
+    def transform(self,x,inds,labels = None):
         """ return a transformation of x using population outputs """
-        return np.asarray(list(map(lambda I: out(I,x,labels), inds)))
+        return np.asarray(list(map(lambda I: out(I,x,labels), inds)),order='F')
 
     def clean(self,x):
         """ remove nan and inf rows from x """
@@ -356,19 +361,25 @@ def main():
                         type=str, help='ML algorithm to pair with features. Default: Lasso')
 
     parser.add_argument('-min_depth', action='store', dest='MIN_DEPTH', default=1,
-                        type=int, help='Minimum length of GP programs.')
+                        type=positive_integer, help='Minimum length of GP programs.')
 
     parser.add_argument('-max_depth', action='store', dest='MAX_DEPTH', default=1,
-                        type=int, help='Maximum number of nodes in GP programs.')
+                        type=positive_integer, help='Maximum number of nodes in GP programs.')
 
-    parser.add_argument('-max_depth_init', action='store', dest='MAX_DEPTH', default=1,
-                        type=int, help='Maximum number of nodes in initialized GP programs.')
+    parser.add_argument('-max_depth_init', action='store', dest='MAX_DEPTH_INIT', default=1,
+                        type=postive_integer, help='Maximum number of nodes in initialized GP programs.')
 
-    # parser.add_argument('-op_weight', action='store', dest='MAX_DEPTH', default=1,
-    #                     type=int, help='Maximum number of nodes in initialized GP programs.')
+    parser.add_argument('-op_weight', action='store', dest='OP_WEIGHT', default=1,
+                        type=bool, help='Weight variables for inclusion in synthesized features based on ML scores. Default: off')
 
     parser.add_argument('-sel', action='store', dest='SEL', default='tournament',
                         type=str, help='Selection method (tournament)')
+
+    parser.add_argument('-tourn_size', action='store', dest='TOURN_SIZE', default=2,
+                        type=positive_integer, help='Tournament size for tournament selection (Default: 2)')
+
+    parser.add_argument('-fit_choice', action='store', dest='FIT_CHOICE', default='mse',
+                        type=str, help='Fitness metric: one of mse, mae, mdae, r2, vaf. (Default: mse)')
 
     parser.add_argument('-s', action='store', dest='RANDOM_STATE', default=0,
                         type=int, help='Random number generator seed for reproducibility. Set this seed if you want your FEW run to be reproducible '
@@ -415,7 +426,7 @@ def main():
     FEW = FEW(generations=args.GENERATIONS, population_size=args.POPULATION_SIZE,
                 mutation_rate=args.MUTATION_RATE, crossover_rate=args.CROSSOVER_RATE,
                 machine_learner = args.MACHINE_LEARNER, min_depth = args.MIN_DEPTH, max_depth = args.MAX_DEPTH,
-                sel = args.SEL, random_state=args.RANDOM_STATE, verbosity=args.VERBOSITY,
+                sel = args.SEL, tourn_size = TOURN_SIZE, op_weight = args.OP_WEIGHT, random_state=args.RANDOM_STATE, verbosity=args.VERBOSITY,
                 disable_update_check=args.DISABLE_UPDATE_CHECK)
 
     FEW.fit(training_features, training_labels)

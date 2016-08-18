@@ -57,10 +57,10 @@ def test_few_at_least_as_good_as_default():
 
     print("feature shape:",boston.data.shape)
 
-    learner = FEW(generations=100, population_size=10,
+    learner = FEW(generations=10, population_size=10,
                 mutation_rate=0.2, crossover_rate=0.8,
                 machine_learner = 'lasso', min_depth = 1, max_depth = 3,
-                sel = 'tournament', fit_choice = 'r2',tourn_size = 2, random_state=0, verbosity=1,
+                sel = 'epsilon_lexicase', fit_choice = 'r2',tourn_size = 2, random_state=0, verbosity=1,
                 disable_update_check=False)
 
     learner.fit(features[:300], target[:300])
@@ -73,5 +73,7 @@ def test_few_at_least_as_good_as_default():
     print("few score:",few_score,"lasso score:",lasso_score)
     print("few test score:",test_score,"lasso test score:",lasso.score(features[300:],target[300:]))
     assert few_score >= lasso_score
+
+    print("lasso coefficients:",lasso.coef_)
 
     # assert False

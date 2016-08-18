@@ -32,7 +32,7 @@ class Pop(object):
 		print("n_samples:",n_samples)
 		self.individuals = []
 		# initialize empty output matrix
-		self.X = np.empty([n_samples,pop_size],dtype=float)
+		self.X = np.empty([n_samples,pop_size],dtype=float,order='F')
 		# initialize empty error matrix
 		self.E = np.empty(0) #np.empty([n_samples,pop_size],dtype=float)
 		# initialize population programs

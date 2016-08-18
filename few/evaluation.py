@@ -69,7 +69,13 @@ def calc_fitness(pop,labels,fit_choice):
     'mae': lambda y,yhat: mean_absolute_error(y,yhat),
     'mdae': lambda y,yhat: median_absolute_error(y,yhat),
     'r2':  lambda y,yhat: 1-r2_score(y,yhat),
-    'vaf': lambda y,yhat: 1-explained_variance_score(y,yhat)
+    'vaf': lambda y,yhat: 1-explained_variance_score(y,yhat),
+    # non-aggregated fitness calculations
+    'mse_vec': lambda y,yhat: mean_squared_error(y,yhat,multioutput = 'raw_values'),
+    'mae_vec': lambda y,yhat: mean_absolute_error(y,yhat,multioutput = 'raw_values'),
+    'mdae_vec': lambda y,yhat: median_absolute_error(y,yhat,multioutput = 'raw_values'),
+    'r2_vec':  lambda y,yhat: 1-r2_score(y,yhat,multioutput = 'raw_values'),
+    'vaf_vec': lambda y,yhat: 1-explained_variance_score(y,yhat,multioutput = 'raw_values')
     }
 
     if (fit_choice[-3::] == 'rel'): # relative fitness calculation
