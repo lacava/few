@@ -18,19 +18,19 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 
 import argparse
 from _version import __version__
-from .evaluation import out, calc_fitness
-from .population import ind, Pop, init, make_program
-from .variation import cross, mutate
-from .selection import tournament, lexicase, epsilon_lexicase
+from few.evaluation import out, calc_fitness
+from few.population import *
+from few.variation import *
+from few.selection import *
 
-
-from sklearn.linear_model import LassoLarsCV, LassoLars
+from sklearn.linear_model import LassoLarsCV
 from sklearn.cross_validation import train_test_split
 from sklearn.metrics import r2_score
 import numpy as np
 import pandas as pd
 import warnings
 import copy
+import itertools as it
 # import multiprocessing as mp
 # NUM_THREADS = mp.cpu_count()
 
@@ -41,7 +41,7 @@ class FEW(object):
                  mutation_rate=0.2, crossover_rate=0.8,
                  machine_learner = 'lasso', min_depth = 1, max_depth = 5, max_depth_init = 5,
                  sel = 'tournament', tourn_size = 2, fit_choice = 'mse', op_weight = False,
-                 random_state=0, verbosity=0, scoring_function=None,
+                 seed_with_ml = False, erc = False, random_state=0, verbosity=0, scoring_function=None,
                  disable_update_check=False):
                 # sets up GP.
 
@@ -74,6 +74,8 @@ class FEW(object):
         self._best_inds = None
         self._fit_choice = fit_choice
         self._op_weight = False
+        self.seed_with_ml = seed_with_ml
+        self.erc = erc
         # self.op_weight = op_weight
         self.sel = sel
         if "lexicase" in sel and ("_vec" not in fit_choice or "_rel" not in fit_choice):
@@ -99,9 +101,6 @@ class FEW(object):
     def fit(self, features, labels):
         """ Fit model to data """
         # setup data
-        # p = mp.Pool(NUM_THREADS)
-
-
 
         # Train-test split routine for internal validation
         ####
@@ -148,11 +147,11 @@ class FEW(object):
         for i in np.arange(x_t.shape[1]):
             # (.,.,.): node type, arity, feature column index or value
             self.term_set.append(('x',0,i)) # features
-            self.term_set.append(('k',0,np.random.rand())) # ephemeral random constants
+            if self.erc:
+                self.term_set.append(('k',0,np.random.rand())) # ephemeral random constants
 
         # Create initial population
-        pop = init(self.population_size,x_t.shape[0], self.func_set,
-                   self.term_set,self.min_depth, self.max_depth)
+        pop = self.init_pop()
 
         # Evaluate the entire population
         # X represents a matrix of the population outputs (number os samples x population size)
@@ -164,10 +163,14 @@ class FEW(object):
         # print("fitnesses:",fitnesses)
         # Assign fitnesses to inidividuals in population
         for ind, fit in zip(pop.individuals, fitnesses):
-            fit[fit < 0] = 999999.666
-            fit[np.isnan(fit)] = 999999.666
-            fit[np.isinf(fit)] = 999999.666
-            ind.fitness = fit
+            if isinstance(fit,list): # calc_fitness returned raw fitness values
+                fit[fit < 0] = 999999.666
+                fit[np.isnan(fit)] = 999999.666
+                fit[np.isinf(fit)] = 999999.666
+                ind.fitness_vec = fit
+                ind.fitness = np.mean(ind.fitness_vec)
+            else:
+                ind.fitness = np.nanmin([fit,99999.666])
         # for each generation g
         for g in np.arange(self.generations):
             # print("X shape:",pop.X.shape)
@@ -225,11 +228,17 @@ class FEW(object):
             # print("fitnesses:",fitnesses)
             # Assign fitnesses to inidividuals in population
             for ind, fit in zip(pop.individuals, fitnesses):
-                fit[fit < 0] = np.inf
-                fit[np.isnan(fit)] = np.inf
-                ind.fitness = fit
+                if isinstance(fit,list): # calc_fitness returned raw fitness values
+                    fit[fit < 0] = 999999.666
+                    fit[np.isnan(fit)] = 999999.666
+                    fit[np.isinf(fit)] = 999999.666
+                    ind.fitness_vec = fit
+                    ind.fitness = np.mean(ind.fitness_vec)
+                else:
+                    ind.fitness = np.nanmin([fit,99999.666])
 
         print("best score:",self._best_score)
+        print("features:",pop.stacks_2_eqns())
         return self.score(features,labels)
 
     def transform(self,x,inds,labels = None):
@@ -286,6 +295,38 @@ class FEW(object):
     def export(self, output_file_name):
         """ exports engineered features """
 
+    def init_pop(self):
+    	""" initializes population of features as GP stacks. """
+    	pop = Pop(self.population_size,self._training_features.shape[0])
+    	# make programs
+    	if self.seed_with_ml:
+            # initial population is the components of the default ml model
+            if self.machine_learner == 'lasso':
+                # add all model components with non-zero coefficients
+                for i,(c,p) in enumerate(it.zip_longest([c for c in self.ml.coef_ if c !=0],pop.individuals,fillvalue=None)):
+                    if c is not None and p is not None:
+                        p.stack = [('x',0,i)]
+                    elif p is not None:
+                        # make program if pop is bigger than model componennts
+                        make_program(p.stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1))
+                        p.stack = list(reversed(p.stack))
+            print("population:")
+            for p in pop.individuals:
+                print(p.stack)
+    	else:
+    		for I in pop.individuals:
+    			depth = np.random.randint(self.min_depth,self.max_depth+1)
+    			# print("hex(id(I)):",hex(id(I)))
+    			# depth = 2;
+    			# print("initial I.stack:",I.stack)
+    			make_program(I.stack,self.func_set,self.term_set,depth)
+    			# print(I.stack)
+    			I.stack = list(reversed(I.stack))
+
+    		# print(I.stack)
+
+    	return pop
+
 def positive_integer(value):
     """Ensures that the provided value is a positive integer; throws an exception otherwise
 
@@ -335,11 +376,11 @@ def main():
                                                  'machine learning algorithms using genetic programming.',
                                      add_help=False)
 
-    parser.add_argument('INPUT_FILE', type=str, help='Data file to run FEW on; ensure that the class label column is labeled as "class".')
+    parser.add_argument('INPUT_FILE', type=str, help='Data file to run FEW on; ensure that the target/label column is labeled as "label".')
 
     parser.add_argument('-h', '--help', action='help', help='Show this help message and exit.')
 
-    parser.add_argument('-is', action='store', dest='INPUT_SEPARATOR', default='\t',
+    parser.add_argument('-is', action='store', dest='INPUT_SEPARATOR', default=None,
                         type=str, help='Character used to separate columns in the input file.')
 
     parser.add_argument('-o', action='store', dest='OUTPUT_FILE', default='',
@@ -351,35 +392,42 @@ def main():
     parser.add_argument('-p', action='store', dest='POPULATION_SIZE', default=100,
                         type=positive_integer, help='Number of individuals in the GP population.')
 
-    parser.add_argument('-mr', action='store', dest='MUTATION_RATE', default=0.2,
+    parser.add_argument('-mr', action='store', dest='MUTATION_RATE', default=0.5,
                         type=float_range, help='GP mutation rate in the range [0.0, 1.0].')
 
-    parser.add_argument('-xr', action='store', dest='CROSSOVER_RATE', default=0.8,
+    parser.add_argument('-xr', action='store', dest='CROSSOVER_RATE', default=0.5,
                         type=float_range, help='GP crossover rate in the range [0.0, 1.0].')
 
-    parser.add_argument('-ml', action='store', dest='MACHINE_LEARNER', default='lasso',
+    parser.add_argument('-ml', action='store', dest='MACHINE_LEARNER', default='lasso', choices = ['lasso'],
                         type=str, help='ML algorithm to pair with features. Default: Lasso')
 
     parser.add_argument('-min_depth', action='store', dest='MIN_DEPTH', default=1,
                         type=positive_integer, help='Minimum length of GP programs.')
 
-    parser.add_argument('-max_depth', action='store', dest='MAX_DEPTH', default=1,
+    parser.add_argument('-max_depth', action='store', dest='MAX_DEPTH', default=2,
                         type=positive_integer, help='Maximum number of nodes in GP programs.')
 
     parser.add_argument('-max_depth_init', action='store', dest='MAX_DEPTH_INIT', default=1,
-                        type=postive_integer, help='Maximum number of nodes in initialized GP programs.')
+                        type=positive_integer, help='Maximum number of nodes in initialized GP programs.')
 
     parser.add_argument('-op_weight', action='store', dest='OP_WEIGHT', default=1,
                         type=bool, help='Weight variables for inclusion in synthesized features based on ML scores. Default: off')
 
-    parser.add_argument('-sel', action='store', dest='SEL', default='tournament',
-                        type=str, help='Selection method (tournament)')
+    parser.add_argument('-sel', action='store', dest='SEL', default='tournament', choices = ['tournament','lexicase','epsilon_lexicase'],
+                        type=str, help='Selection method (Default: tournament)')
 
     parser.add_argument('-tourn_size', action='store', dest='TOURN_SIZE', default=2,
                         type=positive_integer, help='Tournament size for tournament selection (Default: 2)')
 
-    parser.add_argument('-fit_choice', action='store', dest='FIT_CHOICE', default='mse',
-                        type=str, help='Fitness metric: one of mse, mae, mdae, r2, vaf. (Default: mse)')
+    parser.add_argument('-fit', action='store', dest='FIT_CHOICE', default='mse', choices = ['mse','mae','mdae','r2','vaf',
+                        'mse_rel','mae_rel','mdae_re','r2_rel','vaf_rel'],
+                        type=str, help='Fitness metric (Default: mse)')
+
+    parser.add_argument('--seed_with_ml', action='store_true', dest='SEED_WITH_ML', default=False,
+                    help='Flag to seed initial GP population with components of the ML model.')
+
+    parser.add_argument('--erc', action='store_true', dest='ERC', default=False,
+                    help='Flag to use ephemeral random constants in GP feature construction.')
 
     parser.add_argument('-s', action='store', dest='RANDOM_STATE', default=0,
                         type=int, help='Random number generator seed for reproducibility. Set this seed if you want your FEW run to be reproducible '
@@ -404,7 +452,11 @@ def main():
             print('{}\t=\t{}'.format(arg, args.__dict__[arg]))
         print('')
 
-    input_data = pd.read_csv(args.INPUT_FILE, sep=args.INPUT_SEPARATOR)
+    # load data from csv file
+    if args.INPUT_SEPARATOR is None:
+        input_data = pd.read_csv(args.INPUT_FILE, sep=args.INPUT_SEPARATOR,engine='python')
+    else: # use c engine for read_csv is separator is specified
+        input_data = pd.read_csv(args.INPUT_FILE, sep=args.INPUT_SEPARATOR)
 
     if 'Label' in input_data.columns.values:
         input_data.rename(columns={'Label': 'label'}, inplace=True)
@@ -423,20 +475,22 @@ def main():
     testing_features = input_data.loc[test_i].drop('label', axis=1).values
     testing_labels = input_data.loc[test_i, 'label'].values
 
-    FEW = FEW(generations=args.GENERATIONS, population_size=args.POPULATION_SIZE,
+    learner = FEW(generations=args.GENERATIONS, population_size=args.POPULATION_SIZE,
                 mutation_rate=args.MUTATION_RATE, crossover_rate=args.CROSSOVER_RATE,
-                machine_learner = args.MACHINE_LEARNER, min_depth = args.MIN_DEPTH, max_depth = args.MAX_DEPTH,
-                sel = args.SEL, tourn_size = TOURN_SIZE, op_weight = args.OP_WEIGHT, random_state=args.RANDOM_STATE, verbosity=args.VERBOSITY,
+                machine_learner = args.MACHINE_LEARNER, min_depth = args.MIN_DEPTH,
+                max_depth = args.MAX_DEPTH, sel = args.SEL, tourn_size = args.TOURN_SIZE,
+                seed_with_ml = args.SEED_WITH_ML, op_weight = args.OP_WEIGHT,
+                erc = args.ERC, random_state=args.RANDOM_STATE, verbosity=args.VERBOSITY,
                 disable_update_check=args.DISABLE_UPDATE_CHECK)
 
-    FEW.fit(training_features, training_labels)
+    learner.fit(training_features, training_labels)
 
     if args.VERBOSITY >= 1:
-        print('\nTraining accuracy: {}'.format(FEW.score(training_features, training_labels)))
-        print('Holdout accuracy: {}'.format(FEW.score(testing_features, testing_labels)))
+        print('\nTraining accuracy: {}'.format(learner.score(training_features, training_labels)))
+        print('Holdout accuracy: {}'.format(learner.score(testing_features, testing_labels)))
 
     if args.OUTPUT_FILE != '':
-        FEW.export(args.OUTPUT_FILE)
+        learner.export(args.OUTPUT_FILE)
 
 
 if __name__ == '__main__':

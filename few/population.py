@@ -16,12 +16,25 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 
 """
 import numpy as np
+eqn_dict = {
+    '+': lambda n,stack_eqn: '(' + stack_eqn.pop() + '+' + stack_eqn.pop() + ')',
+    '-': lambda n,stack_eqn: '(' + stack_eqn.pop() + '-' + stack_eqn.pop()+ ')',
+    '*': lambda n,stack_eqn: '(' + stack_eqn.pop() + '*' + stack_eqn.pop()+ ')',
+    '/': lambda n,stack_eqn: '(' + stack_eqn.pop() + '/' + stack_eqn.pop()+ ')',
+    'sin': lambda n,stack_eqn: 'sin(' + stack_eqn.pop() + ')',
+    'cos': lambda n,stack_eqn: 'cos(' + stack_eqn.pop() + ')',
+    'exp': lambda n,stack_eqn: 'exp(' + stack_eqn.pop() + ')',
+    'log': lambda n,stack_eqn: 'log(' + stack_eqn.pop() + ')',
+    'x':  lambda n,stack_eqn: 'x_' + str(n[2]),
+    'k': lambda n,stack_eqn: str(n[2])
+}
 
 class ind(object):
 	""" class for features, represented as GP stacks."""
-	def __init__(self,fitness = [-1.0],stack = []):
+	def __init__(self,fitness = -1.0,stack = []):
 		""" initializes empty individual with invalid fitness. """
 		self.fitness = fitness
+		self.fitness_vec = []
 		self.stack = stack[:]
 
 class Pop(object):
@@ -42,25 +55,26 @@ class Pop(object):
 			else:
 				self.individuals.append(ind(fitness = [fit]))
 
+	def stacks_2_eqns(self):
+		""" returns equation strings from stacks"""
+		# eqns = []
+		# for p in self.individuals:
+		# 	eqns.append(self.stack_2_eqn(p))
 
-def init(population_size,n_samples,func_set,term_set,min_depth,max_depth):
-	""" initializes population of features as GP stacks. """
-	pop = Pop(population_size,n_samples)
-	# build programs
-	typ = 'f'
-	# make programs
-	for I in pop.individuals:
-		depth = np.random.randint(min_depth,max_depth+1)
-		# print("hex(id(I)):",hex(id(I)))
-		# depth = 2;
-		# print("initial I.stack:",I.stack)
-		make_program(I.stack,func_set,term_set,depth)
-		# print(I.stack)
-		I.stack = list(reversed(I.stack))
+		return list(map(lambda p: self.stack_2_eqn(p), self.individuals))
 
-		# print(I.stack)
+	def stack_2_eqn(self,p):
+		""" returns equation string for program stack """
+		stack_eqn = []
+		for n in p.stack:
+			self.eval_eqn(n,stack_eqn)
+		return stack_eqn[-1]
 
-	return pop
+	def eval_eqn(self,n,stack_eqn):
+		if len(stack_eqn) >= n[1]:
+			stack_eqn.append(eqn_dict[n[0]](n,stack_eqn))
+			# if any(np.isnan(stack_eqn[-1])) or any(np.isinf(stack_eqn[-1])):
+	        #     print("problem operator:",n)
 
 def make_program(stack,func_set,term_set,max_d):
 	""" makes a program stack. """

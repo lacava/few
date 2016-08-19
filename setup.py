@@ -13,7 +13,7 @@ setup(
     name='FEW',
     version=package_version,
     author='William La Cava',
-    author_email='lacava@mail.med.upenn.edu',
+    author_email='lacava@upenn.edu',
     packages=find_packages(),
     url='https://github.com/lacava/few',
     license='GNU/GPLv3',
@@ -26,7 +26,7 @@ A feature engineering wrapper for scikitlearn based on genetic programming.
 
 Contact:
 ===
-e-mail: lacava@mail.med.upenn.edu
+e-mail: lacava@upenn.edu
 
 This project is hosted at https://github.com/lacava/few
 ''',
@@ -35,8 +35,11 @@ This project is hosted at https://github.com/lacava/few
     classifiers=[
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Topic :: Scientific/Engineering :: Artificial Intelligence'
     ],
-    keywords=['data science', 'machine learning', 'genetic programming', 'evolutionary computation'],
+    keywords=['data science', 'machine learning', 'feature engineering', 'genetic programming', 'evolutionary computation'],
 )

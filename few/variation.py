@@ -53,29 +53,26 @@ def cross(I,J):
     tmpi = I[:]
     tmpj = J[:]
     tmpi[x_i_begin:x_i_end+1:],tmpj[x_j_begin:x_j_end+1:] = tmpj[x_j_begin:x_j_end+1:],tmpi[x_i_begin:x_i_end+1:]
-
+    # I[x_i_begin:x_i_end+1:],J[x_j_begin:x_j_end+1:] = J[x_j_begin:x_j_end+1:],I[x_i_begin:x_i_end+1:]
     # I[x_i_begin:x_i_end+1:],J[x_j_begin:x_j_end+1:] = J[x_j_begin:x_j_end+1:],I[x_i_begin:x_i_end+1:]
 
-    if not is_valid_program(tmpi) or not is_valid_program(tmpj):
+    if not is_valid_program(I) or not is_valid_program(J):
+
         print("parent 1:",I,"x_i_begin:",x_i_begin,"x_i_end:",x_i_end)
         print("parent 2:",J,"x_j_begin:",x_j_begin,"x_j_end:",x_j_end)
         print("child 1:",tmpi)
         print("child 2:",tmpj)
-        assert False
+        raise ValueError('Crossover produced an invalid program.')
 
     I = tmpi
     J = tmpj
 
 def mutate(I,func_set,term_set):
     """ mutates individual I """
-    x_i_end = np.random.randint(len(I))
-    x_i_begin = x_i_end
-    while (I[x_i_end][1] - sum(arity[1] for arity in I[x_i_begin:x_i_end+1:]) != 0):
-        x_i_begin -= 1
-
-    # swap mutation
-    depth = 1
-    newpiece = make_program([],func_set,term_set,depth)
+    # point mutation
+    x = np.random.randint(len(I))
+    reps = [n for n in func_set+term_set if n[1]==I[x][1]]
+    I[x] = reps[np.random.randint(len(reps))]
     assert is_valid_program(I)
 
 def is_valid_program(p):

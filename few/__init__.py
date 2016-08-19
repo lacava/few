@@ -19,7 +19,6 @@ the TPOT library. If not, see http://www.gnu.org/licenses/.
 
 from _version import __version__
 from .few import main
-
-# from .few import evaluation as ev
-# from .few import selection as sel
-# from .few import variation as vary
+# from .few import evaluation
+# from .few import selection
+# from .few import variation
