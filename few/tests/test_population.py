@@ -17,7 +17,7 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 """
 import numpy as np
 
-from few.population import ind, Pop, init, make_program
+from few.population import *
 from itertools import accumulate
 # unit tests for population methods.
 def test_pop_shape():

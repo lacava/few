@@ -66,9 +66,11 @@ class Pop(object):
 	def stack_2_eqn(self,p):
 		""" returns equation string for program stack """
 		stack_eqn = []
-		for n in p.stack:
-			self.eval_eqn(n,stack_eqn)
-		return stack_eqn[-1]
+		if p: # if stack is not empty
+			for n in p.stack:
+				self.eval_eqn(n,stack_eqn)
+			return stack_eqn[-1]
+		return []
 
 	def eval_eqn(self,n,stack_eqn):
 		if len(stack_eqn) >= n[1]:
@@ -87,3 +89,20 @@ def make_program(stack,func_set,term_set,max_d):
 			make_program(stack,func_set,term_set,max_d-1)
 	# return stack
 	# print("current stack:",stack)
+
+def init(population_size,n_samples,func_set,term_set,min_depth,max_depth):
+	""" initializes population of features as GP stacks. """
+	pop = Pop(population_size,n_samples)
+
+	for I in pop.individuals:
+		depth = np.random.randint(min_depth,max_depth+1)
+		# print("hex(id(I)):",hex(id(I)))
+		# depth = 2;
+		# print("initial I.stack:",I.stack)
+		make_program(I.stack,func_set,term_set,depth)
+		# print(I.stack)
+		I.stack = list(reversed(I.stack))
+
+	# print(I.stack)
+
+	return pop

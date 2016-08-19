@@ -15,8 +15,8 @@ You should have received a copy of the GNU General Public License along with
 the FEW library. If not, see http://www.gnu.org/licenses/.
 
 """
-from few.population import ind, Pop, init
-from few.selection import tournament,lexicase,epsilon_lexicase
+from few.population import *
+from few.selection import *
 import numpy as np
 # unit tests for selection methods.
 def test_tournament_shapes():

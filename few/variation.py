@@ -64,16 +64,27 @@ def cross(I,J):
         print("child 2:",tmpj)
         raise ValueError('Crossover produced an invalid program.')
 
-    I = tmpi
-    J = tmpj
+    I[:] = tmpi
+    J[:] = tmpj
 
 def mutate(I,func_set,term_set):
     """ mutates individual I """
     # point mutation
+    # print("I:",I,"id:",id(I))
     x = np.random.randint(len(I))
-    reps = [n for n in func_set+term_set if n[1]==I[x][1]]
-    I[x] = reps[np.random.randint(len(reps))]
+    arity = I[x][1]
+    # print("node choice:",I[x])
+    wholeset = func_set+term_set
+    reps = [n for n in func_set+term_set if n[1]==arity]
+    # print("replacements:",reps)
+    tmp = reps[np.random.randint(len(reps))]
+    # print("chosen:",tmp)
+    # Imut = I[:]
+    # Imut[x] = tmp
+    I[x] = tmp
+    # print(I,"->",Imut)
     assert is_valid_program(I)
+    # return Imut
 
 def is_valid_program(p):
     """ checks that the accumulated program length is always greater than the

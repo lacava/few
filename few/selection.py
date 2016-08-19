@@ -16,6 +16,7 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 
 """
 import numpy as np
+import copy
 
 def tournament(pop,tourn_size):
     """ conducts tournament selection of size tourn_size, returning len(pop)
@@ -28,11 +29,11 @@ def tournament(pop,tourn_size):
         for i in pool_i:
             pool.append(np.mean(pop.individuals[i].fitness))
 
-        winners.append(pop.individuals[pool_i[np.argmin(pool)]])
+        winners.append(copy.deepcopy(pop.individuals[pool_i[np.argmin(pool)]]))
     # print("size winners:",len(winners))
     # for index,i in enumerate(winners):
     #     print("fitness "+str(index)+":",i.fitness)
-    print("winners:",pop.stacks_2_eqns())
+    # print("winners:",pop.stacks_2_eqns())
     return winners
 
 def lexicase(pop):
@@ -54,8 +55,8 @@ def lexicase(pop):
             candidates = list(filter(lambda x: x.fitness_vec[cases[0]] == best_val_for_case, pop.individuals))
             cases.pop(0)
 
-        winners.append(np.random.choice(candidates))
-    print("winners:",pop.stacks_2_eqns())
+        winners.append(copy.deepcopy(np.random.choice(candidates)))
+    # print("winners:",pop.stacks_2_eqns())
     return winners
 
 def epsilon_lexicase(pop):
@@ -80,9 +81,9 @@ def epsilon_lexicase(pop):
 
             cases.pop(0)
 
-        winners.append(np.random.choice(candidates))
+        winners.append(copy.deepcopy(np.random.choice(candidates)))
 
-    print("winners:",pop.stacks_2_eqns())
+    # print("winners:",pop.stacks_2_eqns())
 
     return winners
 

@@ -163,7 +163,7 @@ class FEW(object):
         # print("fitnesses:",fitnesses)
         # Assign fitnesses to inidividuals in population
         for ind, fit in zip(pop.individuals, fitnesses):
-            if isinstance(fit,list): # calc_fitness returned raw fitness values
+            if isinstance(fit,(list,np.ndarray)): # calc_fitness returned raw fitness values
                 fit[fit < 0] = 999999.666
                 fit[np.isnan(fit)] = 999999.666
                 fit[np.isinf(fit)] = 999999.666
@@ -176,6 +176,7 @@ class FEW(object):
             # print("X shape:",pop.X.shape)
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
+                # print("population:",pop.stacks_2_eqns())
                 self.ml.fit(pop.X.transpose(),y_t)
             # keep best model
             try:
@@ -188,19 +189,19 @@ class FEW(object):
                 self._best_score = tmp
                 self._best_inds = pop.individuals[:]
                 print("best individuals updated")
-
+            offspring = []
             # Select the next generation individuals
             if self.sel == 'tournament':
-                offspring = tournament(pop, self.tourn_size)
+                offspring[:] = tournament(pop, self.tourn_size)
             elif self.sel == 'lexicase':
-                offspring = lexicase(pop)
+                offspring[:] = lexicase(pop)
             elif self.sel == 'epsilon_lexicase':
-                offspring = epsilon_lexicase(pop)
+                offspring[:] = epsilon_lexicase(pop)
             else:
                 warning("invalid selection method chosen!")
             # Clone the selected individuals
             #offspring = list(map(clone, offspring))
-
+            # print("selected:",list(map(lambda p: pop.stack_2_eqn(p), offspring)))
             # Apply crossover and mutation on the offspring
             for child1, child2 in zip(offspring[::2], offspring[1::2]):
 
@@ -208,11 +209,16 @@ class FEW(object):
                     cross(child1.stack, child2.stack)
                     child1.fitness = -1
                     child2.fitness = -1
-
+                    # print("pop being crossed:",list(map(lambda p: pop.stack_2_eqn(p), offspring)))
+            # print("crossed:",list(map(lambda p: pop.stack_2_eqn(p), offspring)))
             for mutant in offspring:
                 if np.random.rand() < self.mutation_rate:
                     mutate(mutant.stack,self.func_set,self.term_set)
+                    # print("pop being mutated:",list(map(lambda p: pop.stack_2_eqn(p), offspring)))
                     mutant.fitness = -1
+
+            # print("mutated:",list(map(lambda p: pop.stack_2_eqn(p), offspring)))
+
 
             # # Evaluate the individuals with an invalid fitness
             # invalid_ind = [ind for ind in offspring if ind.fitness == -1]
@@ -228,13 +234,14 @@ class FEW(object):
             # print("fitnesses:",fitnesses)
             # Assign fitnesses to inidividuals in population
             for ind, fit in zip(pop.individuals, fitnesses):
-                if isinstance(fit,list): # calc_fitness returned raw fitness values
+                if isinstance(fit,(list,np.ndarray)): # calc_fitness returned raw fitness values
                     fit[fit < 0] = 999999.666
                     fit[np.isnan(fit)] = 999999.666
                     fit[np.isinf(fit)] = 999999.666
                     ind.fitness_vec = fit
                     ind.fitness = np.mean(ind.fitness_vec)
                 else:
+                    print("fit.shape:",fit.shape)
                     ind.fitness = np.nanmin([fit,99999.666])
 
         print("best score:",self._best_score)

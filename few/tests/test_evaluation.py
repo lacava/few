@@ -16,8 +16,8 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 
 """
 # unit tests for evaluation methods.
-from few.evaluation import out, safe, calc_fitness
-from few.population import init,ind
+from few.evaluation import *
+from few.population import *
 from sklearn.datasets import load_boston
 import numpy as np
 def test_out_shapes():
