@@ -17,11 +17,11 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 """
 
 import argparse
-from _version import __version__
-from few.evaluation import out, calc_fitness
-from few.population import *
-from few.variation import *
-from few.selection import *
+from ._version import __version__
+from .evaluation import out, calc_fitness
+from .population import *
+from .variation import *
+from .selection import *
 
 from sklearn.linear_model import LassoLarsCV
 from sklearn.cross_validation import train_test_split

@@ -35,9 +35,9 @@ This project is hosted at https://github.com/lacava/few
     classifiers=[
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
+        # 'Programming Language :: Python :: 2.7',
+        # 'Programming Language :: Python :: 3',
+        # 'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Topic :: Scientific/Engineering :: Artificial Intelligence'
     ],

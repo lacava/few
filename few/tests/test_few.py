@@ -31,7 +31,7 @@ def test_few_fit_shapes():
     d = pd.DataFrame(data=boston.data)
     print("feature shape:",boston.data.shape)
 
-    learner = FEW(generations=10, population_size=25,
+    learner = FEW(generations=10, population_size=10,
                 mutation_rate=0.2, crossover_rate=0.8,
                 machine_learner = 'lasso', min_depth = 1, max_depth = 3,
                 sel = 'tournament', tourn_size = 2, random_state=0, verbosity=1,
