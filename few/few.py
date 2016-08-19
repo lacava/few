@@ -241,7 +241,7 @@ class FEW(object):
                     ind.fitness_vec = fit
                     ind.fitness = np.mean(ind.fitness_vec)
                 else:
-                    print("fit.shape:",fit.shape)
+                    # print("fit.shape:",fit.shape)
                     ind.fitness = np.nanmin([fit,99999.666])
 
         print("best score:",self._best_score)
