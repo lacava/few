@@ -129,10 +129,7 @@ class FEW(object):
         x_v = train_val_data.loc[val_i].drop('labels',axis=1).values
         y_t = train_val_data.loc[train_i, 'labels'].values
         y_v = train_val_data.loc[val_i, 'labels'].values
-        print("x_t shape:",x_t.shape)
-        print("x_v shape:",x_v.shape)
-        print("y_t shape:",y_t.shape)
-        print("y_v shape:",y_v.shape)
+
         # Store the training features and classes for later use
         self._training_features = x_t
         self._training_labels = y_t
@@ -148,6 +145,7 @@ class FEW(object):
         for i in np.arange(x_t.shape[1]):
             # (.,.,.): node type, arity, feature column index or value
             self.term_set.append(('x',0,i)) # features
+            # add ephemeral random constants if flag
             if self.erc:
                 self.term_set.append(('k',0,np.random.rand())) # ephemeral random constants
 
@@ -184,6 +182,7 @@ class FEW(object):
                 tmp = self.ml.score((self.transform(x_v,pop.individuals)).transpose(),y_v)
             except Exception:
                 tmp = 0
+
             if tmp > self._best_score:
                 print("new best score:",self._best_score)
                 self._best_estimator = copy.deepcopy(self.ml)
@@ -198,34 +197,22 @@ class FEW(object):
                 offspring[:] = lexicase(pop)
             elif self.sel == 'epsilon_lexicase':
                 offspring[:] = epsilon_lexicase(pop)
-            else:
-                warning("invalid selection method chosen!")
+
             # Clone the selected individuals
-            #offspring = list(map(clone, offspring))
-            # print("selected:",list(map(lambda p: pop.stack_2_eqn(p), offspring)))
+
             # Apply crossover and mutation on the offspring
             for child1, child2 in zip(offspring[::2], offspring[1::2]):
-
                 if np.random.rand() < self.crossover_rate:
-                    cross(child1.stack, child2.stack)
+                    cross(child1.stack, child2.stack, self.max_depth)
                     child1.fitness = -1
                     child2.fitness = -1
-                    # print("pop being crossed:",list(map(lambda p: pop.stack_2_eqn(p), offspring)))
-            # print("crossed:",list(map(lambda p: pop.stack_2_eqn(p), offspring)))
+
             for mutant in offspring:
                 if np.random.rand() < self.mutation_rate:
                     mutate(mutant.stack,self.func_set,self.term_set)
                     # print("pop being mutated:",list(map(lambda p: pop.stack_2_eqn(p), offspring)))
                     mutant.fitness = -1
 
-            # print("mutated:",list(map(lambda p: pop.stack_2_eqn(p), offspring)))
-
-
-            # # Evaluate the individuals with an invalid fitness
-            # invalid_ind = [ind for ind in offspring if ind.fitness == -1]
-            # fitnesses = list(map(lambda I: fitness(I,y_t,self.machine_learner),pop.X[]))
-            # for ind, fit in zip(invalid_ind, fitnesses):
-            #     ind.fitness.values = fit
             # The population is entirely replaced by the offspring
             pop.individuals[:] = offspring
             pop.X = self.transform(x_t,pop.individuals)

@@ -20,8 +20,7 @@ import copy
 
 def tournament(pop,tourn_size):
     """conducts tournament selection of size tourn_size, returning len(pop)
-    individuals.
-    """
+    individuals."""
     winners = []
     for i in np.arange(len(pop.individuals)):
         # sample pool with replacement
@@ -60,25 +59,30 @@ def lexicase(pop):
     # print("winners:",pop.stacks_2_eqns())
     return winners
 
-def epsilon_lexicase(pop):
+def epsilon_lexicase(pop, num_selections=None):
     """conducts epsilon lexicase selection for de-aggregated fitness vectors"""
 
-    winners = []
+    if num_selections is None:
+        num_selections = len(pop.individuals)
 
-    for i in np.arange(len(pop.individuals)):
+    winners = []
+    mad_for_case = []
+    best_val_for_case = []
+    # calculate epsilon thresholds based on median absolute deviation (MAD)
+    for i in np.arange(len(pop.individuals[0].fitness_vec)):
+        mad_for_case.append(mad(np.asarray(list(map(lambda x: x.fitness_vec[i], pop.individuals)))))
+        best_val_for_case.append(min(map(lambda x: x.fitness_vec[i], pop.individuals)))
+
+    for i in np.arange(num_selections):
 
         candidates = pop.individuals
         cases = list(range(len(pop.individuals[0].fitness_vec)))
         np.random.shuffle(cases)
 
         while len(cases) > 0 and len(candidates) > 1:
-            # get elite fitness for case
-            best_val_for_case = min(map(lambda x: x.fitness_vec[cases[0]], pop.individuals))
-
             if not np.isinf(best_val_for_case):
-                mad_for_case = 2*mad(np.asarray(list(map(lambda x: x.fitness_vec[cases[0]], pop.individuals))))
                 # filter individuals without an elite+epsilon fitness on this case
-                candidates = list(filter(lambda x: x.fitness_vec[cases[0]] <= best_val_for_case+mad_for_case, pop.individuals))
+                candidates = list(filter(lambda x: x.fitness_vec[cases[0]] <= best_val_for_case[cases[0]]+mad_for_case[cases[0]], pop.individuals))
 
             cases.pop(0)
 
