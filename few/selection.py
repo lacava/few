@@ -40,6 +40,10 @@ def lexicase(pop):
     """conducts lexicase selection for de-aggregated fitness vectors"""
 
     winners = []
+    best_val_for_case = []
+    # calculate best values for cases beforehand
+    for i in np.arange(len(pop.individuals[0].fitness_vec)):
+        best_val_for_case.append(min(map(lambda x: x.fitness_vec[i], pop.individuals)))
 
     for i in np.arange(len(pop.individuals)):
 
@@ -49,10 +53,8 @@ def lexicase(pop):
         np.random.shuffle(cases)
 
         while len(cases) > 0 and len(candidates) > 1:
-            # get elite fitness for case
-            best_val_for_case = min(map(lambda x: x.fitness_vec[cases[0]], pop.individuals))
             # filter individuals without an elite fitness on this case
-            candidates = list(filter(lambda x: x.fitness_vec[cases[0]] == best_val_for_case, pop.individuals))
+            candidates = list(filter(lambda x: x.fitness_vec[cases[0]] == best_val_for_case[cases[0]], pop.individuals))
             cases.pop(0)
 
         winners.append(copy.deepcopy(np.random.choice(candidates)))
