@@ -59,13 +59,10 @@ class Pop(object):
             if fit is None:
                 self.individuals.append(ind())
             else:
-                self.individuals.append(ind(fitness = [fit]))
+                self.individuals.append(ind(fitness = fit))
 
     def stacks_2_eqns(self):
         """returns equation strings from stacks"""
-        # eqns = []
-        # for p in self.individuals:
-        #     eqns.append(self.stack_2_eqn(p))
 
         return list(map(lambda p: self.stack_2_eqn(p), self.individuals))
 

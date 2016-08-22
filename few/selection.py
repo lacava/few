@@ -18,79 +18,81 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 import numpy as np
 import copy
 
-def tournament(pop,tourn_size):
+def tournament(individuals,tourn_size, num_selections=None):
     """conducts tournament selection of size tourn_size, returning len(pop)
     individuals."""
     winners = []
-    for i in np.arange(len(pop.individuals)):
+    if num_selections is None:
+        num_selections = len(individuals)
+
+    for i in np.arange(num_selections):
         # sample pool with replacement
-        pool_i = np.random.choice(len(pop.individuals),size=tourn_size)
+        pool_i = np.random.choice(len(individuals),size=tourn_size)
         pool = []
         for i in pool_i:
-            pool.append(np.mean(pop.individuals[i].fitness))
+            pool.append(np.mean(individuals[i].fitness))
 
-        winners.append(copy.deepcopy(pop.individuals[pool_i[np.argmin(pool)]]))
-    # print("size winners:",len(winners))
-    # for index,i in enumerate(winners):
-    #     print("fitness "+str(index)+":",i.fitness)
-    # print("winners:",pop.stacks_2_eqns())
+        winners.append(copy.deepcopy(individuals[pool_i[np.argmin(pool)]]))
+
     return winners
 
-def lexicase(pop):
+def lexicase(individuals, num_selections=None):
     """conducts lexicase selection for de-aggregated fitness vectors"""
 
+    if num_selections is None:
+        num_selections = len(individuals)
     winners = []
     best_val_for_case = []
     # calculate best values for cases beforehand
-    for i in np.arange(len(pop.individuals[0].fitness_vec)):
-        best_val_for_case.append(min(map(lambda x: x.fitness_vec[i], pop.individuals)))
+    for i in np.arange(len(individuals[0].fitness_vec)):
+        best_val_for_case.append(min(map(lambda x: x.fitness_vec[i], individuals)))
 
-    for i in np.arange(len(pop.individuals)):
+    for i in np.arange(len(individuals)):
 
-        candidates = pop.individuals
-        # print("pop.individuals[0].fitness",pop.individuals[0].fitness)
-        cases = list(np.arange(len(pop.individuals[0].fitness_vec)))
+        candidates = individuals
+        # print("individuals[0].fitness",individuals[0].fitness)
+        cases = list(np.arange(len(individuals[0].fitness_vec)))
         np.random.shuffle(cases)
 
         while len(cases) > 0 and len(candidates) > 1:
             # filter individuals without an elite fitness on this case
-            candidates = list(filter(lambda x: x.fitness_vec[cases[0]] == best_val_for_case[cases[0]], pop.individuals))
+            candidates = list(filter(lambda x: x.fitness_vec[cases[0]] == best_val_for_case[cases[0]], individuals))
             cases.pop(0)
 
         winners.append(copy.deepcopy(np.random.choice(candidates)))
-    # print("winners:",pop.stacks_2_eqns())
+
     return winners
 
-def epsilon_lexicase(pop, num_selections=None):
+def epsilon_lexicase(individuals, num_selections=None):
     """conducts epsilon lexicase selection for de-aggregated fitness vectors"""
 
     if num_selections is None:
-        num_selections = len(pop.individuals)
+        num_selections = len(individuals)
 
     winners = []
     mad_for_case = []
     best_val_for_case = []
     # calculate epsilon thresholds based on median absolute deviation (MAD)
-    for i in np.arange(len(pop.individuals[0].fitness_vec)):
-        mad_for_case.append(mad(np.asarray(list(map(lambda x: x.fitness_vec[i], pop.individuals)))))
-        best_val_for_case.append(min(map(lambda x: x.fitness_vec[i], pop.individuals)))
+    for i in np.arange(len(individuals[0].fitness_vec)):
+        mad_for_case.append(mad(np.asarray(list(map(lambda x: x.fitness_vec[i], individuals)))))
+        best_val_for_case.append(min(map(lambda x: x.fitness_vec[i], individuals)))
 
     for i in np.arange(num_selections):
 
-        candidates = pop.individuals
-        cases = list(range(len(pop.individuals[0].fitness_vec)))
+        candidates = individuals
+        cases = list(range(len(individuals[0].fitness_vec)))
         np.random.shuffle(cases)
 
         while len(cases) > 0 and len(candidates) > 1:
             if not np.isinf(best_val_for_case):
                 # filter individuals without an elite+epsilon fitness on this case
-                candidates = list(filter(lambda x: x.fitness_vec[cases[0]] <= best_val_for_case[cases[0]]+mad_for_case[cases[0]], pop.individuals))
+                candidates = list(filter(lambda x: x.fitness_vec[cases[0]] <= best_val_for_case[cases[0]]+mad_for_case[cases[0]], individuals))
 
             cases.pop(0)
 
         winners.append(copy.deepcopy(np.random.choice(candidates)))
 
-    # print("winners:",pop.stacks_2_eqns())
+    # print("winners:",stacks_2_eqns())
 
     return winners
 

@@ -190,15 +190,13 @@ class FEW(object):
                 self._best_inds = pop.individuals[:]
                 print("best individuals updated")
             offspring = []
-            # Select the next generation individuals
-            if self.sel == 'tournament':
-                offspring[:] = tournament(pop, self.tourn_size)
-            elif self.sel == 'lexicase':
-                offspring[:] = lexicase(pop)
-            elif self.sel == 'epsilon_lexicase':
-                offspring[:] = epsilon_lexicase(pop)
 
-            # Clone the selected individuals
+            # clone individuals for offspring creation
+            if sel == 'lasso':
+                # for lasso, filter individuals with 0 coefficients
+                offspring = copy.deepcopy(list(filter(lambda i,x: x if i != 0, zip(ml.coef_,pop.individuals))))
+            else:
+                offspring = copy.deepcopy(pop.individuals)
 
             # Apply crossover and mutation on the offspring
             for child1, child2 in zip(offspring[::2], offspring[1::2]):
@@ -212,6 +210,14 @@ class FEW(object):
                     mutate(mutant.stack,self.func_set,self.term_set)
                     # print("pop being mutated:",list(map(lambda p: pop.stack_2_eqn(p), offspring)))
                     mutant.fitness = -1
+
+            # Select the next generation individuals
+            if self.sel == 'tournament':
+                offspring = tournament(pop.individuals + offspring, self.tourn_size,  len(pop.individuals))
+            elif self.sel == 'lexicase':
+                offspring = lexicase(pop.inviduals + offspring, len(pop.individuals))
+            elif self.sel == 'epsilon_lexicase':
+                offspring = epsilon_lexicase(pop.individuals + offspring, len(pop.individuals))
 
             # The population is entirely replaced by the offspring
             pop.individuals[:] = offspring
