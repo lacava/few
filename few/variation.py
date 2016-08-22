@@ -68,7 +68,7 @@ def cross(I,J):
     J[:] = tmpj
 
 def mutate(I,func_set,term_set):
-    """ mutates individual I """
+    """mutates individual I"""
     # point mutation
     # print("I:",I,"id:",id(I))
     x = np.random.randint(len(I))
@@ -87,11 +87,12 @@ def mutate(I,func_set,term_set):
     # return Imut
 
 def is_valid_program(p):
-    """ checks that the accumulated program length is always greater than the
+    """checks that the accumulated program length is always greater than the
     accumulated arities, indicating that the appropriate number of arguments is
     alway present for functions. It then checks that the sum of arties +1
     exactly equals the length of the stack, indicating that there are no
-    missing arguments. """
+    missing arguments.
+    """
     # print("p:",p)
     arities = list(a[1] for a in p)
     accu_arities = list(accumulate(arities))

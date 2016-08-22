@@ -19,8 +19,9 @@ import numpy as np
 import copy
 
 def tournament(pop,tourn_size):
-    """ conducts tournament selection of size tourn_size, returning len(pop)
-    individuals. """
+    """conducts tournament selection of size tourn_size, returning len(pop)
+    individuals.
+    """
     winners = []
     for i in np.arange(len(pop.individuals)):
         # sample pool with replacement
@@ -37,7 +38,7 @@ def tournament(pop,tourn_size):
     return winners
 
 def lexicase(pop):
-    """ conducts lexicase selection for de-aggregated fitness vectors"""
+    """conducts lexicase selection for de-aggregated fitness vectors"""
 
     winners = []
 
@@ -60,7 +61,7 @@ def lexicase(pop):
     return winners
 
 def epsilon_lexicase(pop):
-    """ conducts epsilon lexicase selection for de-aggregated fitness vectors"""
+    """conducts epsilon lexicase selection for de-aggregated fitness vectors"""
 
     winners = []
 
@@ -88,5 +89,5 @@ def epsilon_lexicase(pop):
     return winners
 
 def mad(x, axis=None):
-    """ median absolute deviation statistics """
+    """median absolute deviation statistics"""
     return np.median(np.abs(x - np.median(x, axis)), axis)

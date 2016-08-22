@@ -30,17 +30,17 @@ eqn_dict = {
 }
 
 class ind(object):
-	""" class for features, represented as GP stacks."""
+	"""class for features, represented as GP stacks."""
 	def __init__(self,fitness = -1.0,stack = []):
-		""" initializes empty individual with invalid fitness. """
+		"""initializes empty individual with invalid fitness."""
 		self.fitness = fitness
 		self.fitness_vec = []
 		self.stack = stack[:]
 
 class Pop(object):
-	""" class representing population """
+	"""class representing population"""
 	def __init__(self,pop_size=100,n_samples=1, fit = None):
-		""" initializes population of inds of size pop_size """
+		"""initializes population of inds of size pop_size"""
 		print("pop_size:",pop_size)
 		print("n_samples:",n_samples)
 		self.individuals = []
@@ -56,7 +56,7 @@ class Pop(object):
 				self.individuals.append(ind(fitness = [fit]))
 
 	def stacks_2_eqns(self):
-		""" returns equation strings from stacks"""
+		"""returns equation strings from stacks"""
 		# eqns = []
 		# for p in self.individuals:
 		# 	eqns.append(self.stack_2_eqn(p))
@@ -64,7 +64,7 @@ class Pop(object):
 		return list(map(lambda p: self.stack_2_eqn(p), self.individuals))
 
 	def stack_2_eqn(self,p):
-		""" returns equation string for program stack """
+		"""returns equation string for program stack"""
 		stack_eqn = []
 		if p: # if stack is not empty
 			for n in p.stack:
@@ -79,7 +79,7 @@ class Pop(object):
 	        #     print("problem operator:",n)
 
 def make_program(stack,func_set,term_set,max_d):
-	""" makes a program stack. """
+	"""makes a program stack"""
 	# print("stack:",stack,"max d:",max_d)
 	if max_d == 0: #or np.random.rand() < float(len(term_set))/(len(term_set)+len(func_set)):
 		stack.append(term_set[np.random.choice(len(term_set))])
@@ -91,7 +91,7 @@ def make_program(stack,func_set,term_set,max_d):
 	# print("current stack:",stack)
 
 def init(population_size,n_samples,func_set,term_set,min_depth,max_depth):
-	""" initializes population of features as GP stacks. """
+	"""initializes population of features as GP stacks"""
 	pop = Pop(population_size,n_samples)
 
 	for I in pop.individuals:

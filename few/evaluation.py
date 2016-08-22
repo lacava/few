@@ -35,7 +35,7 @@ eval_dict = {
     'k': lambda n,features,stack_float: np.ones(features.shape[0])*n[2]
 }
 def safe(x):
-    """ removes nans and infs from outputs. """
+    """removes nans and infs from outputs."""
     x[np.isinf(x)] = 0
     x[np.isnan(x)] = 0
     return x
@@ -48,7 +48,7 @@ def eval(n, features, stack_float):
             print("problem operator:",n)
 
 def out(I,features,labels=None):
-    """computes the output for individual I """
+    """computes the output for individual I"""
     stack_float = []
     # print("stack:",I.stack)
     # evaulate stack over rows of features,labels

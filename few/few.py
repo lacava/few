@@ -35,8 +35,9 @@ import itertools as it
 # NUM_THREADS = mp.cpu_count()
 
 class FEW(object):
-    """ FEW uses GP to find a set of transformations from the original feature space
-    that produces the best performance for a given machine learner. """
+    """FEW uses GP to find a set of transformations from the original feature space
+    that produces the best performance for a given machine learner.
+    """
     def __init__(self, population_size=100, generations=100,
                  mutation_rate=0.2, crossover_rate=0.8,
                  machine_learner = 'lasso', min_depth = 1, max_depth = 5, max_depth_init = 5,
@@ -99,7 +100,7 @@ class FEW(object):
         self.term_set = []
 
     def fit(self, features, labels):
-        """ Fit model to data """
+        """Fit model to data"""
         # setup data
 
         # Train-test split routine for internal validation
@@ -249,20 +250,20 @@ class FEW(object):
         return self.score(features,labels)
 
     def transform(self,x,inds,labels = None):
-        """ return a transformation of x using population outputs """
+        """return a transformation of x using population outputs"""
         return np.asarray(list(map(lambda I: out(I,x,labels), inds)),order='F')
 
     def clean(self,x):
-        """ remove nan and inf rows from x """
+        """remove nan and inf rows from x"""
         return x[~np.any(np.isnan(x) | np.isinf(x),axis=1)]
 
     def clean_with_zeros(self,x):
-        """ set nan and inf rows from x to zero """
+        """ set nan and inf rows from x to zero"""
         x[~np.any(np.isnan(x) | np.isinf(x),axis=1)] = 0
         return x
 
     def predict(self, testing_features):
-        """ predict on a holdout data set. """
+        """predict on a holdout data set."""
         # print("best_inds:",self._best_inds)
         # print("best estimator size:",self._best_estimator.coef_.shape)
         if self._best_inds is None:
@@ -291,19 +292,19 @@ class FEW(object):
         return self.predict(features)
 
     def score(self, testing_features, testing_labels):
-        """ estimates accuracy on testing set """
+        """estimates accuracy on testing set"""
         # print("test features shape:",testing_features.shape)
         # print("testing labels shape:",testing_labels.shape)
         yhat = self.predict(testing_features)
         return r2_score(testing_labels,yhat)
 
     def get_params(self, deep=None):
-        """ returns parameters of the current FEW instance """
+        """returns parameters of the current FEW instance"""
     def export(self, output_file_name):
-        """ exports engineered features """
+        """exports engineered features"""
 
     def init_pop(self):
-    	""" initializes population of features as GP stacks. """
+    	"""initializes population of features as GP stacks."""
     	pop = Pop(self.population_size,self._training_features.shape[0])
     	# make programs
     	if self.seed_with_ml:
