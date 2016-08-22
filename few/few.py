@@ -175,7 +175,7 @@ class FEW(object):
             # print("X shape:",pop.X.shape)
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                # print("population:",pop.stacks_2_eqns())
+                print("population:",pop.stacks_2_eqns())
                 self.ml.fit(pop.X.transpose(),y_t)
             # keep best model
             try:
@@ -192,9 +192,9 @@ class FEW(object):
             offspring = []
 
             # clone individuals for offspring creation
-            if sel == 'lasso':
+            if self.sel == 'lasso':
                 # for lasso, filter individuals with 0 coefficients
-                offspring = copy.deepcopy(list(filter(lambda i,x: x if i != 0, zip(ml.coef_,pop.individuals))))
+                offspring = copy.deepcopy(list(x for i,x in zip(ml.coef_, pop.individuals) if  i != 0))
             else:
                 offspring = copy.deepcopy(pop.individuals)
 
@@ -211,13 +211,13 @@ class FEW(object):
                     # print("pop being mutated:",list(map(lambda p: pop.stack_2_eqn(p), offspring)))
                     mutant.fitness = -1
 
-            # Select the next generation individuals
+            # Survival the next generation individuals
             if self.sel == 'tournament':
-                offspring = tournament(pop.individuals + offspring, self.tourn_size,  len(pop.individuals))
+                offspring = tournament(pop.individuals + offspring, self.tourn_size, num_selections = len(pop.individuals))
             elif self.sel == 'lexicase':
-                offspring = lexicase(pop.inviduals + offspring, len(pop.individuals))
+                offspring = lexicase(pop.inviduals + offspring, len(pop.individuals), survival = True)
             elif self.sel == 'epsilon_lexicase':
-                offspring = epsilon_lexicase(pop.individuals + offspring, len(pop.individuals))
+                offspring = epsilon_lexicase(pop.individuals + offspring, len(pop.individuals), survival = True)
 
             # The population is entirely replaced by the offspring
             pop.individuals[:] = offspring

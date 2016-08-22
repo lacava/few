@@ -36,7 +36,7 @@ def tournament(individuals,tourn_size, num_selections=None):
 
     return winners
 
-def lexicase(individuals, num_selections=None):
+def lexicase(individuals, num_selections=None, survival = False):
     """conducts lexicase selection for de-aggregated fitness vectors"""
 
     if num_selections is None:
@@ -47,7 +47,7 @@ def lexicase(individuals, num_selections=None):
     for i in np.arange(len(individuals[0].fitness_vec)):
         best_val_for_case.append(min(map(lambda x: x.fitness_vec[i], individuals)))
 
-    for i in np.arange(len(individuals)):
+    for i in np.arange(num_selections):
 
         candidates = individuals
         # print("individuals[0].fitness",individuals[0].fitness)
@@ -59,11 +59,14 @@ def lexicase(individuals, num_selections=None):
             candidates = list(filter(lambda x: x.fitness_vec[cases[0]] == best_val_for_case[cases[0]], individuals))
             cases.pop(0)
 
-        winners.append(copy.deepcopy(np.random.choice(candidates)))
+        choice = np.random.randint(len(candidates))
+        winners.append(copy.deepcopy(candidates[choice]))
+        # if survival: # filter out winners (and clones) from remaining selection pool
+        #     individuals = list(filter(lambda x: x != candidates[choice], individuals))
 
     return winners
 
-def epsilon_lexicase(individuals, num_selections=None):
+def epsilon_lexicase(individuals, num_selections=None, survival = False):
     """conducts epsilon lexicase selection for de-aggregated fitness vectors"""
 
     if num_selections is None:
@@ -89,8 +92,13 @@ def epsilon_lexicase(individuals, num_selections=None):
                 candidates = list(filter(lambda x: x.fitness_vec[cases[0]] <= best_val_for_case[cases[0]]+mad_for_case[cases[0]], individuals))
 
             cases.pop(0)
+        if len(candidates) == 0:
+            print("out of candidates!")
+        choice = np.random.randint(len(candidates))
+        winners.append(copy.deepcopy(candidates[choice]))
+        # if survival: # filter out winners from remaining selection pool
+        #     individuals = list(filter(lambda x: x != candidates[choice], individuals))
 
-        winners.append(copy.deepcopy(np.random.choice(candidates)))
 
     # print("winners:",stacks_2_eqns())
 
