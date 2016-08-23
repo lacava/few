@@ -23,6 +23,7 @@ from .population import *
 from .variation import *
 from .selection import *
 
+from sklearn.base import BaseEstimator
 from sklearn.linear_model import LassoLarsCV
 from sklearn.cross_validation import train_test_split
 from sklearn.metrics import r2_score
@@ -37,7 +38,7 @@ from update_checker import update_check
 # import multiprocessing as mp
 # NUM_THREADS = mp.cpu_count()
 
-class FEW(object):
+class FEW(BaseEstimator):
     """FEW uses GP to find a set of transformations from the original feature space
     that produces the best performance for a given machine learner.
     """
@@ -53,6 +54,8 @@ class FEW(object):
 
         # Save params to be recalled later by get_params()
         self.params = locals()  # Must be placed before any local variable definitions
+        self.params.pop('self')
+
         # Do not prompt the user to update during this session if they ever disabled the update check
         if disable_update_check:
             FEW.update_checked = True
@@ -308,25 +311,6 @@ class FEW(object):
         # print("testing labels shape:",testing_labels.shape)
         yhat = self.predict(testing_features)
         return self.scoring_function(testing_labels,yhat)
-
-    def get_params(self, deep=None):
-        """returns parameters of the current FEW instance
-
-        This function is necessary for FEW to work as a drop-in estimator in,
-        e.g., sklearn.cross_validation.cross_val_score
-
-        Parameters
-        ----------
-        deep: unused
-            Only implemented to maintain interface for sklearn
-
-        Returns
-        -------
-        params : mapping of string to any
-            Parameter names mapped to their values.
-
-        """
-        return self.params
 
     def export(self, output_file_name):
         """exports engineered features
