@@ -15,15 +15,21 @@ Usage
 ===
 Few uses the same nomenclature as [sklearn](http://scikit-learn.org/) supervised learning modules. Given a set of data with variables X and target Y, you can call Few in python as:
 
-```learner = Few(X,Y)```
+```python
+learner = Few(X,Y)
+```
 
 or specify a machine learning algorithm as:
 
-```learner = Few(X,Y,machine_learner = 'lasso')```
+```python
+learner = Few(X,Y,machine_learner = 'lasso')
+```
 
 Then optimize the set of feature transformations using the ```fit()``` method:
 
-```learner.fit()```
+```python
+learner.fit()
+```
 
 You have now learned a set of feature tranformations for your data. See the documentation (forthcoming) for more information.
 
