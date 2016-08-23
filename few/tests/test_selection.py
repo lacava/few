@@ -58,11 +58,25 @@ def test_epsilon_lexicase_shapes():
 
 def test_lexicase_survival_shapes():
     """test_selection.py: lexicase survival returns correct shape"""
-    pop = Pop(257)
+    func_set = [('+',2),('-',2),('*',2),('/',2),('sin',1),('cos',1),('exp',1),('log',1)]
+    # terminal set
+    term_set = []
+    n_features = 3
+    # numbers represent column indices of features
+    for i in np.arange(n_features):
+        term_set.append(('x'+str(i),0,i)) # features
+        # term_set.append(('erc',0,np.random.rand())) # ephemeral random constants
+
+    pop = init(257,10,func_set,term_set,1,5)
+    for i in pop.individuals:
+        i.fitness_vec = list(np.random.rand(10,1))
+
     offspring = lexicase(pop.individuals,num_selections=100,survival=True)
     assert len(offspring) == 100
 
     # smaller popsize than tournament size
-    pop = Pop(2)
+    pop = init(2,10,func_set,term_set,1,5)
+    for i in pop.individuals:
+        i.fitness_vec = np.random.rand(10,1)
     offspring = lexicase(pop.individuals,num_selections=1,survival=True)
     assert len(offspring) == 1;

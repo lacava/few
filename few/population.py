@@ -63,7 +63,10 @@ class Pop(object):
 
 def stacks_2_eqns(stacks):
     """returns equation strings from stacks"""
-    return list(map(lambda p: stack_2_eqn(p), stacks))
+    if stacks:
+        return list(map(lambda p: stack_2_eqn(p), stacks))
+    else:
+        return []
 
 def stack_2_eqn(p):
     """returns equation string for program stack"""

@@ -42,13 +42,13 @@ def lexicase(individuals, num_selections=None, survival = False):
     if num_selections is None:
         num_selections = len(individuals)
     winners = []
-    best_val_for_case = []
+    # best_val_for_case = []
     # calculate best values for cases beforehand
     # for i in np.arange(len(individuals[0].fitness_vec)):
     #     best_val_for_case.append(min(map(lambda x: x.fitness_vec[i], individuals)))
 
     for i in np.arange(num_selections):
-
+                
         candidates = individuals
         # print("individuals[0].fitness",individuals[0].fitness)
         cases = list(np.arange(len(individuals[0].fitness_vec)))
@@ -58,7 +58,7 @@ def lexicase(individuals, num_selections=None, survival = False):
 
             best_val_for_case = min(map(lambda x: x.fitness_vec[cases[0]], individuals))
             # filter individuals without an elite fitness on this case
-            candidates = list(filter(lambda x: x.fitness_vec[cases[0]] == best_val_for_case[cases[0]], individuals))
+            candidates = list(filter(lambda x: x.fitness_vec[cases[0]] == best_val_for_case, individuals))
             cases.pop(0)
 
         if len(candidates) == 0:
