@@ -16,7 +16,7 @@ setup(
     author_email='lacava@upenn.edu',
     packages=find_packages(),
     url='https://github.com/lacava/few',
-    download_url='https://github.com/lacava/few/releases/tag/'+package_version
+    download_url='https://github.com/lacava/few/releases/tag/'+package_version,
     license='GNU/GPLv3',
     entry_points={'console_scripts': ['few=few:main', ]},
     test_suite='nose.collector',
