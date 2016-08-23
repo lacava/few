@@ -199,7 +199,8 @@ class FEW(object):
             # clone individuals for offspring creation
             if self.sel == 'lasso':
                 # for lasso, filter individuals with 0 coefficients
-                offspring = copy.deepcopy(list(x for i,x in zip(ml.coef_, pop.individuals) if  i != 0))
+                pdb.set_trace()
+                offspring = copy.deepcopy(list(x for i,x in zip(self.ml.coef_, pop.individuals) if  i != 0))
             else:
                 offspring = copy.deepcopy(pop.individuals)
 
@@ -320,7 +321,7 @@ class FEW(object):
 
         """
         return self.params
-        
+
     def export(self, output_file_name):
         """exports engineered features
 

@@ -19,8 +19,7 @@ import numpy as np
 import copy
 
 def tournament(individuals,tourn_size, num_selections=None):
-    """conducts tournament selection of size tourn_size, returning len(pop)
-    individuals."""
+    """conducts tournament selection of size tourn_size"""
     winners = []
     if num_selections is None:
         num_selections = len(individuals)
@@ -38,7 +37,6 @@ def tournament(individuals,tourn_size, num_selections=None):
 
 def lexicase(individuals, num_selections=None, survival = False):
     """conducts lexicase selection for de-aggregated fitness vectors"""
-
     if num_selections is None:
         num_selections = len(individuals)
     winners = []
@@ -48,7 +46,7 @@ def lexicase(individuals, num_selections=None, survival = False):
     #     best_val_for_case.append(min(map(lambda x: x.fitness_vec[i], individuals)))
 
     for i in np.arange(num_selections):
-                
+
         candidates = individuals
         # print("individuals[0].fitness",individuals[0].fitness)
         cases = list(np.arange(len(individuals[0].fitness_vec)))
@@ -74,7 +72,6 @@ def lexicase(individuals, num_selections=None, survival = False):
 
 def epsilon_lexicase(individuals, num_selections=None, survival = False):
     """conducts epsilon lexicase selection for de-aggregated fitness vectors"""
-
     if num_selections is None:
         num_selections = len(individuals)
 

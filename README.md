@@ -13,16 +13,22 @@ Install
 
 Usage
 ===
+In a python script, import FEW:
+
+```python
+from few.few import FEW
+```
+
 Few uses the same nomenclature as [sklearn](http://scikit-learn.org/) supervised learning modules. Given a set of data with variables X and target Y, you can call Few in python as:
 
 ```python
-learner = Few(X,Y)
+learner = FEW(X,Y)
 ```
 
 or specify a machine learning algorithm as:
 
 ```python
-learner = Few(X,Y,machine_learner = 'lasso')
+learner = FEW(X,Y,machine_learner = 'lasso')
 ```
 
 Then optimize the set of feature transformations using the ```fit()``` method:
@@ -31,7 +37,17 @@ Then optimize the set of feature transformations using the ```fit()``` method:
 learner.fit()
 ```
 
-You have now learned a set of feature tranformations for your data. See the documentation (forthcoming) for more information.
+You have now learned a set of feature tranformations for your data. 
+
+You can also call Few from the terminal as
+
+```bash
+python -m few.few data_file_name 
+```
+
+try ```python -m few.few --help``` to see options.
+
+See the documentation (forthcoming) for more information.
 
 Acknowledgments
 ===
