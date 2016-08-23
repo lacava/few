@@ -44,8 +44,8 @@ def lexicase(individuals, num_selections=None, survival = False):
     winners = []
     best_val_for_case = []
     # calculate best values for cases beforehand
-    for i in np.arange(len(individuals[0].fitness_vec)):
-        best_val_for_case.append(min(map(lambda x: x.fitness_vec[i], individuals)))
+    # for i in np.arange(len(individuals[0].fitness_vec)):
+    #     best_val_for_case.append(min(map(lambda x: x.fitness_vec[i], individuals)))
 
     for i in np.arange(num_selections):
 
@@ -55,14 +55,20 @@ def lexicase(individuals, num_selections=None, survival = False):
         np.random.shuffle(cases)
 
         while len(cases) > 0 and len(candidates) > 1:
+
+            best_val_for_case = min(map(lambda x: x.fitness_vec[cases[0]], individuals))
             # filter individuals without an elite fitness on this case
             candidates = list(filter(lambda x: x.fitness_vec[cases[0]] == best_val_for_case[cases[0]], individuals))
             cases.pop(0)
 
-        choice = np.random.randint(len(candidates))
-        winners.append(copy.deepcopy(candidates[choice]))
-        # if survival: # filter out winners (and clones) from remaining selection pool
-        #     individuals = list(filter(lambda x: x != candidates[choice], individuals))
+        if len(candidates) == 0:
+            print("out of candidates!")
+            winners.append(np.random.choice(individuals))
+        else:
+            choice = np.random.randint(len(candidates))
+            winners.append(copy.deepcopy(candidates[choice]))
+            if survival: # filter out winners from remaining selection pool
+                 individuals = list(filter(lambda x: x.stack != candidates[choice].stack, individuals))
 
     return winners
 
@@ -78,7 +84,7 @@ def epsilon_lexicase(individuals, num_selections=None, survival = False):
     # calculate epsilon thresholds based on median absolute deviation (MAD)
     for i in np.arange(len(individuals[0].fitness_vec)):
         mad_for_case.append(mad(np.asarray(list(map(lambda x: x.fitness_vec[i], individuals)))))
-        best_val_for_case.append(min(map(lambda x: x.fitness_vec[i], individuals)))
+        # best_val_for_case.append(min(map(lambda x: x.fitness_vec[i], individuals)))
 
     for i in np.arange(num_selections):
 
@@ -87,23 +93,26 @@ def epsilon_lexicase(individuals, num_selections=None, survival = False):
         np.random.shuffle(cases)
 
         while len(cases) > 0 and len(candidates) > 1:
+
+            best_val_for_case = min(map(lambda x: x.fitness_vec[cases[0]], individuals))
+
             if not np.isinf(best_val_for_case):
                 # filter individuals without an elite+epsilon fitness on this case
-                candidates = list(filter(lambda x: x.fitness_vec[cases[0]] <= best_val_for_case[cases[0]]+mad_for_case[cases[0]], individuals))
+                candidates = list(filter(lambda x: x.fitness_vec[cases[0]] <= best_val_for_case+mad_for_case[cases[0]], individuals))
 
             cases.pop(0)
-        if len(candidates) == 0:
+        if len(candidates) == 0: # should not happen
             print("out of candidates!")
-        choice = np.random.randint(len(candidates))
-        winners.append(copy.deepcopy(candidates[choice]))
-        # if survival: # filter out winners from remaining selection pool
-        #     individuals = list(filter(lambda x: x != candidates[choice], individuals))
-
-
-    # print("winners:",stacks_2_eqns())
+            winners.append(np.random.choice(individuals))
+        else:
+            choice = np.random.randint(len(candidates))
+            winners.append(copy.deepcopy(candidates[choice]))
+            if survival: # filter out winners from remaining selection pool
+                 individuals = list(filter(lambda x: x.stack != candidates[choice].stack, individuals))
 
     return winners
 
+
 def mad(x, axis=None):
-    """median absolute deviation statistics"""
+    """median absolute deviation statistic"""
     return np.median(np.abs(x - np.median(x, axis)), axis)

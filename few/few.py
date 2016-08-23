@@ -31,6 +31,7 @@ import pandas as pd
 import warnings
 import copy
 import itertools as it
+import pdb
 # import multiprocessing as mp
 # NUM_THREADS = mp.cpu_count()
 
@@ -172,6 +173,7 @@ class FEW(object):
                 ind.fitness = np.nanmin([fit,99999.666])
         # for each generation g
         for g in np.arange(self.generations):
+            # pdb.set_trace()
             # print("X shape:",pop.X.shape)
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
@@ -202,14 +204,17 @@ class FEW(object):
             for child1, child2 in zip(offspring[::2], offspring[1::2]):
                 if np.random.rand() < self.crossover_rate:
                     cross(child1.stack, child2.stack, self.max_depth)
-                    child1.fitness = -1
-                    child2.fitness = -1
+                else:
+                    mutate(child1.stack,self.func_set,self.term_set)
+                    mutate(child2.stack,self.func_set,self.term_set)
+                child1.fitness = -1
+                child2.fitness = -1
 
-            for mutant in offspring:
-                if np.random.rand() < self.mutation_rate:
-                    mutate(mutant.stack,self.func_set,self.term_set)
-                    # print("pop being mutated:",list(map(lambda p: pop.stack_2_eqn(p), offspring)))
-                    mutant.fitness = -1
+            # for mutant in offspring:
+            #     if np.random.rand() < self.mutation_rate:
+            #         mutate(mutant.stack,self.func_set,self.term_set)
+            #         # print("pop being mutated:",list(map(lambda p: pop.stack_2_eqn(p), offspring)))
+            #         mutant.fitness = -1
 
             # Survival the next generation individuals
             if self.sel == 'tournament':
@@ -217,7 +222,10 @@ class FEW(object):
             elif self.sel == 'lexicase':
                 offspring = lexicase(pop.inviduals + offspring, len(pop.individuals), survival = True)
             elif self.sel == 'epsilon_lexicase':
+                # print("pop going in to ep lexicase:",pop.stacks_2_eqns(pop.individuals + offspring))
                 offspring = epsilon_lexicase(pop.individuals + offspring, len(pop.individuals), survival = True)
+                # print("pop coming out of ep lexicase:",pop.stacks_2_eqns(offspring))
+
 
             # The population is entirely replaced by the offspring
             pop.individuals[:] = offspring
@@ -311,9 +319,9 @@ class FEW(object):
                         # make program if pop is bigger than model componennts
                         make_program(p.stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1))
                         p.stack = list(reversed(p.stack))
-            # print("population:")
-            for p in pop.individuals:
-                print(p.stack)
+            # print initial population            
+            print("seeded initial population:",pop.stacks_2_eqns())
+
     	else:
     		for I in pop.individuals:
     			depth = np.random.randint(self.min_depth,self.max_depth+1)
@@ -393,10 +401,10 @@ def main():
     parser.add_argument('-p', action='store', dest='POPULATION_SIZE', default=100,
                         type=positive_integer, help='Number of individuals in the GP population.')
 
-    parser.add_argument('-mr', action='store', dest='MUTATION_RATE', default=0.5,
+    parser.add_argument('-mr', action='store', dest='MUTATION_RATE', default=0.8,
                         type=float_range, help='GP mutation rate in the range [0.0, 1.0].')
 
-    parser.add_argument('-xr', action='store', dest='CROSSOVER_RATE', default=0.5,
+    parser.add_argument('-xr', action='store', dest='CROSSOVER_RATE', default=0.2,
                         type=float_range, help='GP crossover rate in the range [0.0, 1.0].')
 
     parser.add_argument('-ml', action='store', dest='MACHINE_LEARNER', default='lasso', choices = ['lasso'],
