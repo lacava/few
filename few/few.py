@@ -32,6 +32,8 @@ import warnings
 import copy
 import itertools as it
 import pdb
+from update_checker import update_check
+
 # import multiprocessing as mp
 # NUM_THREADS = mp.cpu_count()
 
@@ -39,26 +41,26 @@ class FEW(object):
     """FEW uses GP to find a set of transformations from the original feature space
     that produces the best performance for a given machine learner.
     """
+    update_checked = False
+
     def __init__(self, population_size=100, generations=100,
                  mutation_rate=0.2, crossover_rate=0.8,
                  machine_learner = 'lasso', min_depth = 1, max_depth = 5, max_depth_init = 5,
                  sel = 'tournament', tourn_size = 2, fit_choice = 'mse', op_weight = False,
-                 seed_with_ml = False, erc = False, random_state=0, verbosity=0, scoring_function=None,
+                 seed_with_ml = False, erc = False, random_state=0, verbosity=0, scoring_function=r2_score,
                  disable_update_check=False):
                 # sets up GP.
 
         # Save params to be recalled later by get_params()
         self.params = locals()  # Must be placed before any local variable definitions
-        # self.params.pop('self')
-
         # Do not prompt the user to update during this session if they ever disabled the update check
-        # if disable_update_check:
-        #     FEW.update_checked = True
+        if disable_update_check:
+            FEW.update_checked = True
 
         # Prompt the user if their version is out of date
-        # if not disable_update_check and not FEW.update_checked:
-        #     update_check('FEW', __version__)
-        #     FEW.update_checked = True
+        if not disable_update_check and not FEW.update_checked:
+            update_check('FEW', __version__)
+            FEW.update_checked = True
 
         self._best_estimator = None
         self._training_features = None
@@ -79,7 +81,11 @@ class FEW(object):
         self.seed_with_ml = seed_with_ml
         self.erc = erc
         # self.op_weight = op_weight
+        self.scoring_function = scoring_function
+        np.random.seed(random_state)
+
         self.sel = sel
+
         if "lexicase" in sel and ("_vec" not in fit_choice or "_rel" not in fit_choice):
             self._fit_choice += "_vec"
 
@@ -301,7 +307,7 @@ class FEW(object):
         # print("test features shape:",testing_features.shape)
         # print("testing labels shape:",testing_labels.shape)
         yhat = self.predict(testing_features)
-        return r2_score(testing_labels,yhat)
+        return self.scoring_function(testing_labels,yhat)
 
     def get_params(self, deep=None):
         """returns parameters of the current FEW instance
