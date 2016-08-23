@@ -61,27 +61,24 @@ class Pop(object):
             else:
                 self.individuals.append(ind(fitness = fit))
 
-    def stacks_2_eqns(self,stacks=None):
-        """returns equation strings from stacks"""
-        if stacks is None:
-            return list(map(lambda p: self.stack_2_eqn(p), self.individuals))
-        else:
-            return list(map(lambda p: self.stack_2_eqn(p), stacks))
+def stacks_2_eqns(stacks):
+    """returns equation strings from stacks"""
+    return list(map(lambda p: stack_2_eqn(p), stacks))
 
-    def stack_2_eqn(self,p):
-        """returns equation string for program stack"""
-        stack_eqn = []
-        if p: # if stack is not empty
-            for n in p.stack:
-                self.eval_eqn(n,stack_eqn)
-            return stack_eqn[-1]
-        return []
+def stack_2_eqn(p):
+    """returns equation string for program stack"""
+    stack_eqn = []
+    if p: # if stack is not empty
+        for n in p.stack:
+            eval_eqn(n,stack_eqn)
+        return stack_eqn[-1]
+    return []
 
-    def eval_eqn(self,n,stack_eqn):
-        if len(stack_eqn) >= n[1]:
-            stack_eqn.append(eqn_dict[n[0]](n,stack_eqn))
-            # if any(np.isnan(stack_eqn[-1])) or any(np.isinf(stack_eqn[-1])):
-            #     print("problem operator:",n)
+def eval_eqn(n,stack_eqn):
+    if len(stack_eqn) >= n[1]:
+        stack_eqn.append(eqn_dict[n[0]](n,stack_eqn))
+        # if any(np.isnan(stack_eqn[-1])) or any(np.isinf(stack_eqn[-1])):
+        #     print("problem operator:",n)
 
 def make_program(stack,func_set,term_set,max_d):
     """makes a program stack"""

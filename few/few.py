@@ -177,8 +177,11 @@ class FEW(object):
             # print("X shape:",pop.X.shape)
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                # print("population:",pop.stacks_2_eqns())
-                self.ml.fit(pop.X.transpose(),y_t)
+                # print("population:",stacks_2_eqns())
+                try:
+                    self.ml.fit(pop.X.transpose(),y_t)
+                except:
+                    pdb.set_trace()
             # keep best model
             try:
                 tmp = self.ml.score((self.transform(x_v,pop.individuals)).transpose(),y_v)
@@ -186,11 +189,11 @@ class FEW(object):
                 tmp = 0
 
             if tmp > self._best_score:
-                print("new best score:",self._best_score)
+                print("best internal validation score:",self._best_score)
                 self._best_estimator = copy.deepcopy(self.ml)
                 self._best_score = tmp
                 self._best_inds = pop.individuals[:]
-                print("best individuals updated")
+                # print("best individuals updated")
             offspring = []
 
             # clone individuals for offspring creation
@@ -213,7 +216,7 @@ class FEW(object):
             # for mutant in offspring:
             #     if np.random.rand() < self.mutation_rate:
             #         mutate(mutant.stack,self.func_set,self.term_set)
-            #         # print("pop being mutated:",list(map(lambda p: pop.stack_2_eqn(p), offspring)))
+            #         # print("pop being mutated:",list(map(lambda p: stack_2_eqn(p), offspring)))
             #         mutant.fitness = -1
 
             # Survival the next generation individuals
@@ -222,9 +225,9 @@ class FEW(object):
             elif self.sel == 'lexicase':
                 offspring = lexicase(pop.inviduals + offspring, len(pop.individuals), survival = True)
             elif self.sel == 'epsilon_lexicase':
-                # print("pop going in to ep lexicase:",pop.stacks_2_eqns(pop.individuals + offspring))
+                # print("pop going in to ep lexicase:",stacks_2_eqns(pop.individuals + offspring))
                 offspring = epsilon_lexicase(pop.individuals + offspring, len(pop.individuals), survival = True)
-                # print("pop coming out of ep lexicase:",pop.stacks_2_eqns(offspring))
+                # print("pop coming out of ep lexicase:",stacks_2_eqns(offspring))
 
 
             # The population is entirely replaced by the offspring
@@ -247,7 +250,7 @@ class FEW(object):
                     ind.fitness = np.nanmin([fit,99999.666])
 
         print("best score:",self._best_score)
-        print("features:",pop.stacks_2_eqns())
+        print("features:",stacks_2_eqns(self._best_inds))
         return self.score(features,labels)
 
     def transform(self,x,inds,labels = None):
@@ -300,9 +303,61 @@ class FEW(object):
         return r2_score(testing_labels,yhat)
 
     def get_params(self, deep=None):
-        """returns parameters of the current FEW instance"""
+        """returns parameters of the current FEW instance
+
+        This function is necessary for FEW to work as a drop-in estimator in,
+        e.g., sklearn.cross_validation.cross_val_score
+
+        Parameters
+        ----------
+        deep: unused
+            Only implemented to maintain interface for sklearn
+
+        Returns
+        -------
+        params : mapping of string to any
+            Parameter names mapped to their values.
+
+        """
+
+        return self.params
     def export(self, output_file_name):
-        """exports engineered features"""
+        """exports engineered features
+
+        Parameters
+        ----------
+        output_file_name: string
+            String containing the path and file name of the desired output file
+
+        Returns
+        -------
+        None
+
+        """
+        if self._best_estimator is None:
+            raise ValueError('A model has not been optimized. Please call fit() first.')
+
+        # Have the exported code import all of the necessary modules and functions
+        # write model form from coefficients and features
+        model = ''
+        sym_model = ''
+        x = 0
+        for c,i in zip(self._best_estimator.coef_,stacks_2_eqns(self._best_inds)):
+           if c != 0:
+               if model:
+                   model+= '+'
+                   sym_model += '+'
+               model+= str(c) + '*' + str(i)
+               sym_model += "k_" + str(x) + '*' + str(i)
+               x += 1
+
+        print_text = "exact_model: " + model
+        print_text += "\nsymbolic_model: " + sym_model
+        print_text += "\ncoefficients: " + str([c for c in self._best_estimator.coef_ if c != 0])
+        print_text += "\nfeatures: " + str([s for s,c in zip(stacks_2_eqns(self._best_inds),self._best_estimator.coef_) if c!=0])
+
+        with open(output_file_name, 'w') as output_file:
+            output_file.write(print_text)
 
     def init_pop(self):
     	"""initializes population of features as GP stacks."""
@@ -319,8 +374,8 @@ class FEW(object):
                         # make program if pop is bigger than model componennts
                         make_program(p.stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1))
                         p.stack = list(reversed(p.stack))
-            # print initial population            
-            print("seeded initial population:",pop.stacks_2_eqns())
+            # print initial population
+            print("seeded initial population:",stacks_2_eqns(pop.individuals))
 
     	else:
     		for I in pop.individuals:
