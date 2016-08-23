@@ -319,8 +319,8 @@ class FEW(object):
             Parameter names mapped to their values.
 
         """
-
         return self.params
+        
     def export(self, output_file_name):
         """exports engineered features
 
@@ -360,10 +360,10 @@ class FEW(object):
             output_file.write(print_text)
 
     def init_pop(self):
-    	"""initializes population of features as GP stacks."""
-    	pop = Pop(self.population_size,self._training_features.shape[0])
-    	# make programs
-    	if self.seed_with_ml:
+        """initializes population of features as GP stacks."""
+        pop = Pop(self.population_size,self._training_features.shape[0])
+        # make programs
+        if self.seed_with_ml:
             # initial population is the components of the default ml model
             if self.machine_learner == 'lasso':
                 # add all model components with non-zero coefficients
@@ -377,19 +377,19 @@ class FEW(object):
             # print initial population
             print("seeded initial population:",stacks_2_eqns(pop.individuals))
 
-    	else:
-    		for I in pop.individuals:
-    			depth = np.random.randint(self.min_depth,self.max_depth+1)
-    			# print("hex(id(I)):",hex(id(I)))
-    			# depth = 2;
-    			# print("initial I.stack:",I.stack)
-    			make_program(I.stack,self.func_set,self.term_set,depth)
-    			# print(I.stack)
-    			I.stack = list(reversed(I.stack))
+        else:
+            for I in pop.individuals:
+                depth = np.random.randint(self.min_depth,self.max_depth+1)
+                # print("hex(id(I)):",hex(id(I)))
+                # depth = 2;
+                # print("initial I.stack:",I.stack)
+                make_program(I.stack,self.func_set,self.term_set,depth)
+                # print(I.stack)
+                I.stack = list(reversed(I.stack))
 
-    		# print(I.stack)
+            # print(I.stack)
 
-    	return pop
+        return pop
 
 def positive_integer(value):
     """Ensures that the provided value is a positive integer; throws an exception otherwise
