@@ -21,69 +21,74 @@ from itertools import accumulate
 
 # from few.tests.test_population import is_valid_program
 
-def cross(I,J):
-    """subtree-like swap crossover between programs I and J."""
-    x_i_end = np.random.randint(0,len(I))
+def cross(p_i,p_j, max_depth = 3):
+    """subtree-like swap crossover between programs p_i and p_j."""
+    # grab subtree of p_i
+    x_i_end = np.random.randint(0,len(p_i))
 
     x_i_begin = x_i_end
-    arity_sum = I[x_i_end][1]
+    arity_sum = p_i[x_i_end][1]
     # print("x_i_end:",x_i_end)
     while (arity_sum > 0):
         if x_i_begin == 0:
             print("arity_sum:",arity_sum,"x_i_begin:",x_i_begin,"x_i_end:",x_i_end)
         x_i_begin -= 1
-        arity_sum += I[x_i_begin][1]-1
+        arity_sum += p_i[x_i_begin][1]-1
 
-    x_j_end = np.random.randint(len(J))
+    # grab subtree of p_j
+    x_j_end = np.random.randint(len(p_j))
     x_j_begin = x_j_end
-    arity_sum = J[x_j_end][1]
+    arity_sum = p_j[x_j_end][1]
 
     while (arity_sum > 0):
         if x_j_begin == 0:
             print("arity_sum:",arity_sum,"x_j_begin:",x_j_begin,"x_j_end:",x_j_end)
-            print("J:",J)
+            print("p_j:",p_j)
         x_j_begin -= 1
-        arity_sum += J[x_j_begin][1]-1
+        arity_sum += p_j[x_j_begin][1]-1
 
-    # print("J subtree:",J[x_j_begin:x_j_end+1:])
-    # print("I subtree:",I[x_i_begin:x_i_end+1:])
-    # #print("Returned tree:",J[x_j_begin:x_j_end+1:] + I[x_i::])
-    # X = del I[-1]
     #swap subtrees
-    tmpi = I[:]
-    tmpj = J[:]
+    tmpi = p_i[:]
+    tmpj = p_j[:]
     tmpi[x_i_begin:x_i_end+1:],tmpj[x_j_begin:x_j_end+1:] = tmpj[x_j_begin:x_j_end+1:],tmpi[x_i_begin:x_i_end+1:]
 
-    # I[x_i_begin:x_i_end+1:],J[x_j_begin:x_j_end+1:] = J[x_j_begin:x_j_end+1:],I[x_i_begin:x_i_end+1:]
+    if not is_valid_program(p_i) or not is_valid_program(p_j):
 
-    if not is_valid_program(tmpi) or not is_valid_program(tmpj):
-        print("parent 1:",I,"x_i_begin:",x_i_begin,"x_i_end:",x_i_end)
-        print("parent 2:",J,"x_j_begin:",x_j_begin,"x_j_end:",x_j_end)
+        print("parent 1:",p_i,"x_i_begin:",x_i_begin,"x_i_end:",x_i_end)
+        print("parent 2:",p_j,"x_j_begin:",x_j_begin,"x_j_end:",x_j_end)
         print("child 1:",tmpi)
         print("child 2:",tmpj)
-        assert False
+        raise ValueError('Crossover produced an invalid program.')
 
-    I = tmpi
-    J = tmpj
+    # size check, then assignment
+    if len(tmpi) <= 2**max_depth-1:
+        p_i[:] = tmpi
+    if len(tmpj) <= 2**max_depth-1:
+        p_j[:] = tmpj
 
-def mutate(I,func_set,term_set):
-    """ mutates individual I """
-    x_i_end = np.random.randint(len(I))
-    x_i_begin = x_i_end
-    while (I[x_i_end][1] - sum(arity[1] for arity in I[x_i_begin:x_i_end+1:]) != 0):
-        x_i_begin -= 1
 
-    # swap mutation
-    depth = 1
-    newpiece = make_program([],func_set,term_set,depth)
-    assert is_valid_program(I)
+
+def mutate(p_i,func_set,term_set):
+    """point mutation on individual p_i"""
+    # point mutation
+    x = np.random.randint(len(p_i))
+    arity = p_i[x][1]
+    wholeset = func_set+term_set
+    reps = [n for n in func_set+term_set if n[1]==arity]
+    tmp = reps[np.random.randint(len(reps))]
+
+    p_i[x] = tmp
+    assert is_valid_program(p_i)
 
 def is_valid_program(p):
-    """ checks that the accumulated program length is always greater than the
+    """checks whether program p makes a syntactically valid tree.
+
+    checks that the accumulated program length is always greater than the
     accumulated arities, indicating that the appropriate number of arguments is
     alway present for functions. It then checks that the sum of arties +1
     exactly equals the length of the stack, indicating that there are no
-    missing arguments. """
+    missing arguments.
+    """
     # print("p:",p)
     arities = list(a[1] for a in p)
     accu_arities = list(accumulate(arities))
