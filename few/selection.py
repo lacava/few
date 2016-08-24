@@ -1,18 +1,8 @@
+# -*- coding: utf-8 -*-
 """
 Copyright 2016 William La Cava
 
-This file is part of the FEW library.
-
-The FEW library is free software: you can redistribute it and/or
-modify it under the terms of the GNU General Public License as published by the
-Free Software Foundation, either version 3 of the License, or (at your option)
-any later version.
-
-The FEW library is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-You should have received a copy of the GNU General Public License along with
-the FEW library. If not, see http://www.gnu.org/licenses/.
+license: GNU/GPLv3
 
 """
 import numpy as np
@@ -50,7 +40,7 @@ def lexicase(individuals, num_selections=None, survival = False):
 
         while len(cases) > 0 and len(candidates) > 1:
 
-            best_val_for_case = min(map(lambda x: x.fitness_vec[cases[0]], individuals))
+            best_val_for_case = min(map(lambda x: x.fitness_vec[cases[0]], candidates))
             # filter individuals without an elite fitness on this case
             candidates = list(filter(lambda x: x.fitness_vec[cases[0]] == best_val_for_case, individuals))
             cases.pop(0)
@@ -87,7 +77,7 @@ def epsilon_lexicase(individuals, num_selections=None, survival = False):
 
         while len(cases) > 0 and len(candidates) > 1:
 
-            best_val_for_case = min(map(lambda x: x.fitness_vec[cases[0]], individuals))
+            best_val_for_case = min(map(lambda x: x.fitness_vec[cases[0]], candidates))
 
             if not np.isinf(best_val_for_case):
                 # filter individuals without an elite+epsilon fitness on this case
