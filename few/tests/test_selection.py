@@ -48,7 +48,7 @@ def test_epsilon_lexicase_shapes():
     """test_selection.py: epsilon lexicase selection returns correct shape"""
 
     pop = Pop(257,fit = 1)
-    offspring = epsilon_lexicase(pop.individuals)
+    offspring = lexicase(pop.individuals, epsilon=True)
     assert len(offspring) == 257
 
     # smaller popsize than tournament size
