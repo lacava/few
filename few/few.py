@@ -173,9 +173,11 @@ class FEW(BaseEstimator):
                 ind.fitness = np.mean(ind.fitness_vec)
             else:
                 ind.fitness = np.nanmin([fit,self.max_fit])
+
+        ####################
+        ### Main GP loop
         # for each generation g
         for g in np.arange(self.generations):
-            # pdb.set_trace()
             if self.verbosity > 0: print(".",end='')
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
@@ -186,7 +188,7 @@ class FEW(BaseEstimator):
                 #     pdb.set_trace()
             # keep best model
             try:
-                tmp = self.ml.score((self.transform(x_v,pop.individuals))[self.valid_loc(pop.individuals),:].transpose(),y_v)
+                tmp = self.ml.score(self.transform(x_v,pop.individuals)[self.valid_loc(pop.individuals),:].transpose(),y_v)
             except Exception:
                 tmp = 0
 
@@ -201,26 +203,26 @@ class FEW(BaseEstimator):
             # clone individuals for offspring creation
             if self.sel == 'lasso':
                 # for lasso, filter individuals with 0 coefficients
-                pdb.set_trace()
                 offspring = copy.deepcopy(list(x for i,x in zip(self.ml.coef_, self.valid(pop.individuals)) if  i != 0))
             else:
                 offspring = copy.deepcopy(self.valid(pop.individuals))
 
             # Apply crossover and mutation on the offspring
-            for i, child1, child2 in it.zip_longest(range(self.population_size), offspring[::2], offspring[1::2], fillvalue=None):
-                if child1 and child2:
-                    if np.random.rand() < self.crossover_rate:
-                        cross(child1.stack, child2.stack, self.max_depth)
-                    else:
-                        mutate(child1.stack,self.func_set,self.term_set)
-                        mutate(child2.stack,self.func_set,self.term_set)
-                    child1.fitness = -1
-                    child2.fitness = -1
-                else: #make new offspring to replace the invalid ones
-                    offspring.append(Ind())
-                    make_program(offspring[-1].stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1))
+            for child1, child2 in zip(offspring[::2], offspring[1::2]):
+                if np.random.rand() < self.crossover_rate:
+                    cross(child1.stack, child2.stack, self.max_depth)
+                else:
+                    mutate(child1.stack,self.func_set,self.term_set)
+                    mutate(child2.stack,self.func_set,self.term_set)
+                child1.fitness = -1
+                child2.fitness = -1
+            while len(offspring) < self.population_size:
+                #make new offspring to replace the invalid ones
+                offspring.append(Ind())
+                make_program(offspring[-1].stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1))
+                offspring[-1].stack = list(reversed(offspring[-1].stack))
 
-            print("offspring:",stacks_2_eqns(offspring))
+            # print("offspring:",stacks_2_eqns(offspring))
             X_offspring = self.transform(x_t,offspring)
             F_offspring = calc_fitness(X_offspring,y_t,self.fit_choice)
             # print("fitnesses:",fitnesses)
@@ -242,13 +244,18 @@ class FEW(BaseEstimator):
             elif self.sel == 'lexicase':
                 survivors, survivor_index = lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True)
             elif self.sel == 'epsilon_lexicase':
-                survivors, survivor_index = lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True, epsilon=True)
+                survivors, survivor_index = epsilon_lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True)
 
             # The population is entirely replaced by the offspring
-            pop.individuals[:] = survivors
-            pop.X = np.vstack((pop.X[[s for s in survivor_index if s<len(pop.individuals)],:],
-                                     X_offspring[[s-len(pop.individuals) for s in survivor_index if s>=len(pop.individuals)],:]))
+            # pdb.set_trace()
 
+            pop.individuals[:] = survivors
+            pop.X = np.vstack((pop.X, X_offspring))
+            pop.X = pop.X[survivor_index,:]
+            #[[s for s in survivor_index if s<len(pop.individuals)],:],
+                                    #  X_offspring[[s-len(pop.individuals) for s in survivor_index if s>=len(pop.individuals)],:]))
+        # end of main GP loop
+        ####################
         if self.verbosity > 0: print("best score:",self._best_score)
         if self.verbosity > 1: print("features:",stacks_2_eqns(self._best_inds))
         return self.score(features,labels)

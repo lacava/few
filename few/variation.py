@@ -8,7 +8,7 @@ license: GNU/GPLv3
 import numpy as np
 from .population import make_program, Ind
 from itertools import accumulate
-
+import pdb
 # from few.tests.test_population import is_valid_program
 
 def cross(p_i,p_j, max_depth = 3):
@@ -43,7 +43,7 @@ def cross(p_i,p_j, max_depth = 3):
     tmpi[x_i_begin:x_i_end+1:],tmpj[x_j_begin:x_j_end+1:] = tmpj[x_j_begin:x_j_end+1:],tmpi[x_i_begin:x_i_end+1:]
 
     if not is_valid_program(p_i) or not is_valid_program(p_j):
-
+        pdb.set_trace()
         print("parent 1:",p_i,"x_i_begin:",x_i_begin,"x_i_end:",x_i_end)
         print("parent 2:",p_j,"x_j_begin:",x_j_begin,"x_j_end:",x_j_end)
         print("child 1:",tmpi)
@@ -66,9 +66,12 @@ def mutate(p_i,func_set,term_set):
     wholeset = func_set+term_set
     reps = [n for n in func_set+term_set if n[1]==arity]
     tmp = reps[np.random.randint(len(reps))]
-
+    tmp_p = p_i[:]
     p_i[x] = tmp
-    assert is_valid_program(p_i)
+    if not is_valid_program(p_i):
+        print("old:",tmp_p)
+        print("new:",p_i)
+        pdb.set_trace()
 
 def is_valid_program(p):
     """checks whether program p makes a syntactically valid tree.

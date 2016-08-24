@@ -27,7 +27,8 @@ class Ind(object):
         """initializes empty individual with invalid fitness."""
         self.fitness = fitness
         self.fitness_vec = []
-
+        self.fitness_bool = []
+        
         if stack is None:
             self.stack = []
         else:
