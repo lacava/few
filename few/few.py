@@ -22,7 +22,7 @@ import pandas as pd
 import warnings
 import copy
 import itertools as it
-import pdb
+# import pdb
 from update_checker import update_check
 
 # import multiprocessing as mp
@@ -86,8 +86,8 @@ class FEW(BaseEstimator):
         # instantiate sklearn estimator according to specified machine learner
         if (self.machine_learner.lower() == "lasso"):
             self.ml = LassoLarsCV(n_jobs=-1)
-        elif (self.machine_learner.lower() == "distance"):
-            self.ml = DistanceClassifier()
+        # elif (self.machine_learner.lower() == "distance"):
+        #     self.ml = DistanceClassifier()
         else:
             self.ml = LassoLarsCV(n_jobs=-1)
 
