@@ -6,7 +6,7 @@ license: GNU/GPLv3
 
 """
 import numpy as np
-from .population import make_program, ind
+from .population import make_program, Ind
 from itertools import accumulate
 
 # from few.tests.test_population import is_valid_program

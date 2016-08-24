@@ -20,7 +20,7 @@ eqn_dict = {
     'k': lambda n,stack_eqn: str(n[2])
 }
 
-class ind(object):
+class Ind(object):
     """class for features, represented as GP stacks."""
 
     def __init__(self,fitness = -1.0,stack = None):
@@ -46,9 +46,9 @@ class Pop(object):
         # initialize population programs
         for i in np.arange(pop_size):
             if fit is None:
-                self.individuals.append(ind())
+                self.individuals.append(Ind())
             else:
-                self.individuals.append(ind(fitness = fit))
+                self.individuals.append(Ind(fitness = fit))
 
 def stacks_2_eqns(stacks):
     """returns equation strings from stacks"""

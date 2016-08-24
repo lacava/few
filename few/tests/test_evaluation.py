@@ -54,11 +54,11 @@ def test_out_is_correct():
     n_features = boston.data.shape[1]
     X = boston.data
     Y = boston.target
-    p1 = ind()
-    p2 = ind()
-    p3 = ind()
-    p4 = ind()
-    p5 = ind()
+    p1 = Ind()
+    p2 = Ind()
+    p3 = Ind()
+    p4 = Ind()
+    p5 = Ind()
     p1.stack = [('x', 0, 4), ('x', 0, 5), ('-', 2), ('k', 0, .175), ('log', 1), ('-', 2)]
     p2.stack = [('x', 0, 7), ('x', 0, 8), ('*', 2)]
     p3.stack =  [('x', 0, 0), ('exp', 1), ('x', 0, 5), ('x', 0, 7), ('*', 2), ('/', 2)]
@@ -106,18 +106,11 @@ def test_calc_fitness_shape():
 
     pop.X = np.asarray(list(map(lambda I: out(I,boston.data,boston.target), pop.individuals)))
 
-    fitnesses = calc_fitness(pop,boston.target,'mse')
+    fitnesses = calc_fitness(pop.X,boston.target,'mse')
     assert len(fitnesses) == len(pop.individuals)
 
-    rel_fitnesses = calc_fitness(pop,boston.target,'mse_rel')
-    fitmat = np.asarray(rel_fitnesses)
-    print("fitmat.shape:",fitmat.shape)
-    assert len(rel_fitnesses) == len(pop.individuals)
-
-    assert fitmat.shape == (len(pop.individuals),len(pop.individuals)+1)
-
     # test vectorized fitnesses
-    vec_fitnesses = calc_fitness(pop,boston.target,'mse_vec')
+    vec_fitnesses = calc_fitness(pop.X,boston.target,'mse_vec')
     fitmat = np.asarray(vec_fitnesses)
     print("fitmat.shape:",fitmat.shape)
     assert fitmat.shape == (len(pop.individuals),boston.target.shape[0])

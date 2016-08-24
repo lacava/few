@@ -48,7 +48,7 @@ def out(I,features,labels=None):
 
     return stack_float[-1]
 
-def calc_fitness(pop,labels,fit_choice):
+def calc_fitness(X,labels,fit_choice):
     """computes fitness of individual output yhat.
     yhat: output of a program.
     labels: correct outputs
@@ -68,18 +68,4 @@ def calc_fitness(pop,labels,fit_choice):
     'vaf_vec': lambda y,yhat: 1-explained_variance_score(y,yhat,multioutput = 'raw_values')
     }
 
-    if (fit_choice[-3::] == 'rel'): # relative fitness calculation
-        # calculate fitness of pairwise-comparisons of individual residuals
-        # a row of zeros is added to X to return the metric w.r.t. the labels
-        pop.E = np.asarray(list(map(lambda yhat: labels - yhat,np.vstack((pop.X,np.zeros(labels.shape))))))
-        fitness = []
-        fitmap = np.asarray(list(map(lambda xe: f[fit_choice[0:-4]](xe[1],xe[0]),it.product(pop.X,pop.E))))
-        num_fits = math.floor(fitmap.shape[0]/len(pop.individuals))
-        # print("fitmap.shape[0]:",fitmap.shape[0],"len(pop.individuals):",len(pop.individuals),"num_fits:",num_fits)
-        for i in np.arange(0,fitmap.shape[0],num_fits):
-            fitness.append(fitmap[i:i+num_fits])
-
-        return fitness
-    # pdb.set_trace()
-    # standard fitness calculation
-    return list(map(lambda yhat: f[fit_choice](labels,yhat),pop.X))
+    return list(map(lambda yhat: f[fit_choice](labels,yhat),X))

@@ -79,7 +79,7 @@ class FEW(BaseEstimator):
         self.scoring_function = scoring_function
         self.gp_generation = 0
 
-
+        self.max_fit = 99999999.666
         # self.op_weight = op_weight
 
         if "lexicase" in self.sel and ("_vec" not in self.fit_choice or "_rel" not in self.fit_choice):
@@ -161,18 +161,18 @@ class FEW(BaseEstimator):
         pop.X = self.transform(x_t,pop.individuals,y_t)
         # calculate fitness of individuals
         # fitnesses = list(map(lambda I: fitness(I,y_t,self.machine_learner),pop.X))
-        fitnesses = calc_fitness(pop,y_t,self.fit_choice)
+        fitnesses = calc_fitness(pop.X,y_t,self.fit_choice)
         # print("fitnesses:",fitnesses)
         # Assign fitnesses to inidividuals in population
         for ind, fit in zip(pop.individuals, fitnesses):
             if isinstance(fit,(list,np.ndarray)): # calc_fitness returned raw fitness values
-                fit[fit < 0] = 999999.666
-                fit[np.isnan(fit)] = 999999.666
-                fit[np.isinf(fit)] = 999999.666
+                fit[fit < 0] = self.max_fit
+                fit[np.isnan(fit)] = self.max_fit
+                fit[np.isinf(fit)] = self.max_fit
                 ind.fitness_vec = fit
                 ind.fitness = np.mean(ind.fitness_vec)
             else:
-                ind.fitness = np.nanmin([fit,99999.666])
+                ind.fitness = np.nanmin([fit,self.max_fit])
         # for each generation g
         for g in np.arange(self.generations):
             # pdb.set_trace()
@@ -180,13 +180,13 @@ class FEW(BaseEstimator):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 # print("population:",stacks_2_eqns())
-                try:
-                    self.ml.fit(pop.X.transpose(),y_t)
-                except:
-                    pdb.set_trace()
+                # try:
+                self.ml.fit(pop.X[self.valid_loc(pop.individuals),:].transpose(),y_t)
+                # except:
+                #     pdb.set_trace()
             # keep best model
             try:
-                tmp = self.ml.score((self.transform(x_v,pop.individuals)).transpose(),y_v)
+                tmp = self.ml.score((self.transform(x_v,pop.individuals))[self.valid_loc(pop.individuals),:].transpose(),y_v)
             except Exception:
                 tmp = 0
 
@@ -202,55 +202,52 @@ class FEW(BaseEstimator):
             if self.sel == 'lasso':
                 # for lasso, filter individuals with 0 coefficients
                 pdb.set_trace()
-                offspring = copy.deepcopy(list(x for i,x in zip(self.ml.coef_, pop.individuals) if  i != 0))
+                offspring = copy.deepcopy(list(x for i,x in zip(self.ml.coef_, self.valid(pop.individuals)) if  i != 0))
             else:
-                offspring = copy.deepcopy(pop.individuals)
+                offspring = copy.deepcopy(self.valid(pop.individuals))
 
             # Apply crossover and mutation on the offspring
-            for child1, child2 in zip(offspring[::2], offspring[1::2]):
-                if np.random.rand() < self.crossover_rate:
-                    cross(child1.stack, child2.stack, self.max_depth)
-                else:
-                    mutate(child1.stack,self.func_set,self.term_set)
-                    mutate(child2.stack,self.func_set,self.term_set)
-                child1.fitness = -1
-                child2.fitness = -1
+            for i, child1, child2 in it.zip_longest(range(self.population_size), offspring[::2], offspring[1::2], fillvalue=None):
+                if child1 and child2:
+                    if np.random.rand() < self.crossover_rate:
+                        cross(child1.stack, child2.stack, self.max_depth)
+                    else:
+                        mutate(child1.stack,self.func_set,self.term_set)
+                        mutate(child2.stack,self.func_set,self.term_set)
+                    child1.fitness = -1
+                    child2.fitness = -1
+                else: #make new offspring to replace the invalid ones
+                    offspring.append(Ind())
+                    make_program(offspring[-1].stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1))
 
-            # for mutant in offspring:
-            #     if np.random.rand() < self.mutation_rate:
-            #         mutate(mutant.stack,self.func_set,self.term_set)
-            #         # print("pop being mutated:",list(map(lambda p: stack_2_eqn(p), offspring)))
-            #         mutant.fitness = -1
-
-            # Survival the next generation individuals
-            if self.sel == 'tournament':
-                offspring = tournament(pop.individuals + offspring, self.tourn_size, num_selections = len(pop.individuals))
-            elif self.sel == 'lexicase':
-                offspring = lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True)
-            elif self.sel == 'epsilon_lexicase':
-                # print("pop going in to ep lexicase:",stacks_2_eqns(pop.individuals + offspring))
-                offspring = lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True, epsilon=True)
-                # print("pop coming out of ep lexicase:",stacks_2_eqns(offspring))
-
-
-            # The population is entirely replaced by the offspring
-            pop.individuals[:] = offspring
-            pop.X = self.transform(x_t,pop.individuals)
-            # print("pop.X.shape:",pop.X.shape)
-            # fitnesses = list(map(lambda I: fitness(I,y_t,self.fit_choice),pop.X))
-            fitnesses = calc_fitness(pop,y_t,self.fit_choice)
+            print("offspring:",stacks_2_eqns(offspring))
+            X_offspring = self.transform(x_t,offspring)
+            F_offspring = calc_fitness(X_offspring,y_t,self.fit_choice)
             # print("fitnesses:",fitnesses)
             # Assign fitnesses to inidividuals in population
-            for ind, fit in zip(pop.individuals, fitnesses):
+            for ind, fit in zip(offspring, F_offspring):
                 if isinstance(fit,(list,np.ndarray)): # calc_fitness returned raw fitness values
-                    fit[fit < 0] = 999999.666
-                    fit[np.isnan(fit)] = 999999.666
-                    fit[np.isinf(fit)] = 999999.666
+                    fit[fit < 0] = self.max_fit
+                    fit[np.isnan(fit)] = self.max_fit
+                    fit[np.isinf(fit)] = self.max_fit
                     ind.fitness_vec = fit
                     ind.fitness = np.mean(ind.fitness_vec)
                 else:
                     # print("fit.shape:",fit.shape)
-                    ind.fitness = np.nanmin([fit,99999.666])
+                    ind.fitness = np.nanmin([fit,self.max_fit])
+
+            # Survival the next generation individuals
+            if self.sel == 'tournament':
+                survivors, survivor_index = tournament(pop.individuals + offspring, self.tourn_size, num_selections = len(pop.individuals))
+            elif self.sel == 'lexicase':
+                survivors, survivor_index = lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True)
+            elif self.sel == 'epsilon_lexicase':
+                survivors, survivor_index = lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True, epsilon=True)
+
+            # The population is entirely replaced by the offspring
+            pop.individuals[:] = survivors
+            pop.X = np.vstack((pop.X[[s for s in survivor_index if s<len(pop.individuals)],:],
+                                     X_offspring[[s-len(pop.individuals) for s in survivor_index if s>=len(pop.individuals)],:]))
 
         if self.verbosity > 0: print("best score:",self._best_score)
         if self.verbosity > 1: print("features:",stacks_2_eqns(self._best_inds))
@@ -359,7 +356,7 @@ class FEW(BaseEstimator):
                         make_program(p.stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1))
                         p.stack = list(reversed(p.stack))
             # print initial population
-            print("seeded initial population:",stacks_2_eqns(pop.individuals))
+            if self.verbosity > 1: print("seeded initial population:",stacks_2_eqns(pop.individuals))
 
         else:
             for I in pop.individuals:
@@ -374,6 +371,16 @@ class FEW(BaseEstimator):
             # print(I.stack)
 
         return pop
+
+    def valid_loc(self,individuals):
+        """returns the indices of individuals with valid fitness."""
+
+        return [index for index,i in enumerate(individuals) if i.fitness < self.max_fit]
+
+    def valid(self,individuals):
+        """returns the sublist of individuals with valid fitness."""
+
+        return [i for i in individuals if i.fitness < self.max_fit]
 
     def get_params(self, deep=None):
         """Get parameters for this estimator

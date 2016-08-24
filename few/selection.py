@@ -13,6 +13,7 @@ import copy
 def tournament(individuals,tourn_size, num_selections=None):
     """conducts tournament selection of size tourn_size"""
     winners = []
+    locs = []
     if num_selections is None:
         num_selections = len(individuals)
 
@@ -22,16 +23,18 @@ def tournament(individuals,tourn_size, num_selections=None):
         pool = []
         for i in pool_i:
             pool.append(np.mean(individuals[i].fitness))
+        # winner
+        locs.append(pool_i[np.argmin(pool)])
+        winners.append(copy.deepcopy(individuals[locs[-1]]))
 
-        winners.append(copy.deepcopy(individuals[pool_i[np.argmin(pool)]]))
-
-    return winners
+    return winners,locs
 
 def lexicase(individuals, num_selections=None, epsilon = False, survival = False):
     """conducts lexicase selection for de-aggregated fitness vectors"""
     if num_selections is None:
         num_selections = len(individuals)
     winners = []
+    locs = []
 
     if epsilon: # use epsilon lexicase selection
         # calculate epsilon thresholds based on median absolute deviation (MAD)
@@ -48,21 +51,25 @@ def lexicase(individuals, num_selections=None, epsilon = False, survival = False
     for i in np.arange(num_selections):
 
         candidates = individuals
+        can_locs = range(len(individuals))
         cases = list(np.arange(len(individuals[0].fitness_vec)))
         np.random.shuffle(cases)
         while len(cases) > 0 and len(candidates) > 1:
-            # get best fitness for case among candidates 
+            # get best fitness for case among candidates
             best_val_for_case = min([x.fitness_vec[cases[0]] for x in candidates])
             # filter individuals without an elite fitness on this case
-            candidates = [x for x in candidates if x.fitness_vec[cases[0]] == best_val_for_case] #list(filter(lambda x: x.fitness_vec[cases[0]] == best_val_for_case, individuals))
+            # tmp_c,tmp_l = zip(*((x,l) for x,l in zip(candidates,can_locs) if x.fitness_vec[cases[0]] == best_val_for_case))
+            # print("lex filter returns:",tmp_c,"location:",tmp_l)
+            candidates,can_locs = zip(*((x,l) for x,l in zip(candidates,can_locs) if x.fitness_vec[cases[0]] == best_val_for_case))
             cases.pop(0)
 
         choice = np.random.randint(len(candidates))
         winners.append(copy.deepcopy(candidates[choice]))
+        locs.append(can_locs[choice])
         if survival: # filter out winners from remaining selection pool
             individuals = list(filter(lambda x: x.stack != candidates[choice].stack, individuals))
 
-    return winners
+    return winners, locs
 
 
 def mad(x, axis=None):

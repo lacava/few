@@ -34,7 +34,7 @@ def test_few_fit_shapes():
     learner = FEW(generations=1, population_size=5,
                 mutation_rate=0.2, crossover_rate=0.8,
                 machine_learner = 'lasso', min_depth = 1, max_depth = 3,
-                sel = 'epsilon_lexicase', tourn_size = 2, random_state=105, verbosity=1,
+                sel = 'epsilon_lexicase', tourn_size = 2, random_state=0, verbosity=2,
                 disable_update_check=False, fit_choice = 'mse')
 
     score = learner.fit(boston.data[:300], boston.target[:300])
