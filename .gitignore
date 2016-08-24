@@ -5,3 +5,4 @@ FEW.egg-info/
 *.cfg
 *.txt
 dist/
+analysis/

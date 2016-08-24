@@ -5,7 +5,7 @@
 Few
 ===
 
-**Few** is a **Feature Engineering Wrapper** for sci-kitlearn. FEW looks for a set of feature transformations that work best with a specified machine learning algorithm in order to improve model estimation and prediction. In doing so, FEW is able to provide the user with a set of concise, engineered features that describe their data.
+**Few** is a **Feature Engineering Wrapper** for sci-kitlearn. Few looks for a set of feature transformations that work best with a specified machine learning algorithm in order to improve model estimation and prediction. In doing so, FEW is able to provide the user with a set of concise, engineered features that describe their data.
 
 Install
 ===
@@ -19,27 +19,37 @@ In a python script, import FEW:
 from few.few import FEW
 ```
 
-Few uses the same nomenclature as [sklearn](http://scikit-learn.org/) supervised learning modules. Given a set of data with variables X and target Y, you can call Few in python as:
+Few uses the same nomenclature as [sklearn](http://scikit-learn.org/) supervised learning modules. You can initialize a few learner in python as:
 
 ```python
-learner = FEW(X,Y)
+learner = FEW()
 ```
 
-or specify a machine learning algorithm as:
+or specify the generations, population size and machine learning algorithm as:
 
 ```python
-learner = FEW(X,Y,machine_learner = 'lasso')
+learner = FEW(generations = 100, population_size = 25, machine_learner = 'lasso')
 ```
 
-Then optimize the set of feature transformations using the ```fit()``` method:
+Given a set of data with variables X and target Y, optimize the set of feature transformations using the ```fit()``` method:
 
 ```python
-learner.fit()
+learner.fit(X,Y)
 ```
 
-You have now learned a set of feature tranformations for your data. 
+You have now learned a set of feature tranformations for your data, as well as a predictor that uses the chosen machine learning algorithm with these feaures. Predict your model's response on a new set of variables as
 
-You can also call Few from the terminal as
+```python
+y_pred = learner.predict(X_unseen)
+```
+
+You can use the ```transform()``` method to just perform a feature tranformation using the learned features:
+
+```python
+X_tranformed = learner.transform(X)
+``` 
+
+Call Few from the terminal as
 
 ```bash
 python -m few.few data_file_name 
