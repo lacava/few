@@ -223,10 +223,10 @@ class FEW(BaseEstimator):
             if self.sel == 'tournament':
                 offspring = tournament(pop.individuals + offspring, self.tourn_size, num_selections = len(pop.individuals))
             elif self.sel == 'lexicase':
-                offspring = lexicase(pop.inviduals + offspring, len(pop.individuals), survival = True)
+                offspring = lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True)
             elif self.sel == 'epsilon_lexicase':
                 # print("pop going in to ep lexicase:",stacks_2_eqns(pop.individuals + offspring))
-                offspring = epsilon_lexicase(pop.individuals + offspring, len(pop.individuals), survival = True)
+                offspring = lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True, epsilon=True)
                 # print("pop coming out of ep lexicase:",stacks_2_eqns(offspring))
 
 

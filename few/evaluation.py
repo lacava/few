@@ -10,6 +10,7 @@ import pdb
 from sklearn.metrics import explained_variance_score, mean_absolute_error, mean_squared_error, median_absolute_error, r2_score
 import itertools as it
 import math
+import pdb
 
 # evaluation functions. these can be sped up using a GPU!
 eval_dict = {
@@ -61,8 +62,8 @@ def calc_fitness(pop,labels,fit_choice):
     'r2':  lambda y,yhat: 1-r2_score(y,yhat),
     'vaf': lambda y,yhat: 1-explained_variance_score(y,yhat),
     # non-aggregated fitness calculations
-    'mse_vec': lambda y,yhat: mean_squared_error(y,yhat,multioutput = 'raw_values'),
-    'mae_vec': lambda y,yhat: mean_absolute_error(y,yhat,multioutput = 'raw_values'),
+    'mse_vec': lambda y,yhat: (y - yhat) ** 2, #mean_squared_error(y,yhat,multioutput = 'raw_values'),
+    'mae_vec': lambda y,yhat: np.abs(y-yhat), #mean_absolute_error(y,yhat,multioutput = 'raw_values'),
     'mdae_vec': lambda y,yhat: median_absolute_error(y,yhat,multioutput = 'raw_values'),
     'r2_vec':  lambda y,yhat: 1-r2_score(y,yhat,multioutput = 'raw_values'),
     'vaf_vec': lambda y,yhat: 1-explained_variance_score(y,yhat,multioutput = 'raw_values')
@@ -80,6 +81,6 @@ def calc_fitness(pop,labels,fit_choice):
             fitness.append(fitmap[i:i+num_fits])
 
         return fitness
-
+    # pdb.set_trace()
     # standard fitness calculation
     return list(map(lambda yhat: f[fit_choice](labels,yhat),pop.X))

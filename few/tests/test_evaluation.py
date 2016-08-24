@@ -115,3 +115,9 @@ def test_calc_fitness_shape():
     assert len(rel_fitnesses) == len(pop.individuals)
 
     assert fitmat.shape == (len(pop.individuals),len(pop.individuals)+1)
+
+    # test vectorized fitnesses
+    vec_fitnesses = calc_fitness(pop,boston.target,'mse_vec')
+    fitmat = np.asarray(vec_fitnesses)
+    print("fitmat.shape:",fitmat.shape)
+    assert fitmat.shape == (len(pop.individuals),boston.target.shape[0])
