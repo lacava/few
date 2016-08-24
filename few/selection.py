@@ -7,8 +7,8 @@ license: GNU/GPLv3
 """
 import numpy as np
 import copy
-import pdb
-from .population import stacks_2_eqns
+# import pdb
+# from .population import stacks_2_eqns
 
 def tournament(individuals,tourn_size, num_selections=None):
     """conducts tournament selection of size tourn_size"""
@@ -62,46 +62,7 @@ def lexicase(individuals, num_selections=None, epsilon = False, survival = False
         choice = np.random.randint(len(candidates))
         winners.append(copy.deepcopy(candidates[choice]))
         if survival: # filter out winners from remaining selection pool
-             individuals = list(filter(lambda x: x.stack != candidates[choice].stack, individuals))
-
-    return winners
-
-def epsilon_lexicase(individuals, num_selections=None, survival = False):
-    """conducts epsilon lexicase selection for de-aggregated fitness vectors"""
-    if num_selections is None:
-        num_selections = len(individuals)
-
-    winners = []
-    mad_for_case = []
-    best_val_for_case = []
-    # calculate epsilon thresholds based on median absolute deviation (MAD)
-    for i in np.arange(len(individuals[0].fitness_vec)):
-        mad_for_case.append(mad(np.asarray(list(map(lambda x: x.fitness_vec[i], individuals)))))
-        # best_val_for_case.append(min(map(lambda x: x.fitness_vec[i], individuals)))
-
-    for i in np.arange(num_selections):
-
-        candidates = individuals
-        cases = list(range(len(individuals[0].fitness_vec)))
-        np.random.shuffle(cases)
-
-        while len(cases) > 0 and len(candidates) > 1:
-
-            best_val_for_case = min(map(lambda x: x.fitness_vec[cases[0]], candidates))
-
-            if not np.isinf(best_val_for_case):
-                # filter individuals without an elite+epsilon fitness on this case
-                candidates = list(filter(lambda x: x.fitness_vec[cases[0]] <= best_val_for_case+mad_for_case[cases[0]], individuals))
-
-            cases.pop(0)
-        if len(candidates) == 0: # should not happen
-            print("out of candidates!")
-            winners.append(np.random.choice(individuals))
-        else:
-            choice = np.random.randint(len(candidates))
-            winners.append(copy.deepcopy(candidates[choice]))
-            if survival: # filter out winners from remaining selection pool
-                 individuals = list(filter(lambda x: x.stack != candidates[choice].stack, individuals))
+            individuals = list(filter(lambda x: x.stack != candidates[choice].stack, individuals))
 
     return winners
 
