@@ -53,7 +53,7 @@ def test_epsilon_lexicase_shapes():
 
     # smaller popsize than tournament size
     pop = Pop(2,fit = 0)
-    offspring = epsilon_lexicase(pop.individuals)
+    offspring = lexicase(pop.individuals,epsilon=True)
     assert len(offspring) == 2;
 
 def test_lexicase_survival_shapes():
