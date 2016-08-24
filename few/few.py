@@ -22,7 +22,7 @@ import pandas as pd
 import warnings
 import copy
 import itertools as it
-# import pdb
+import pdb
 from update_checker import update_check
 
 # import multiprocessing as mp
@@ -58,31 +58,33 @@ class FEW(BaseEstimator):
         self._best_estimator = None
         self._training_features = None
         self._training_labels = None
+        self._best_inds = None
+
         self.population_size = population_size
         self.generations = generations
         self.mutation_rate = mutation_rate
         self.crossover_rate = crossover_rate
         self.machine_learner = machine_learner
-        self.verbosity = verbosity
-        self.gp_generation = 0
         self.min_depth = min_depth
         self.max_depth = max_depth
         self.max_depth_init = max_depth_init
-        self._best_inds = None
-        self._fit_choice = fit_choice
-        self._op_weight = False
+        self.sel = sel
+        self.tourn_size = tourn_size
+        self.fit_choice = fit_choice
+        self.op_weight = op_weight
         self.seed_with_ml = seed_with_ml
         self.erc = erc
-        # self.op_weight = op_weight
+        self.random_state = random_state
+        self.verbosity = verbosity
         self.scoring_function = scoring_function
-        np.random.seed(random_state)
+        self.gp_generation = 0
 
-        self.sel = sel
 
-        if "lexicase" in sel and ("_vec" not in fit_choice or "_rel" not in fit_choice):
-            self._fit_choice += "_vec"
+        # self.op_weight = op_weight
 
-        self.tourn_size = tourn_size
+        if "lexicase" in self.sel and ("_vec" not in self.fit_choice or "_rel" not in self.fit_choice):
+            self.fit_choice += "_vec"
+
         # instantiate sklearn estimator according to specified machine learner
         if (self.machine_learner.lower() == "lasso"):
             self.ml = LassoLarsCV(n_jobs=-1)
@@ -101,6 +103,7 @@ class FEW(BaseEstimator):
 
     def fit(self, features, labels):
         """Fit model to data"""
+        np.random.seed(self.random_state)
         # setup data
 
         # Train-test split routine for internal validation
@@ -139,8 +142,8 @@ class FEW(BaseEstimator):
         # initial model
         self._best_estimator = copy.deepcopy(self.ml.fit(x_t,y_t))
         self._best_score = self._best_estimator.score(x_v,y_v)
-        print("initial estimator size:",self._best_estimator.coef_.shape)
-        print("initial score:",self._best_score)
+        if self.verbosity > 1: print("initial estimator size:",self._best_estimator.coef_.shape)
+        if self.verbosity > 0: print("initial score:",self._best_score)
         # create terminal set
         for i in np.arange(x_t.shape[1]):
             # (.,.,.): node type, arity, feature column index or value
@@ -158,7 +161,7 @@ class FEW(BaseEstimator):
         pop.X = self.transform(x_t,pop.individuals,y_t)
         # calculate fitness of individuals
         # fitnesses = list(map(lambda I: fitness(I,y_t,self.machine_learner),pop.X))
-        fitnesses = calc_fitness(pop,y_t,self._fit_choice)
+        fitnesses = calc_fitness(pop,y_t,self.fit_choice)
         # print("fitnesses:",fitnesses)
         # Assign fitnesses to inidividuals in population
         for ind, fit in zip(pop.individuals, fitnesses):
@@ -173,7 +176,7 @@ class FEW(BaseEstimator):
         # for each generation g
         for g in np.arange(self.generations):
             # pdb.set_trace()
-            # print("X shape:",pop.X.shape)
+            if self.verbosity > 0: print(".",end='')
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 # print("population:",stacks_2_eqns())
@@ -188,7 +191,7 @@ class FEW(BaseEstimator):
                 tmp = 0
 
             if tmp > self._best_score:
-                print("best internal validation score:",self._best_score)
+                if self.verbosity > 0: print("updated best internal validation score:",self._best_score)
                 self._best_estimator = copy.deepcopy(self.ml)
                 self._best_score = tmp
                 self._best_inds = pop.individuals[:]
@@ -234,8 +237,8 @@ class FEW(BaseEstimator):
             pop.individuals[:] = offspring
             pop.X = self.transform(x_t,pop.individuals)
             # print("pop.X.shape:",pop.X.shape)
-            # fitnesses = list(map(lambda I: fitness(I,y_t,self._fit_choice),pop.X))
-            fitnesses = calc_fitness(pop,y_t,self._fit_choice)
+            # fitnesses = list(map(lambda I: fitness(I,y_t,self.fit_choice),pop.X))
+            fitnesses = calc_fitness(pop,y_t,self.fit_choice)
             # print("fitnesses:",fitnesses)
             # Assign fitnesses to inidividuals in population
             for ind, fit in zip(pop.individuals, fitnesses):
@@ -249,8 +252,8 @@ class FEW(BaseEstimator):
                     # print("fit.shape:",fit.shape)
                     ind.fitness = np.nanmin([fit,99999.666])
 
-        print("best score:",self._best_score)
-        print("features:",stacks_2_eqns(self._best_inds))
+        if self.verbosity > 0: print("best score:",self._best_score)
+        if self.verbosity > 1: print("features:",stacks_2_eqns(self._best_inds))
         return self.score(features,labels)
 
     def transform(self,x,inds,labels = None):
@@ -371,6 +374,24 @@ class FEW(BaseEstimator):
             # print(I.stack)
 
         return pop
+
+    def get_params(self, deep=None):
+        """Get parameters for this estimator
+
+        This function is necessary for FEW to work as a drop-in feature constructor in,
+        e.g., sklearn.cross_validation.cross_val_score
+
+        Parameters
+        ----------
+        deep: unused
+            Only implemented to maintain interface for sklearn
+
+        Returns
+        -------
+        params: mapping of string to any
+            Parameter names mapped to their values
+        """
+        return self.params
 
 def positive_integer(value):
     """Ensures that the provided value is a positive integer; throws an exception otherwise

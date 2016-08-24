@@ -37,8 +37,7 @@ class Pop(object):
     """class representing population"""
     def __init__(self,pop_size=100,n_samples=1, fit = None):
         """initializes population of inds of size pop_size"""
-        print("pop_size:",pop_size)
-        print("n_samples:",n_samples)
+
         self.individuals = []
         # initialize empty output matrix
         self.X = np.empty([n_samples,pop_size],dtype=float,order='F')
