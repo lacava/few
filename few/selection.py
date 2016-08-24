@@ -48,12 +48,10 @@ def lexicase(individuals, num_selections=None, epsilon = False, survival = False
     for i in np.arange(num_selections):
 
         candidates = individuals
-        # print("individuals[0].fitness",individuals[0].fitness)
         cases = list(np.arange(len(individuals[0].fitness_vec)))
         np.random.shuffle(cases)
-        # pdb.set_trace()
         while len(cases) > 0 and len(candidates) > 1:
-
+            # get best fitness for case among candidates 
             best_val_for_case = min([x.fitness_vec[cases[0]] for x in candidates])
             # filter individuals without an elite fitness on this case
             candidates = [x for x in candidates if x.fitness_vec[cases[0]] == best_val_for_case] #list(filter(lambda x: x.fitness_vec[cases[0]] == best_val_for_case, individuals))
