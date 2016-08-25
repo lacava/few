@@ -116,13 +116,7 @@ class FEW(BaseEstimator):
             if type(column) != str:
                 new_col_names[column] = str(column).zfill(10)
         train_val_data.rename(columns=new_col_names, inplace=True)
-
-        # Randomize the order of the columns so there is no potential bias introduced by the initial order
-        # of the columns, e.g., the most predictive features at the beginning or end.
-        # data_columns = list(train_val_data.columns.values)
-        # np.random.shuffle(data_columns)
-        # train_val_data = train_val_data[data_columns]
-
+        # internal training/validation split
         train_i, val_i = train_test_split(train_val_data.index,
                                                              stratify=None,
                                                              train_size=0.75,
@@ -178,10 +172,14 @@ class FEW(BaseEstimator):
         ### Main GP loop
         # for each generation g
         for g in np.arange(self.generations):
-            if self.verbosity > 0: print(".",end='')
+            if self.verbosity > 0: print(str(g)+".)",end='\n')
+            if self.verbosity > 1: print("population:",stacks_2_eqns(pop.individuals))
+            if self.verbosity > 1: print("pop fitnesses:", ["%0.2f" % x.fitness for x in pop.individuals])
+            if self.verbosity > 0: print("median fitness parents: %0.2f" % np.median([x.fitness for x in pop.individuals]))
+
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                # print("population:",stacks_2_eqns())
+
                 # try:
                 self.ml.fit(pop.X[self.valid_loc(pop.individuals),:].transpose(),y_t)
                 # except:
@@ -237,6 +235,7 @@ class FEW(BaseEstimator):
                 else:
                     # print("fit.shape:",fit.shape)
                     ind.fitness = np.nanmin([fit,self.max_fit])
+            if self.verbosity > 0: print("median fitness offspring: %0.2f" % np.median([x.fitness for x in offspring]))
 
             # Survival the next generation individuals
             if self.sel == 'tournament':
@@ -250,19 +249,23 @@ class FEW(BaseEstimator):
             # pdb.set_trace()
 
             pop.individuals[:] = survivors
-            pop.X = np.vstack((pop.X, X_offspring))
-            pop.X = pop.X[survivor_index,:]
+            pop.X = np.vstack((pop.X, X_offspring))[survivor_index,:]
+            # pop.X = pop.X[survivor_index,:]
             #[[s for s in survivor_index if s<len(pop.individuals)],:],
                                     #  X_offspring[[s-len(pop.individuals) for s in survivor_index if s>=len(pop.individuals)],:]))
+            if self.verbosity > 0: print("median fitness survivors: %0.2f" % np.median([x.fitness for x in pop.individuals]))
         # end of main GP loop
         ####################
         if self.verbosity > 0: print("best score:",self._best_score)
         if self.verbosity > 1: print("features:",stacks_2_eqns(self._best_inds))
         return self.score(features,labels)
 
-    def transform(self,x,inds,labels = None):
+    def transform(self,x,inds=None,labels = None):
         """return a transformation of x using population outputs"""
-        return np.asarray(list(map(lambda I: out(I,x,labels), inds)),order='F')
+        if inds:
+            return np.asarray(list(map(lambda I: out(I,x,labels), inds)),order='F')
+        else:
+            return np.asarray(list(map(lambda I: out(I,x,labels), self._best_inds)),order='F')
 
     def clean(self,x):
         """remove nan and inf rows from x"""
@@ -281,7 +284,7 @@ class FEW(BaseEstimator):
             return self._best_estimator.predict(testing_features)
         else:
             X_transform = (np.asarray(list(map(lambda I: out(I,testing_features), self._best_inds))))
-            return self._best_estimator.predict(X_transform.transpose())
+            return self._best_estimator.predict(X_transform[self.valid_loc(self._best_inds),:].transpose())
 
     def fit_predict(self, features, labels):
         """Convenience function that fits a pipeline then predicts on the provided features
