@@ -38,7 +38,7 @@ class FEW(BaseEstimator):
                  mutation_rate=0.2, crossover_rate=0.8,
                  machine_learner = 'lasso', min_depth = 1, max_depth = 5, max_depth_init = 5,
                  sel = 'tournament', tourn_size = 2, fit_choice = 'mse', op_weight = False,
-                 seed_with_ml = False, erc = False, random_state=0, verbosity=0, scoring_function=r2_score,
+                 seed_with_ml = False, erc = False, random_state=np.random.randint(4294967295), verbosity=0, scoring_function=r2_score,
                  disable_update_check=False):
                 # sets up GP.
 
@@ -84,7 +84,7 @@ class FEW(BaseEstimator):
 
         if "lexicase" in self.sel and ("_vec" not in self.fit_choice or "_rel" not in self.fit_choice):
             self.fit_choice += "_vec"
-
+        # pdb.set_trace()
         # instantiate sklearn estimator according to specified machine learner
         if (self.machine_learner.lower() == "lasso"):
             self.ml = LassoLarsCV(n_jobs=-1)
@@ -172,10 +172,11 @@ class FEW(BaseEstimator):
         ### Main GP loop
         # for each generation g
         for g in np.arange(self.generations):
-            if self.verbosity > 0: print(str(g)+".)",end='\n')
-            if self.verbosity > 1: print("population:",stacks_2_eqns(pop.individuals))
+            if self.verbosity == 0: print(".",end='')
+            if self.verbosity > 0: print(str(g)+".)",end='')
+            # if self.verbosity > 1: print("population:",stacks_2_eqns(pop.individuals))
             if self.verbosity > 1: print("pop fitnesses:", ["%0.2f" % x.fitness for x in pop.individuals])
-            if self.verbosity > 0: print("median fitness parents: %0.2f" % np.median([x.fitness for x in pop.individuals]))
+            if self.verbosity > 1: print("median fitness parents: %0.2f" % np.median([x.fitness for x in pop.individuals]))
 
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
@@ -184,18 +185,20 @@ class FEW(BaseEstimator):
                 self.ml.fit(pop.X[self.valid_loc(pop.individuals),:].transpose(),y_t)
                 # except:
                 #     pdb.set_trace()
+            if self.verbosity > 1: print("number of non-zero regressors:",self.ml.coef_.shape[0])
             # keep best model
-            try:
-                tmp = self.ml.score(self.transform(x_v,pop.individuals)[self.valid_loc(pop.individuals),:].transpose(),y_v)
-            except Exception:
-                tmp = 0
+            # try:
+            tmp = self.ml.score(self.transform(x_v,pop.individuals)[self.valid_loc(pop.individuals),:].transpose(),y_v)
+            if self.verbosity > 0: print("current ml validation score:",tmp)
+            # except Exception:
+            #     tmp = 0
 
             if tmp > self._best_score:
-                if self.verbosity > 0: print("updated best internal validation score:",self._best_score)
                 self._best_estimator = copy.deepcopy(self.ml)
                 self._best_score = tmp
                 self._best_inds = pop.individuals[:]
-                # print("best individuals updated")
+                if self.verbosity > 0: print("updated best internal validation score:",self._best_score)
+
             offspring = []
 
             # clone individuals for offspring creation
@@ -248,12 +251,20 @@ class FEW(BaseEstimator):
             # The population is entirely replaced by the offspring
             # pdb.set_trace()
 
+            # print("current population:",stacks_2_eqns(pop.individuals))
+            # print("current pop.X:",pop.X[:,:4])
+            # print("offspring:",stacks_2_eqns(offspring))
+            # print("current X_offspring:",X_offspring[:,:4])
+            # print("survivor index:",survivor_index)
+            # print("survivors:",stacks_2_eqns(survivors))
             pop.individuals[:] = survivors
             pop.X = np.vstack((pop.X, X_offspring))[survivor_index,:]
+            # print("new pop.X:",pop.X[:,:4])
+            # pdb.set_trace()
             # pop.X = pop.X[survivor_index,:]
             #[[s for s in survivor_index if s<len(pop.individuals)],:],
                                     #  X_offspring[[s-len(pop.individuals) for s in survivor_index if s>=len(pop.individuals)],:]))
-            if self.verbosity > 0: print("median fitness survivors: %0.2f" % np.median([x.fitness for x in pop.individuals]))
+            if self.verbosity > 1: print("median fitness survivors: %0.2f" % np.median([x.fitness for x in pop.individuals]))
         # end of main GP loop
         ####################
         if self.verbosity > 0: print("best score:",self._best_score)
@@ -512,9 +523,9 @@ def main():
     parser.add_argument('--erc', action='store_true', dest='ERC', default=False,
                     help='Flag to use ephemeral random constants in GP feature construction.')
 
-    parser.add_argument('-s', action='store', dest='RANDOM_STATE', default=0,
-                        type=int, help='Random number generator seed for reproducibility. Set this seed if you want your FEW run to be reproducible '
-                                       'with the same seed and data set in the future.')
+    parser.add_argument('-s', action='store', dest='RANDOM_STATE', default=np.random.randint(4294967295),
+                        type=int, help='Random number generator seed for reproducibility. Note that using multi-threading may '
+                                       'make exacts results impossible to reproduce.')
 
     parser.add_argument('-v', action='store', dest='VERBOSITY', default=1, choices=[0, 1, 2],
                         type=int, help='How much information FEW communicates while it is running: 0 = none, 1 = minimal, 2 = all.')
@@ -564,7 +575,7 @@ def main():
                 max_depth = args.MAX_DEPTH, sel = args.SEL, tourn_size = args.TOURN_SIZE,
                 seed_with_ml = args.SEED_WITH_ML, op_weight = args.OP_WEIGHT,
                 erc = args.ERC, random_state=args.RANDOM_STATE, verbosity=args.VERBOSITY,
-                disable_update_check=args.DISABLE_UPDATE_CHECK)
+                disable_update_check=args.DISABLE_UPDATE_CHECK,fit_choice = args.FIT_CHOICE)
 
     learner.fit(training_features, training_labels)
 

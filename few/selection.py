@@ -80,7 +80,7 @@ def epsilon_lexicase(individuals, num_selections=None, survival = False):
         num_selections = len(individuals)
     winners = []
     locs = []
-
+    individual_locs = range(len(individuals))
     # calculate epsilon thresholds based on median absolute deviation (MAD)
     mad_for_case = np.empty([len(individuals[0].fitness_vec),1])
     global_best_val_for_case = np.empty([len(individuals[0].fitness_vec),1])
@@ -95,7 +95,7 @@ def epsilon_lexicase(individuals, num_selections=None, survival = False):
     for i in np.arange(num_selections):
 
         candidates = individuals
-        can_locs = range(len(individuals))
+        can_locs = individual_locs
         cases = list(np.arange(len(individuals[0].fitness_vec)))
         np.random.shuffle(cases)
         # pdb.set_trace()
@@ -114,8 +114,14 @@ def epsilon_lexicase(individuals, num_selections=None, survival = False):
         winners.append(copy.deepcopy(candidates[choice]))
         locs.append(can_locs[choice])
         if survival: # filter out winners from remaining selection pool
-            individuals = list(filter(lambda x: x.stack != candidates[choice].stack, individuals))
+            # individuals = list(filter(lambda x: x.stack != candidates[choice].stack, individuals))
+            try:
+                individuals, individual_locs = zip(*[(x,l) for x,l in zip(individuals,individual_locs) if x.stack != candidates[choice].stack])
+            except ValueError: # there are only clones left
+                break
 
+    while len(winners) < num_selections:
+        winners.append(copy.deepcopy(individuals[0]))
     return winners, locs
 
 def mad(x, axis=None):

@@ -9,7 +9,7 @@ import numpy as np
 from sklearn.metrics import explained_variance_score, mean_absolute_error, mean_squared_error, median_absolute_error, r2_score
 import itertools as it
 import math
-# import pdb
+import pdb
 
 # evaluation functions. these can be sped up using a GPU!
 eval_dict = {
@@ -64,8 +64,29 @@ def calc_fitness(X,labels,fit_choice):
     'mse_vec': lambda y,yhat: (y - yhat) ** 2, #mean_squared_error(y,yhat,multioutput = 'raw_values'),
     'mae_vec': lambda y,yhat: np.abs(y-yhat), #mean_absolute_error(y,yhat,multioutput = 'raw_values'),
     'mdae_vec': lambda y,yhat: median_absolute_error(y,yhat,multioutput = 'raw_values'),
-    'r2_vec':  lambda y,yhat: 1-r2_score(y,yhat,multioutput = 'raw_values'),
+    'r2_vec':  lambda y,yhat: 1-r2_score_vec(y,yhat),
     'vaf_vec': lambda y,yhat: 1-explained_variance_score(y,yhat,multioutput = 'raw_values')
     }
-
+    # pdb.set_trace()
     return list(map(lambda yhat: f[fit_choice](labels,yhat),X))
+
+def r2_score_vec(y_true,y_pred):
+    """ returns non-aggregate version of r2 score.
+
+    based on r2_score() function from sklearn (http://sklearn.org)
+    """
+
+    numerator = (y_true - y_pred) ** 2
+    denominator = (y_true - np.average(y_true)) ** 2
+
+    nonzero_denominator = denominator != 0
+    nonzero_numerator = numerator != 0
+    valid_score = nonzero_denominator & nonzero_numerator
+    output_scores = np.ones([y_true.shape[0]])
+    output_scores[valid_score] = 1 - (numerator[valid_score] /
+                                      denominator[valid_score])
+    # arbitrary set to zero to avoid -inf scores, having a constant
+    # y_true is not interesting for scoring a regression anyway
+    output_scores[nonzero_numerator & ~nonzero_denominator] = 0.
+
+    return output_scores
