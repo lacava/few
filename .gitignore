@@ -6,3 +6,6 @@ FEW.egg-info/
 *.txt
 dist/
 analysis/
+*.dropbox
+*.attr
+*.ipynb
