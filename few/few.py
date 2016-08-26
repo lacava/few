@@ -260,6 +260,7 @@ class FEW(BaseEstimator):
             # print("survivors:",stacks_2_eqns(survivors))
             pop.individuals[:] = survivors
             pop.X = np.vstack((pop.X, X_offspring))[survivor_index,:]
+            assert pop.X.shape[0] == self.population_size
             # print("new pop.X:",pop.X[:,:4])
             # pdb.set_trace()
             # pop.X = pop.X[survivor_index,:]
