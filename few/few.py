@@ -15,6 +15,7 @@ from .selection import *
 
 from sklearn.base import BaseEstimator
 from sklearn.linear_model import LassoLarsCV
+from sklearn.svm import LinearSVR
 from sklearn.cross_validation import train_test_split
 from sklearn.metrics import r2_score
 import numpy as np
@@ -88,6 +89,8 @@ class FEW(BaseEstimator):
         # instantiate sklearn estimator according to specified machine learner
         if (self.machine_learner.lower() == "lasso"):
             self.ml = LassoLarsCV(n_jobs=-1)
+        elif (self.machine_learner.lower() == 'svr'):
+            self.ml = LinearSVR()
         # elif (self.machine_learner.lower() == "distance"):
         #     self.ml = DistanceClassifier()
         else:
@@ -176,15 +179,13 @@ class FEW(BaseEstimator):
             if self.verbosity > 0: print(str(g)+".)",end='')
             # if self.verbosity > 1: print("population:",stacks_2_eqns(pop.individuals))
             if self.verbosity > 1: print("pop fitnesses:", ["%0.2f" % x.fitness for x in pop.individuals])
-            if self.verbosity > 1: print("median fitness parents: %0.2f" % np.median([x.fitness for x in pop.individuals]))
+            if self.verbosity >= 1: print("median fitness pop: %0.2f" % np.median([x.fitness for x in pop.individuals]))
+            if self.verbosity >= 1: print("best fitness pop: %0.2f" % np.min([x.fitness for x in pop.individuals]))
 
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-
-                # try:
                 self.ml.fit(pop.X[self.valid_loc(pop.individuals),:].transpose(),y_t)
-                # except:
-                #     pdb.set_trace()
+
             if self.verbosity > 1: print("number of non-zero regressors:",self.ml.coef_.shape[0])
             # keep best model
             # try:
@@ -238,7 +239,7 @@ class FEW(BaseEstimator):
                 else:
                     # print("fit.shape:",fit.shape)
                     ind.fitness = np.nanmin([fit,self.max_fit])
-            if self.verbosity > 0: print("median fitness offspring: %0.2f" % np.median([x.fitness for x in offspring]))
+            # if self.verbosity > 0: print("median fitness offspring: %0.2f" % np.median([x.fitness for x in offspring]))
 
             # Survival the next generation individuals
             if self.sel == 'tournament':
@@ -267,7 +268,7 @@ class FEW(BaseEstimator):
             if self.verbosity > 1: print("median fitness survivors: %0.2f" % np.median([x.fitness for x in pop.individuals]))
         # end of main GP loop
         ####################
-        if self.verbosity > 0: print("best score:",self._best_score)
+        print("finished. best internal val score:",self._best_score)
         if self.verbosity > 1: print("features:",stacks_2_eqns(self._best_inds))
         return self.score(features,labels)
 
@@ -376,8 +377,24 @@ class FEW(BaseEstimator):
                         # make program if pop is bigger than model componennts
                         make_program(p.stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1))
                         p.stack = list(reversed(p.stack))
+            else: # seed with raw features
+                # if list(self.ml.coef_):
+                if self.population_size < self.ml.coef_.shape[0]:
+                    # seed pop with highest coefficients
+                    coef_order = np.argsort(self.ml.coef_[::-1])
+                    for c,p in zip(coef_order,pop.individuals):
+                        p.stack = [('x',0,c)]
+                else: # seed pop with raw features
+                     for i,p in it.zip_longest(range(self._training_features.shape[1]),pop.individuals,fillvalue=None):
+                         if i is not None:
+                             p.stack = [('x',0,i)]
+                         else:
+                             make_program(p.stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1))
+                             p.stack = list(reversed(p.stack))
+
             # print initial population
             if self.verbosity > 1: print("seeded initial population:",stacks_2_eqns(pop.individuals))
+
 
         else:
             for I in pop.individuals:
@@ -492,7 +509,7 @@ def main():
     parser.add_argument('-xr', action='store', dest='CROSSOVER_RATE', default=0.2,
                         type=float_range, help='GP crossover rate in the range [0.0, 1.0].')
 
-    parser.add_argument('-ml', action='store', dest='MACHINE_LEARNER', default='lasso', choices = ['lasso'],
+    parser.add_argument('-ml', action='store', dest='MACHINE_LEARNER', default='lasso', choices = ['lasso','svr'],
                         type=str, help='ML algorithm to pair with features. Default: Lasso')
 
     parser.add_argument('-min_depth', action='store', dest='MIN_DEPTH', default=1,
