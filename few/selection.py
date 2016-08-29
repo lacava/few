@@ -122,7 +122,8 @@ def epsilon_lexicase(individuals, num_selections=None, survival = False):
 
     while len(winners) < num_selections:
         winners.append(copy.deepcopy(individuals[0]))
-        
+        locs.append(individual_locs[0])
+
     return winners, locs
 
 def mad(x, axis=None):

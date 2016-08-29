@@ -40,7 +40,7 @@ class FEW(BaseEstimator):
                  machine_learner = 'lasso', min_depth = 1, max_depth = 5, max_depth_init = 5,
                  sel = 'tournament', tourn_size = 2, fit_choice = 'mse', op_weight = False,
                  seed_with_ml = False, erc = False, random_state=np.random.randint(4294967295), verbosity=0, scoring_function=r2_score,
-                 disable_update_check=False):
+                 disable_update_check=False,elitism=False):
                 # sets up GP.
 
         # Save params to be recalled later by get_params()
@@ -79,7 +79,7 @@ class FEW(BaseEstimator):
         self.verbosity = verbosity
         self.scoring_function = scoring_function
         self.gp_generation = 0
-
+        self.elitism = elitism
         self.max_fit = 99999999.666
         # self.op_weight = op_weight
 
@@ -209,6 +209,10 @@ class FEW(BaseEstimator):
             else:
                 offspring = copy.deepcopy(self.valid(pop.individuals))
 
+            if self.elitism: # keep a copy of the elite individual
+                elite_index = np.argmin([x.fitness for x in pop.individuals])
+                elite = copy.deepcopy(pop.individuals[elite_index])
+
             # Apply crossover and mutation on the offspring
             for child1, child2 in zip(offspring[::2], offspring[1::2]):
                 if np.random.rand() < self.crossover_rate:
@@ -249,9 +253,11 @@ class FEW(BaseEstimator):
             elif self.sel == 'epsilon_lexicase':
                 survivors, survivor_index = epsilon_lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True)
 
-            # The population is entirely replaced by the offspring
-            # pdb.set_trace()
-
+            if self.elitism and min([x.fitness for x in survivors]) > elite.fitness:
+                # if the elite individual did not survive and elitism is on, replace worst individual with elite
+                rep_index = np.argmax([x.fitness for x in survivors])
+                survivors[rep_index] = elite
+                survivor_index[rep_index] = elite_index
             # print("current population:",stacks_2_eqns(pop.individuals))
             # print("current pop.X:",pop.X[:,:4])
             # print("offspring:",stacks_2_eqns(offspring))

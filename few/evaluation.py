@@ -26,8 +26,8 @@ eval_dict = {
 }
 def safe(x):
     """removes nans and infs from outputs."""
-    x[np.isinf(x)] = 0
-    x[np.isnan(x)] = 0
+    x[np.isinf(x)] = 1
+    x[np.isnan(x)] = 1
     return x
 
 def eval(n, features, stack_float):
