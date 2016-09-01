@@ -13,6 +13,7 @@ import pdb
 
 # evaluation functions. these can be sped up using a GPU!
 eval_dict = {
+# float operations
     '+': lambda n,features,stack_float,stack_bool: stack_float.pop() + stack_float.pop(),
     '-': lambda n,features,stack_float,stack_bool: stack_float.pop() - stack_float.pop(),
     '*': lambda n,features,stack_float,stack_bool: stack_float.pop() * stack_float.pop(),
@@ -20,7 +21,7 @@ eval_dict = {
     'sin': lambda n,features,stack_float,stack_bool: np.sin(stack_float.pop()),
     'cos': lambda n,features,stack_float,stack_bool: np.cos(stack_float.pop()),
     'exp': lambda n,features,stack_float,stack_bool: np.exp(stack_float.pop()),
-    'log': lambda n,features,stack_float,stack_bool: np.log(np.abs(stack_float.pop())),
+    'log': lambda n,features,stack_float,stack_bool: logs(stack_float.pop()),#np.log(np.abs(stack_float.pop())),
     'x':  lambda n,features,stack_float,stack_bool: features[:,n[2]],
     'k': lambda n,features,stack_float,stack_bool: np.ones(features.shape[0])*n[2],
     '^2': lambda n,features,stack_float,stack_bool: stack_float.pop()**2,
@@ -31,14 +32,14 @@ eval_dict = {
     '&': lambda n,features,stack_float,stack_bool: stack_bool.pop() and stack_bool.pop(),
     '|': lambda n,features,stack_float,stack_bool: stack_bool.pop() or stack_bool.pop(),
     '==': lambda n,features,stack_float,stack_bool: stack_bool.pop() == stack_bool.pop(),
-    '>f': lambda n,features,stack_float,stack_bool: stack_float.pop() > stack_float.pop(),
-    '<f': lambda n,features,stack_float,stack_bool: stack_float.pop() < stack_float.pop(),
-    '>=f': lambda n,features,stack_float,stack_bool: stack_float.pop() >= stack_float.pop(),
-    '<=f': lambda n,features,stack_float,stack_bool: stack_float.pop() <= stack_float.pop(),
-    '>b': lambda n,features,stack_float,stack_bool: stack_bool.pop() > stack_bool.pop(),
-    '<b': lambda n,features,stack_float,stack_bool: stack_bool.pop() < stack_bool.pop(),
-    '>=b': lambda n,features,stack_float,stack_bool: stack_bool.pop() >= stack_bool.pop(),
-    '<=b': lambda n,features,stack_float,stack_bool: stack_bool.pop() <= stack_bool.pop(),
+    '>_f': lambda n,features,stack_float,stack_bool: stack_float.pop() > stack_float.pop(),
+    '<_f': lambda n,features,stack_float,stack_bool: stack_float.pop() < stack_float.pop(),
+    '>=_f': lambda n,features,stack_float,stack_bool: stack_float.pop() >= stack_float.pop(),
+    '<=_f': lambda n,features,stack_float,stack_bool: stack_float.pop() <= stack_float.pop(),
+    '>_b': lambda n,features,stack_float,stack_bool: stack_bool.pop() > stack_bool.pop(),
+    '<_b': lambda n,features,stack_float,stack_bool: stack_bool.pop() < stack_bool.pop(),
+    '>=_b': lambda n,features,stack_float,stack_bool: stack_bool.pop() >= stack_bool.pop(),
+    '<=_b': lambda n,features,stack_float,stack_bool: stack_bool.pop() <= stack_bool.pop(),
 }
 f = { # available fitness metrics
 'mse': lambda y,yhat: mean_squared_error(y,yhat),
@@ -61,13 +62,22 @@ def safe(x):
     return x
 
 def divs(x,y):
+    """safe division"""
     tmp = np.ones(x.shape)
     nonzero_y = y != 0
     tmp[nonzero_y] = x[nonzero_y]/y[nonzero_y]
     return tmp
 
-def eval(n, features, stack_float, stack_bool):
+def logs(x):
+    """safe log"""
+    tmp = np.ones(x.shape)
+    nonzero_x = x != 0
+    tmp[nonzero_x] = np.log(np.abs(x[nonzero_x]))
+    return tmp
 
+
+def eval(n, features, stack_float, stack_bool):
+    np.seterr(all='ignore')
     if len(stack_float) >= n[1]:
         stack_float.append(safe(eval_dict[n[0]](n,features,stack_float,stack_bool)))
         if any(np.isnan(stack_float[-1])) or any(np.isinf(stack_float[-1])):

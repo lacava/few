@@ -30,6 +30,7 @@ from joblib import Parallel, delayed
 # import multiprocessing as mp
 # NUM_THREADS = mp.cpu_count()
 
+
 class FEW(BaseEstimator):
     """FEW uses GP to find a set of transformations from the original feature space
     that produces the best performance for a given machine learner.
@@ -101,7 +102,9 @@ class FEW(BaseEstimator):
         self.non_feature_columns = ['label', 'group', 'guess']
 
         # function set
-        self.func_set = [('+',2),('-',2),('*',2),('/',2),('sin',1),('cos',1),('exp',1),('log',1)]
+        self.func_set = [('+',2),('-',2),('*',2),('/',2),
+                         ('sin',1),('cos',1),('exp',1),('log',1),
+                         ('^2',1),('^3',1),('sqrt',1)]
         # terminal set
         self.term_set = []
 
