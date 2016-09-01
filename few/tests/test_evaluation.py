@@ -65,7 +65,7 @@ def test_out_is_correct():
     p4.stack =  [('x', 0, 12), ('sin', 1)]
     p5.stack = [('k', 0, 178.3), ('x', 0, 8), ('*', 2), ('x', 0, 7), ('cos', 1), ('+', 2)]
 
-    y1 = safe(logs(0.175) - (X[:,5] - X[:,4]))
+    y1 = safe(np.log(0.175) - (X[:,5] - X[:,4]))
     y2 = safe(X[:,7]*X[:,8])
     y3 = safe(divs(X[:,5]*X[:,7],np.exp(X[:,0])))
     y4 = safe(np.sin(X[:,12]))
