@@ -8,7 +8,7 @@ license: GNU/GPLv3
 
 import argparse
 from ._version import __version__
-from .evaluation import out, calc_fitness
+from .evaluation import out, calc_fitness, f
 from .population import *
 from .variation import *
 from .selection import *
@@ -23,8 +23,9 @@ import pandas as pd
 import warnings
 import copy
 import itertools as it
-import pdb
+# import pdb
 from update_checker import update_check
+from joblib import Parallel, delayed
 
 # import multiprocessing as mp
 # NUM_THREADS = mp.cpu_count()
@@ -155,10 +156,13 @@ class FEW(BaseEstimator):
         # Evaluate the entire population
         # X represents a matrix of the population outputs (number os samples x population size)
         # pop.X = np.asarray(list(map(lambda I: out(I,x_t,labels), pop.individuals)))
-        pop.X = self.transform(x_t,pop.individuals,y_t)
+        # pop.X = self.transform(x_t,pop.individuals,y_t)
+        pop.X = np.asarray(Parallel(n_jobs=-1,backend="threading")(delayed(out)(I,x_t,y_t) for I in pop.individuals), order = 'F')
+        # pdb.set_trace()
         # calculate fitness of individuals
         # fitnesses = list(map(lambda I: fitness(I,y_t,self.machine_learner),pop.X))
         fitnesses = calc_fitness(pop.X,y_t,self.fit_choice)
+
         # print("fitnesses:",fitnesses)
         # Assign fitnesses to inidividuals in population
         for ind, fit in zip(pop.individuals, fitnesses):
@@ -171,6 +175,7 @@ class FEW(BaseEstimator):
             else:
                 ind.fitness = np.nanmin([fit,self.max_fit])
 
+        #with Parallel(n_jobs=-1,backend="threading") as parallel:
         ####################
         ### Main GP loop
         # for each generation g
@@ -229,8 +234,12 @@ class FEW(BaseEstimator):
                 offspring[-1].stack = list(reversed(offspring[-1].stack))
 
             # print("offspring:",stacks_2_eqns(offspring))
-            X_offspring = self.transform(x_t,offspring)
+            # X_offspring = self.transform(x_t,offspring)
+            X_offspring = np.asarray(Parallel(n_jobs=-1,backend="threading")(delayed(out)(O,x_t,y_t) for O in offspring), order = 'F')
+            # X_offspring = np.asarray([out(O,x_t,y_t) for O in offspring], order = 'F')
+
             F_offspring = calc_fitness(X_offspring,y_t,self.fit_choice)
+            # F_offspring = parallel(delayed(f[self.fit_choice])(y_t,yhat) for yhat in X_offspring)
             # print("fitnesses:",fitnesses)
             # Assign fitnesses to inidividuals in population
             for ind, fit in zip(offspring, F_offspring):
@@ -275,7 +284,7 @@ class FEW(BaseEstimator):
                                     #  X_offspring[[s-len(pop.individuals) for s in survivor_index if s>=len(pop.individuals)],:]))
             if self.verbosity > 1: print("median fitness survivors: %0.2f" % np.median([x.fitness for x in pop.individuals]))
         # end of main GP loop
-        ####################
+            ####################
         print("finished. best internal val score:",self._best_score)
         if self.verbosity > 1: print("features:",stacks_2_eqns(self._best_inds))
         return self.score(features,labels)

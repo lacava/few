@@ -20,10 +20,24 @@ eval_dict = {
     'sin': lambda n,features,stack_float: np.sin(stack_float.pop()),
     'cos': lambda n,features,stack_float: np.cos(stack_float.pop()),
     'exp': lambda n,features,stack_float: np.exp(stack_float.pop()),
-    'log': lambda n,features,stack_float: np.log(stack_float.pop()),
+    'log': lambda n,features,stack_float: np.log(np.abs(stack_float.pop())),
     'x':  lambda n,features,stack_float: features[:,n[2]],
     'k': lambda n,features,stack_float: np.ones(features.shape[0])*n[2]
 }
+f = { # available fitness metrics
+'mse': lambda y,yhat: mean_squared_error(y,yhat),
+'mae': lambda y,yhat: mean_absolute_error(y,yhat),
+'mdae': lambda y,yhat: median_absolute_error(y,yhat),
+'r2':  lambda y,yhat: 1-r2_score(y,yhat),
+'vaf': lambda y,yhat: 1-explained_variance_score(y,yhat),
+# non-aggregated fitness calculations
+'mse_vec': lambda y,yhat: (y - yhat) ** 2, #mean_squared_error(y,yhat,multioutput = 'raw_values'),
+'mae_vec': lambda y,yhat: np.abs(y-yhat), #mean_absolute_error(y,yhat,multioutput = 'raw_values'),
+'mdae_vec': lambda y,yhat: median_absolute_error(y,yhat,multioutput = 'raw_values'),
+'r2_vec':  lambda y,yhat: 1-r2_score_vec(y,yhat),
+'vaf_vec': lambda y,yhat: 1-explained_variance_score(y,yhat,multioutput = 'raw_values')
+}
+
 def safe(x):
     """removes nans and infs from outputs."""
     x[np.isinf(x)] = 1
@@ -54,19 +68,7 @@ def calc_fitness(X,labels,fit_choice):
     labels: correct outputs
     fit_choice: choice of fitness function
     """
-    f = { # available fitness metrics
-    'mse': lambda y,yhat: mean_squared_error(y,yhat),
-    'mae': lambda y,yhat: mean_absolute_error(y,yhat),
-    'mdae': lambda y,yhat: median_absolute_error(y,yhat),
-    'r2':  lambda y,yhat: 1-r2_score(y,yhat),
-    'vaf': lambda y,yhat: 1-explained_variance_score(y,yhat),
-    # non-aggregated fitness calculations
-    'mse_vec': lambda y,yhat: (y - yhat) ** 2, #mean_squared_error(y,yhat,multioutput = 'raw_values'),
-    'mae_vec': lambda y,yhat: np.abs(y-yhat), #mean_absolute_error(y,yhat,multioutput = 'raw_values'),
-    'mdae_vec': lambda y,yhat: median_absolute_error(y,yhat,multioutput = 'raw_values'),
-    'r2_vec':  lambda y,yhat: 1-r2_score_vec(y,yhat),
-    'vaf_vec': lambda y,yhat: 1-explained_variance_score(y,yhat,multioutput = 'raw_values')
-    }
+
     # pdb.set_trace()
     return list(map(lambda yhat: f[fit_choice](labels,yhat),X))
 
