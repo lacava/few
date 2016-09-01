@@ -13,16 +13,32 @@ import pdb
 
 # evaluation functions. these can be sped up using a GPU!
 eval_dict = {
-    '+': lambda n,features,stack_float: stack_float.pop() + stack_float.pop(),
-    '-': lambda n,features,stack_float: stack_float.pop() - stack_float.pop(),
-    '*': lambda n,features,stack_float: stack_float.pop() * stack_float.pop(),
-    '/': lambda n,features,stack_float: stack_float.pop() / stack_float.pop(),
-    'sin': lambda n,features,stack_float: np.sin(stack_float.pop()),
-    'cos': lambda n,features,stack_float: np.cos(stack_float.pop()),
-    'exp': lambda n,features,stack_float: np.exp(stack_float.pop()),
-    'log': lambda n,features,stack_float: np.log(np.abs(stack_float.pop())),
-    'x':  lambda n,features,stack_float: features[:,n[2]],
-    'k': lambda n,features,stack_float: np.ones(features.shape[0])*n[2]
+    '+': lambda n,features,stack_float,stack_bool: stack_float.pop() + stack_float.pop(),
+    '-': lambda n,features,stack_float,stack_bool: stack_float.pop() - stack_float.pop(),
+    '*': lambda n,features,stack_float,stack_bool: stack_float.pop() * stack_float.pop(),
+    '/': lambda n,features,stack_float,stack_bool: divs(stack_float.pop(),stack_float.pop()),
+    'sin': lambda n,features,stack_float,stack_bool: np.sin(stack_float.pop()),
+    'cos': lambda n,features,stack_float,stack_bool: np.cos(stack_float.pop()),
+    'exp': lambda n,features,stack_float,stack_bool: np.exp(stack_float.pop()),
+    'log': lambda n,features,stack_float,stack_bool: np.log(np.abs(stack_float.pop())),
+    'x':  lambda n,features,stack_float,stack_bool: features[:,n[2]],
+    'k': lambda n,features,stack_float,stack_bool: np.ones(features.shape[0])*n[2],
+    '^2': lambda n,features,stack_float,stack_bool: stack_float.pop()**2,
+    '^3': lambda n,features,stack_float,stack_bool: stack_float.pop()**3,
+    'sqrt': lambda n,features,stack_float,stack_bool: np.sqrt(np.abs(stack_float.pop())),
+# bool operations
+    '!': lambda n,features,stack_float,stack_bool: not stack_bool.pop(),
+    '&': lambda n,features,stack_float,stack_bool: stack_bool.pop() and stack_bool.pop(),
+    '|': lambda n,features,stack_float,stack_bool: stack_bool.pop() or stack_bool.pop(),
+    '==': lambda n,features,stack_float,stack_bool: stack_bool.pop() == stack_bool.pop(),
+    '>f': lambda n,features,stack_float,stack_bool: stack_float.pop() > stack_float.pop(),
+    '<f': lambda n,features,stack_float,stack_bool: stack_float.pop() < stack_float.pop(),
+    '>=f': lambda n,features,stack_float,stack_bool: stack_float.pop() >= stack_float.pop(),
+    '<=f': lambda n,features,stack_float,stack_bool: stack_float.pop() <= stack_float.pop(),
+    '>b': lambda n,features,stack_float,stack_bool: stack_bool.pop() > stack_bool.pop(),
+    '<b': lambda n,features,stack_float,stack_bool: stack_bool.pop() < stack_bool.pop(),
+    '>=b': lambda n,features,stack_float,stack_bool: stack_bool.pop() >= stack_bool.pop(),
+    '<=b': lambda n,features,stack_float,stack_bool: stack_bool.pop() <= stack_bool.pop(),
 }
 f = { # available fitness metrics
 'mse': lambda y,yhat: mean_squared_error(y,yhat),
@@ -44,20 +60,27 @@ def safe(x):
     x[np.isnan(x)] = 1
     return x
 
-def eval(n, features, stack_float):
+def divs(x,y):
+    tmp = np.ones(x.shape)
+    nonzero_y = y != 0
+    tmp[nonzero_y] = x[nonzero_y]/y[nonzero_y]
+    return tmp
+
+def eval(n, features, stack_float, stack_bool):
 
     if len(stack_float) >= n[1]:
-        stack_float.append(safe(eval_dict[n[0]](n,features,stack_float)))
+        stack_float.append(safe(eval_dict[n[0]](n,features,stack_float,stack_bool)))
         if any(np.isnan(stack_float[-1])) or any(np.isinf(stack_float[-1])):
             print("problem operator:",n)
 
 def out(I,features,labels=None):
     """computes the output for individual I"""
     stack_float = []
+    stack_bool = []
     # print("stack:",I.stack)
     # evaulate stack over rows of features,labels
     for n in I.stack:
-        eval(n,features,stack_float)
+        eval(n,features,stack_float,stack_bool)
         # print("stack_float:",stack_float)
 
     return stack_float[-1]

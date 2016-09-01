@@ -67,7 +67,7 @@ def test_out_is_correct():
 
     y1 = safe(np.log(0.175) - (X[:,5] - X[:,4]))
     y2 = safe(X[:,7]*X[:,8])
-    y3 = safe(X[:,5]*X[:,7]/np.exp(X[:,0]))
+    y3 = safe(divs(X[:,5]*X[:,7],np.exp(X[:,0])))
     y4 = safe(np.sin(X[:,12]))
     y5 = safe(178.3*X[:,8]+np.cos(X[:,7]))
 

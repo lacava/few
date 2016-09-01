@@ -554,6 +554,9 @@ def main():
     parser.add_argument('--seed_with_ml', action='store_true', dest='SEED_WITH_ML', default=False,
                     help='Flag to seed initial GP population with components of the ML model.')
 
+    parser.add_argument('--elitism', action='store_true', dest='ELITISM', default=False,
+                    help='Flag to force survival of best individual in GP population.')
+
     parser.add_argument('--erc', action='store_true', dest='ERC', default=False,
                     help='Flag to use ephemeral random constants in GP feature construction.')
 
