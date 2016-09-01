@@ -175,106 +175,108 @@ class FEW(BaseEstimator):
             else:
                 ind.fitness = np.nanmin([fit,self.max_fit])
 
-        with Parallel(n_jobs=-1,backend="threading") as parallel:
-            ####################
-            ### Main GP loop
-            # for each generation g
-            for g in np.arange(self.generations):
-                if self.verbosity == 0: print(".",end='')
-                if self.verbosity > 0: print(str(g)+".)",end='')
-                # if self.verbosity > 1: print("population:",stacks_2_eqns(pop.individuals))
-                if self.verbosity > 1: print("pop fitnesses:", ["%0.2f" % x.fitness for x in pop.individuals])
-                if self.verbosity >= 1: print("median fitness pop: %0.2f" % np.median([x.fitness for x in pop.individuals]))
-                if self.verbosity >= 1: print("best fitness pop: %0.2f" % np.min([x.fitness for x in pop.individuals]))
+        #with Parallel(n_jobs=-1,backend="threading") as parallel:
+        ####################
+        ### Main GP loop
+        # for each generation g
+        for g in np.arange(self.generations):
+            if self.verbosity == 0: print(".",end='')
+            if self.verbosity > 0: print(str(g)+".)",end='')
+            # if self.verbosity > 1: print("population:",stacks_2_eqns(pop.individuals))
+            if self.verbosity > 1: print("pop fitnesses:", ["%0.2f" % x.fitness for x in pop.individuals])
+            if self.verbosity >= 1: print("median fitness pop: %0.2f" % np.median([x.fitness for x in pop.individuals]))
+            if self.verbosity >= 1: print("best fitness pop: %0.2f" % np.min([x.fitness for x in pop.individuals]))
 
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    self.ml.fit(pop.X[self.valid_loc(pop.individuals),:].transpose(),y_t)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                self.ml.fit(pop.X[self.valid_loc(pop.individuals),:].transpose(),y_t)
 
-                if self.verbosity > 1: print("number of non-zero regressors:",self.ml.coef_.shape[0])
-                # keep best model
-                # try:
-                tmp = self.ml.score(self.transform(x_v,pop.individuals)[self.valid_loc(pop.individuals),:].transpose(),y_v)
-                if self.verbosity > 0: print("current ml validation score:",tmp)
-                # except Exception:
-                #     tmp = 0
+            if self.verbosity > 1: print("number of non-zero regressors:",self.ml.coef_.shape[0])
+            # keep best model
+            # try:
+            tmp = self.ml.score(self.transform(x_v,pop.individuals)[self.valid_loc(pop.individuals),:].transpose(),y_v)
+            if self.verbosity > 0: print("current ml validation score:",tmp)
+            # except Exception:
+            #     tmp = 0
 
-                if tmp > self._best_score:
-                    self._best_estimator = copy.deepcopy(self.ml)
-                    self._best_score = tmp
-                    self._best_inds = pop.individuals[:]
-                    if self.verbosity > 0: print("updated best internal validation score:",self._best_score)
+            if tmp > self._best_score:
+                self._best_estimator = copy.deepcopy(self.ml)
+                self._best_score = tmp
+                self._best_inds = pop.individuals[:]
+                if self.verbosity > 0: print("updated best internal validation score:",self._best_score)
 
-                offspring = []
+            offspring = []
 
-                # clone individuals for offspring creation
-                if self.sel == 'lasso':
-                    # for lasso, filter individuals with 0 coefficients
-                    offspring = copy.deepcopy(list(x for i,x in zip(self.ml.coef_, self.valid(pop.individuals)) if  i != 0))
+            # clone individuals for offspring creation
+            if self.sel == 'lasso':
+                # for lasso, filter individuals with 0 coefficients
+                offspring = copy.deepcopy(list(x for i,x in zip(self.ml.coef_, self.valid(pop.individuals)) if  i != 0))
+            else:
+                offspring = copy.deepcopy(self.valid(pop.individuals))
+
+            # Apply crossover and mutation on the offspring
+            for child1, child2 in zip(offspring[::2], offspring[1::2]):
+                if np.random.rand() < self.crossover_rate:
+                    cross(child1.stack, child2.stack, self.max_depth)
                 else:
-                    offspring = copy.deepcopy(self.valid(pop.individuals))
+                    mutate(child1.stack,self.func_set,self.term_set)
+                    mutate(child2.stack,self.func_set,self.term_set)
+                child1.fitness = -1
+                child2.fitness = -1
+            while len(offspring) < self.population_size:
+                #make new offspring to replace the invalid ones
+                offspring.append(Ind())
+                make_program(offspring[-1].stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1))
+                offspring[-1].stack = list(reversed(offspring[-1].stack))
 
-                # Apply crossover and mutation on the offspring
-                for child1, child2 in zip(offspring[::2], offspring[1::2]):
-                    if np.random.rand() < self.crossover_rate:
-                        cross(child1.stack, child2.stack, self.max_depth)
-                    else:
-                        mutate(child1.stack,self.func_set,self.term_set)
-                        mutate(child2.stack,self.func_set,self.term_set)
-                    child1.fitness = -1
-                    child2.fitness = -1
-                while len(offspring) < self.population_size:
-                    #make new offspring to replace the invalid ones
-                    offspring.append(Ind())
-                    make_program(offspring[-1].stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1))
-                    offspring[-1].stack = list(reversed(offspring[-1].stack))
+            # print("offspring:",stacks_2_eqns(offspring))
+            # X_offspring = self.transform(x_t,offspring)
+            X_offspring = np.asarray(Parallel(n_jobs=-1,backend="threading")(delayed(out)(O,x_t,y_t) for O in offspring), order = 'F')
+            # X_offspring = np.asarray([out(O,x_t,y_t) for O in offspring], order = 'F')
 
-                # print("offspring:",stacks_2_eqns(offspring))
-                # X_offspring = self.transform(x_t,offspring)
-                X_offspring = np.asarray(parallel(delayed(out)(O,x_t,y_t) for O in offspring), order = 'F')
-                F_offspring = calc_fitness(X_offspring,y_t,self.fit_choice)
-                # F_offspring = parallel(delayed(f[self.fit_choice])(y_t,yhat) for yhat in X_offspring)
-                # print("fitnesses:",fitnesses)
-                # Assign fitnesses to inidividuals in population
-                for ind, fit in zip(offspring, F_offspring):
-                    if isinstance(fit,(list,np.ndarray)): # calc_fitness returned raw fitness values
-                        fit[fit < 0] = self.max_fit
-                        fit[np.isnan(fit)] = self.max_fit
-                        fit[np.isinf(fit)] = self.max_fit
-                        ind.fitness_vec = fit
-                        ind.fitness = np.mean(ind.fitness_vec)
-                    else:
-                        # print("fit.shape:",fit.shape)
-                        ind.fitness = np.nanmin([fit,self.max_fit])
-                # if self.verbosity > 0: print("median fitness offspring: %0.2f" % np.median([x.fitness for x in offspring]))
+            F_offspring = calc_fitness(X_offspring,y_t,self.fit_choice)
+            # F_offspring = parallel(delayed(f[self.fit_choice])(y_t,yhat) for yhat in X_offspring)
+            # print("fitnesses:",fitnesses)
+            # Assign fitnesses to inidividuals in population
+            for ind, fit in zip(offspring, F_offspring):
+                if isinstance(fit,(list,np.ndarray)): # calc_fitness returned raw fitness values
+                    fit[fit < 0] = self.max_fit
+                    fit[np.isnan(fit)] = self.max_fit
+                    fit[np.isinf(fit)] = self.max_fit
+                    ind.fitness_vec = fit
+                    ind.fitness = np.mean(ind.fitness_vec)
+                else:
+                    # print("fit.shape:",fit.shape)
+                    ind.fitness = np.nanmin([fit,self.max_fit])
+            # if self.verbosity > 0: print("median fitness offspring: %0.2f" % np.median([x.fitness for x in offspring]))
 
-                # Survival the next generation individuals
-                if self.sel == 'tournament':
-                    survivors, survivor_index = tournament(pop.individuals + offspring, self.tourn_size, num_selections = len(pop.individuals))
-                elif self.sel == 'lexicase':
-                    survivors, survivor_index = lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True)
-                elif self.sel == 'epsilon_lexicase':
-                    survivors, survivor_index = epsilon_lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True)
+            # Survival the next generation individuals
+            if self.sel == 'tournament':
+                survivors, survivor_index = tournament(pop.individuals + offspring, self.tourn_size, num_selections = len(pop.individuals))
+            elif self.sel == 'lexicase':
+                survivors, survivor_index = lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True)
+            elif self.sel == 'epsilon_lexicase':
+                survivors, survivor_index = epsilon_lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True)
 
-                # The population is entirely replaced by the offspring
-                # pdb.set_trace()
+            # The population is entirely replaced by the offspring
+            # pdb.set_trace()
 
-                # print("current population:",stacks_2_eqns(pop.individuals))
-                # print("current pop.X:",pop.X[:,:4])
-                # print("offspring:",stacks_2_eqns(offspring))
-                # print("current X_offspring:",X_offspring[:,:4])
-                # print("survivor index:",survivor_index)
-                # print("survivors:",stacks_2_eqns(survivors))
-                pop.individuals[:] = survivors
-                pop.X = np.vstack((pop.X, X_offspring))[survivor_index,:]
-                assert pop.X.shape[0] == self.population_size
-                # print("new pop.X:",pop.X[:,:4])
-                # pdb.set_trace()
-                # pop.X = pop.X[survivor_index,:]
-                #[[s for s in survivor_index if s<len(pop.individuals)],:],
-                                        #  X_offspring[[s-len(pop.individuals) for s in survivor_index if s>=len(pop.individuals)],:]))
-                if self.verbosity > 1: print("median fitness survivors: %0.2f" % np.median([x.fitness for x in pop.individuals]))
-            # end of main GP loop
+            # print("current population:",stacks_2_eqns(pop.individuals))
+            # print("current pop.X:",pop.X[:,:4])
+            # print("offspring:",stacks_2_eqns(offspring))
+            # print("current X_offspring:",X_offspring[:,:4])
+            # print("survivor index:",survivor_index)
+            # print("survivors:",stacks_2_eqns(survivors))
+            pop.individuals[:] = survivors
+            pop.X = np.vstack((pop.X, X_offspring))[survivor_index,:]
+            assert pop.X.shape[0] == self.population_size
+            # print("new pop.X:",pop.X[:,:4])
+            # pdb.set_trace()
+            # pop.X = pop.X[survivor_index,:]
+            #[[s for s in survivor_index if s<len(pop.individuals)],:],
+                                    #  X_offspring[[s-len(pop.individuals) for s in survivor_index if s>=len(pop.individuals)],:]))
+            if self.verbosity > 1: print("median fitness survivors: %0.2f" % np.median([x.fitness for x in pop.individuals]))
+        # end of main GP loop
             ####################
         print("finished. best internal val score:",self._best_score)
         if self.verbosity > 1: print("features:",stacks_2_eqns(self._best_inds))

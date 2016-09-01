@@ -20,7 +20,7 @@ eval_dict = {
     'sin': lambda n,features,stack_float: np.sin(stack_float.pop()),
     'cos': lambda n,features,stack_float: np.cos(stack_float.pop()),
     'exp': lambda n,features,stack_float: np.exp(stack_float.pop()),
-    'log': lambda n,features,stack_float: np.log(stack_float.pop()),
+    'log': lambda n,features,stack_float: np.log(np.abs(stack_float.pop())),
     'x':  lambda n,features,stack_float: features[:,n[2]],
     'k': lambda n,features,stack_float: np.ones(features.shape[0])*n[2]
 }
