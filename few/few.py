@@ -192,7 +192,14 @@ class FEW(BaseEstimator):
 
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                self.ml.fit(pop.X[self.valid_loc(pop.individuals),:].transpose(),y_t)
+                try:
+                    self.ml.fit(pop.X[self.valid_loc(pop.individuals),:].transpose(),y_t)
+                except ValueError as detail:
+                    print("warning: ValueError in ml fit. X.shape:",pop.X[self.valid_loc(pop.individuals),:].transpose().shape,"y_t shape:",y_t.shape)
+                    print("First ten entries X:",pop.X[self.valid_loc(pop.individuals),:].transpose()[:10])
+                    print("First ten entries y_t:",y_t[:10])
+                    print("equations:",stacks_2_eqns(pop.individuals))
+                    if self.verbosity > 1: print("---\ndetailed error message:",detail)
 
             if self.verbosity > 1: print("number of non-zero regressors:",self.ml.coef_.shape[0])
             # keep best model
