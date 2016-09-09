@@ -143,8 +143,8 @@ class FEW(BaseEstimator):
         # initial model
         self._best_estimator = copy.deepcopy(self.ml.fit(x_t,y_t))
         self._best_score = self._best_estimator.score(x_v,y_v)
-        if self.verbosity > 1: print("initial estimator size:",self._best_estimator.coef_.shape)
-        if self.verbosity > 0: print("initial score:",self._best_score)
+        if self.verbosity > 2: print("initial estimator size:",self._best_estimator.coef_.shape)
+        if self.verbosity > 1: print("initial score:",self._best_score)
         # create terminal set
         for i in np.arange(x_t.shape[1]):
             # (.,.,.): node type, arity, feature column index or value
@@ -183,12 +183,12 @@ class FEW(BaseEstimator):
         ### Main GP loop
         # for each generation g
         for g in np.arange(self.generations):
-            if self.verbosity == 0: print(".",end='')
-            if self.verbosity > 0: print(str(g)+".)",end='')
+            if self.verbosity > 0: print(".",end='')
+            if self.verbosity > 1: print(str(g)+".)",end='')
             # if self.verbosity > 1: print("population:",stacks_2_eqns(pop.individuals))
-            if self.verbosity > 1: print("pop fitnesses:", ["%0.2f" % x.fitness for x in pop.individuals])
-            if self.verbosity >= 1: print("median fitness pop: %0.2f" % np.median([x.fitness for x in pop.individuals]))
-            if self.verbosity >= 1: print("best fitness pop: %0.2f" % np.min([x.fitness for x in pop.individuals]))
+            if self.verbosity > 2: print("pop fitnesses:", ["%0.2f" % x.fitness for x in pop.individuals])
+            if self.verbosity > 1: print("median fitness pop: %0.2f" % np.median([x.fitness for x in pop.individuals]))
+            if self.verbosity > 1: print("best fitness pop: %0.2f" % np.min([x.fitness for x in pop.individuals]))
 
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
@@ -205,7 +205,7 @@ class FEW(BaseEstimator):
             # keep best model
             # try:
             tmp = self.ml.score(self.transform(x_v,pop.individuals)[self.valid_loc(pop.individuals),:].transpose(),y_v)
-            if self.verbosity > 0: print("current ml validation score:",tmp)
+            if self.verbosity > 1: print("current ml validation score:",tmp)
             # except Exception:
             #     tmp = 0
 
@@ -213,7 +213,7 @@ class FEW(BaseEstimator):
                 self._best_estimator = copy.deepcopy(self.ml)
                 self._best_score = tmp
                 self._best_inds = pop.individuals[:]
-                if self.verbosity > 0: print("updated best internal validation score:",self._best_score)
+                if self.verbosity > 1: print("updated best internal validation score:",self._best_score)
 
             offspring = []
 
@@ -292,11 +292,11 @@ class FEW(BaseEstimator):
             # pop.X = pop.X[survivor_index,:]
             #[[s for s in survivor_index if s<len(pop.individuals)],:],
                                     #  X_offspring[[s-len(pop.individuals) for s in survivor_index if s>=len(pop.individuals)],:]))
-            if self.verbosity > 1: print("median fitness survivors: %0.2f" % np.median([x.fitness for x in pop.individuals]))
+            if self.verbosity > 2: print("median fitness survivors: %0.2f" % np.median([x.fitness for x in pop.individuals]))
         # end of main GP loop
             ####################
         print("finished. best internal val score:",self._best_score)
-        if self.verbosity > 1: print("features:",stacks_2_eqns(self._best_inds))
+        if self.verbosity > 2: print("features:",stacks_2_eqns(self._best_inds))
         return self.score(features,labels)
 
     def transform(self,x,inds=None,labels = None):
@@ -420,7 +420,7 @@ class FEW(BaseEstimator):
                              p.stack = list(reversed(p.stack))
 
             # print initial population
-            if self.verbosity > 1: print("seeded initial population:",stacks_2_eqns(pop.individuals))
+            if self.verbosity > 2: print("seeded initial population:",stacks_2_eqns(pop.individuals))
 
 
         else:
@@ -574,8 +574,8 @@ def main():
                         type=int, help='Random number generator seed for reproducibility. Note that using multi-threading may '
                                        'make exacts results impossible to reproduce.')
 
-    parser.add_argument('-v', action='store', dest='VERBOSITY', default=1, choices=[0, 1, 2],
-                        type=int, help='How much information FEW communicates while it is running: 0 = none, 1 = minimal, 2 = all.')
+    parser.add_argument('-v', action='store', dest='VERBOSITY', default=1, choices=[0, 1, 2, 3],
+                        type=int, help='How much information FEW communicates while it is running: 0 = none, 1 = minimal, 2 = lots, 3 = all.')
 
     parser.add_argument('--no-update-check', action='store_true', dest='DISABLE_UPDATE_CHECK', default=False,
                         help='Flag indicating whether the FEW version checker should be disabled.')
