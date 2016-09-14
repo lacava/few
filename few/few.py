@@ -23,7 +23,7 @@ import pandas as pd
 import warnings
 import copy
 import itertools as it
-# import pdb
+import pdb
 from update_checker import update_check
 from joblib import Parallel, delayed
 
@@ -199,7 +199,9 @@ class FEW(BaseEstimator):
                     print("First ten entries X:",pop.X[self.valid_loc(pop.individuals),:].transpose()[:10])
                     print("First ten entries y_t:",y_t[:10])
                     print("equations:",stacks_2_eqns(pop.individuals))
+                    print("FEW parameters:",self.get_params())
                     if self.verbosity > 1: print("---\ndetailed error message:",detail)
+                    raise(ValueError)
 
             if self.verbosity > 1: print("number of non-zero regressors:",self.ml.coef_.shape[0])
             # keep best model
@@ -295,7 +297,7 @@ class FEW(BaseEstimator):
             if self.verbosity > 2: print("median fitness survivors: %0.2f" % np.median([x.fitness for x in pop.individuals]))
         # end of main GP loop
             ####################
-        print("finished. best internal val score:",self._best_score)
+        if self.verbosity > 0: print("finished. best internal val score:",self._best_score)
         if self.verbosity > 2: print("features:",stacks_2_eqns(self._best_inds))
         return self.score(features,labels)
 
