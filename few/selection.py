@@ -83,14 +83,14 @@ def epsilon_lexicase(individuals, num_selections=None, survival = False):
     individual_locs = range(len(individuals))
     # calculate epsilon thresholds based on median absolute deviation (MAD)
     mad_for_case = np.empty([len(individuals[0].fitness_vec),1])
-    global_best_val_for_case = np.empty([len(individuals[0].fitness_vec),1])
+    # global_best_val_for_case = np.empty([len(individuals[0].fitness_vec),1])
     for i in np.arange(len(individuals[0].fitness_vec)):
         mad_for_case[i] = mad(np.asarray(list(map(lambda x: x.fitness_vec[i], individuals))))
-        global_best_val_for_case[i] = min(map(lambda x: x.fitness_vec[i], individuals))
+        # global_best_val_for_case[i] = min(map(lambda x: x.fitness_vec[i], individuals))
     # convert fitness values to pass/fail based on epsilon distance
-    for I in individuals:
-        fail_condition = np.array(I.fitness_vec > global_best_val_for_case[:,0] + mad_for_case[:,0]) #[f > global_best_val_for_case+mad_for_case for f in I.fitness_vec]
-        I.fitness_bool = fail_condition.astype(int)
+    # for I in individuals:
+    #     fail_condition = np.array(I.fitness_vec > global_best_val_for_case[:,0] + mad_for_case[:,0]) #[f > global_best_val_for_case+mad_for_case for f in I.fitness_vec]
+    #     I.fitness_bool = fail_condition.astype(int)
 
     for i in np.arange(num_selections):
 
@@ -103,11 +103,11 @@ def epsilon_lexicase(individuals, num_selections=None, survival = False):
             # get best fitness for case among candidates
             # print("candidates:",stacks_2_eqns(candidates),"locations:",can_locs)
             # print("fitnesses for case "+str(cases[0])+":",[x.fitness_vec[cases[0]] for x in candidates])
-            best_val_for_case = min([x.fitness_bool[cases[0]] for x in candidates])
+            best_val_for_case = min([x.fitness_vec[cases[0]] for x in candidates])
             # print("best_val_for_case:",best_val_for_case)
             # filter individuals without an elite fitness on this case
             # tmp_c,tmp_l = zip(*((x,l) for x,l in zip(candidates,can_locs) if x.fitness_vec[cases[0]] == best_val_for_case))
-            candidates,can_locs = zip(*((x,l) for x,l in zip(candidates,can_locs) if x.fitness_bool[cases[0]] == best_val_for_case))
+            candidates,can_locs = zip(*((x,l) for x,l in zip(candidates,can_locs) if x.fitness_vec[cases[0]] <= best_val_for_case + mad_for_case[cases[0]]))
             cases.pop(0)
 
         choice = np.random.randint(len(candidates))
