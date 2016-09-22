@@ -16,6 +16,10 @@ eqn_dict = {
     'cos': lambda n,stack_eqn: 'cos(' + stack_eqn.pop() + ')',
     'exp': lambda n,stack_eqn: 'exp(' + stack_eqn.pop() + ')',
     'log': lambda n,stack_eqn: 'log(' + stack_eqn.pop() + ')',
+    '^2': lambda n,stack_eqn: '(' + stack_eqn.pop() + '^2)',
+    '^3': lambda n,stack_eqn: '(' + stack_eqn.pop() + '^3)',
+    'sqrt': lambda n,stack_eqn: 'sqrt(|' + stack_eqn.pop() + '|)',
+    # 'rbf': lambda n,stack_eqn: 'exp(-||' + stack_eqn.pop()-stack_eqn.pop() '||^2/2)',
     'x':  lambda n,stack_eqn: 'x_' + str(n[2]),
     'k': lambda n,stack_eqn: str(n[2])
 }
@@ -28,7 +32,7 @@ class Ind(object):
         self.fitness = fitness
         self.fitness_vec = []
         self.fitness_bool = []
-        
+
         if stack is None:
             self.stack = []
         else:

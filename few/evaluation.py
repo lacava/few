@@ -10,6 +10,7 @@ from sklearn.metrics import explained_variance_score, mean_absolute_error, mean_
 import itertools as it
 import math
 import pdb
+from numpy.linalg import norm
 
 # evaluation functions. these can be sped up using a GPU!
 eval_dict = {
@@ -27,6 +28,7 @@ eval_dict = {
     '^2': lambda n,features,stack_float,stack_bool: stack_float.pop()**2,
     '^3': lambda n,features,stack_float,stack_bool: stack_float.pop()**3,
     'sqrt': lambda n,features,stack_float,stack_bool: np.sqrt(np.abs(stack_float.pop())),
+    # 'rbf': lambda n,features,stack_float,stack_bool: np.exp(-(np.norm(stack_float.pop()-stack_float.pop())**2)/2)
 # bool operations
     '!': lambda n,features,stack_float,stack_bool: not stack_bool.pop(),
     '&': lambda n,features,stack_float,stack_bool: stack_bool.pop() and stack_bool.pop(),

@@ -26,7 +26,7 @@ import itertools as it
 import pdb
 from update_checker import update_check
 from joblib import Parallel, delayed
-
+from tqdm import tqdm
 # import multiprocessing as mp
 # NUM_THREADS = mp.cpu_count()
 
@@ -182,7 +182,7 @@ class FEW(BaseEstimator):
         ####################
         ### Main GP loop
         # for each generation g
-        for g in np.arange(self.generations):
+        for g in tqdm(np.arange(self.generations)):
             if self.verbosity > 0: print(".",end='')
             if self.verbosity > 1: print(str(g)+".)",end='')
             # if self.verbosity > 1: print("population:",stacks_2_eqns(pop.individuals))
