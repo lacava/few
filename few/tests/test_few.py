@@ -33,7 +33,7 @@ def test_few_fit_shapes():
 
     learner = FEW(generations=1, population_size=5,
                 mutation_rate=0.2, crossover_rate=0.8,
-                machine_learner = 'lasso', min_depth = 1, max_depth = 3,
+                machine_learner = LassoLarsCV(), min_depth = 1, max_depth = 3,
                 sel = 'epsilon_lexicase', tourn_size = 2, random_state=0, verbosity=2,
                 disable_update_check=False, fit_choice = 'mse')
 
@@ -59,7 +59,7 @@ def test_few_at_least_as_good_as_default():
 
     learner = FEW(generations=1, population_size=5,
                 mutation_rate=1, crossover_rate=1,
-                machine_learner = 'lasso', min_depth = 1, max_depth = 3,
+                machine_learner = LassoLarsCV(), min_depth = 1, max_depth = 3,
                 sel = 'epsilon_lexicase', fit_choice = 'r2',tourn_size = 2, random_state=0, verbosity=1,
                 disable_update_check=False)
 

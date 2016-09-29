@@ -14,8 +14,10 @@ from .variation import *
 from .selection import *
 
 from sklearn.base import BaseEstimator
-from sklearn.linear_model import LassoLarsCV
-from sklearn.svm import LinearSVR
+from sklearn.linear_model import LassoLarsCV, LogisticRegression
+from sklearn.svm import SVR, LinearSVR, SVC, LinearSVC
+from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.cross_validation import train_test_split
 from sklearn.metrics import r2_score
 import numpy as np
@@ -39,10 +41,10 @@ class FEW(BaseEstimator):
 
     def __init__(self, population_size=100, generations=100,
                  mutation_rate=0.2, crossover_rate=0.8,
-                 machine_learner = 'lasso', min_depth = 1, max_depth = 5, max_depth_init = 5,
+                 machine_learner = None, min_depth = 1, max_depth = 5, max_depth_init = 5,
                  sel = 'tournament', tourn_size = 2, fit_choice = 'mse', op_weight = False,
                  seed_with_ml = False, erc = False, random_state=np.random.randint(4294967295), verbosity=0, scoring_function=r2_score,
-                 disable_update_check=False,elitism=False):
+                 disable_update_check=False,elitism=False, boolean = False,classification=False):
                 # sets up GP.
 
         # Save params to be recalled later by get_params()
@@ -83,26 +85,32 @@ class FEW(BaseEstimator):
         self.gp_generation = 0
         self.elitism = elitism
         self.max_fit = 99999999.666
+        self.boolean = boolean
+        self.classification = classification
         # self.op_weight = op_weight
 
         if "lexicase" in self.sel and ("_vec" not in self.fit_choice or "_rel" not in self.fit_choice):
             self.fit_choice += "_vec"
         # pdb.set_trace()
         # instantiate sklearn estimator according to specified machine learner
-        if (self.machine_learner.lower() == "lasso"):
-            self.ml = LassoLarsCV(n_jobs=-1)
-        elif (self.machine_learner.lower() == 'svr'):
-            self.ml = LinearSVR()
-        # elif (self.machine_learner.lower() == "distance"):
-        #     self.ml = DistanceClassifier()
+        if machine_learner:
+            self.ml = machine_learner
         else:
-            self.ml = LassoLarsCV(n_jobs=-1)
+            if self.classification:
+                self.ml = LogisticRegression()
+            else:
+                self.ml = LassoLarsCV(n_jobs=-1)
 
         # Columns to always ignore when in an operator
         self.non_feature_columns = ['label', 'group', 'guess']
 
         # function set
-        self.func_set = [('+',2),('-',2),('*',2),('/',2),
+        if self.boolean:
+            self.func_set = [('!',1),('&',2),('|',2),('==',1),('>_f',2),('<_f',2),
+                            ('>=_f',2),('<=_f',2),('>_b',2),('<_b',2),
+                            ('>=_b',2),('<=_b',2)]
+        else:
+            self.func_set = [('+',2),('-',2),('*',2),('/',2),
                          ('sin',1),('cos',1),('exp',1),('log',1),
                          ('^2',1),('^3',1),('sqrt',1)]
         # terminal set
@@ -141,6 +149,7 @@ class FEW(BaseEstimator):
         ####
 
         # initial model
+        print("y_t:",y_t.shape,y_t)
         self._best_estimator = copy.deepcopy(self.ml.fit(x_t,y_t))
         self._best_score = self._best_estimator.score(x_v,y_v)
         if self.verbosity > 2: print("initial estimator size:",self._best_estimator.coef_.shape)
@@ -509,6 +518,20 @@ def float_range(value):
         raise argparse.ArgumentTypeError('Invalid float value: \'{}\''.format(value))
     return value
 
+# dictionary of ml options
+ml_dict = {
+        'lasso': LassoLarsCV(n_jobs=-1),
+        'svr': SVR(),
+        'lsvr': LinearSVR(),
+        'lr': LogisticRegression(),
+        'svc': SVC(),
+        'lsvc': LinearSVC(),
+        'rfc': RandomForestClassifier(),
+        'rfr': RandomForestRegressor(),
+        'dtc': DecisionTreeClassifier(),
+        'dtr': DecisionTreeRegressor()
+        # 'dist': DistanceClassifier(),
+}
 # main functions
 def main():
     """Main function that is called when FEW is run on the command line"""
@@ -572,6 +595,12 @@ def main():
     parser.add_argument('--erc', action='store_true', dest='ERC', default=False,
                     help='Flag to use ephemeral random constants in GP feature construction.')
 
+    parser.add_argument('--bool', action='store_true', dest='BOOLEAN', default=False,
+                    help='Flag to construct boolean-values features instead of continuous.')
+
+    parser.add_argument('--class', action='store_true', dest='CLASSIFICATION', default=False,
+                    help='Flag to conduct clasisfication rather than regression.')
+
     parser.add_argument('-s', action='store', dest='RANDOM_STATE', default=np.random.randint(4294967295),
                         type=int, help='Random number generator seed for reproducibility. Note that using multi-threading may '
                                        'make exacts results impossible to reproduce.')
@@ -620,11 +649,12 @@ def main():
 
     learner = FEW(generations=args.GENERATIONS, population_size=args.POPULATION_SIZE,
                 mutation_rate=args.MUTATION_RATE, crossover_rate=args.CROSSOVER_RATE,
-                machine_learner = args.MACHINE_LEARNER, min_depth = args.MIN_DEPTH,
+                machine_learner = ml_dict[args.MACHINE_LEARNER], min_depth = args.MIN_DEPTH,
                 max_depth = args.MAX_DEPTH, sel = args.SEL, tourn_size = args.TOURN_SIZE,
                 seed_with_ml = args.SEED_WITH_ML, op_weight = args.OP_WEIGHT,
                 erc = args.ERC, random_state=args.RANDOM_STATE, verbosity=args.VERBOSITY,
-                disable_update_check=args.DISABLE_UPDATE_CHECK,fit_choice = args.FIT_CHOICE)
+                disable_update_check=args.DISABLE_UPDATE_CHECK,fit_choice = args.FIT_CHOICE,
+                boolean=args.BOOLEAN,classification=args.CLASSIFICATION)
 
     learner.fit(training_features, training_labels)
 
