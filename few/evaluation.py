@@ -80,7 +80,7 @@ def logs(x):
 
 def eval(n, features, stack_float, stack_bool):
     np.seterr(all='ignore')
-    if len(stack_float) >= n[1]:
+    if (in_type[n[0]]=='f' and len(stack_float) >= n[1]) or (in_type[n[0]]=='b' and len(stack_bool) >= n[1]):
         stack_float.append(safe(eval_dict[n[0]](n,features,stack_float,stack_bool)))
         if any(np.isnan(stack_float[-1])) or any(np.isinf(stack_float[-1])):
             print("problem operator:",n)
@@ -127,3 +127,22 @@ def r2_score_vec(y_true,y_pred):
     output_scores[nonzero_numerator & ~nonzero_denominator] = 0.
 
     return output_scores
+
+in_type = {
+# float operations
+    '+':'f', '-':'f', '*':'f', '/':'f', 'sin':'f', 'cos':'f', 'exp': 'f',
+    'log':'f', 'x':'f', 'k':'f', '^2':'f', '^3':'f', 'sqrt': 'f',
+    # 'rbf': ,
+# bool operations
+    '!':'b', '&':'b', '|':'b', '==':'b', '>_f':'f', '<_f':'f', '>=_f':'f',
+    '<=_f':'f', '>_b':'b', '<_b':'b', '>=_b':'b', '<=_b':'b',
+}
+out_type = {
+# float operations
+    '+': 'f','-': 'f','*': 'f','/': 'f','sin': 'f','cos': 'f','exp': 'f',
+    'log': 'f','x':  'f','k': 'f','^2': 'f','^3': 'f','sqrt': 'f',
+    # 'rbf': ,
+# bool operations
+    '!': 'b', '&': 'b','|': 'b','==': 'b','>_f': 'b','<_f': 'b','>=_f': 'b',
+    '<=_f': 'b','>_b': 'b','<_b': 'b','>=_b': 'b','<=_b': 'b',
+}

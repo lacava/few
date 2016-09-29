@@ -20,6 +20,7 @@ from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.cross_validation import train_test_split
 from sklearn.metrics import r2_score
+from sklearn.preprocessing import Imputer
 import numpy as np
 import pandas as pd
 import warnings
@@ -44,7 +45,7 @@ class FEW(BaseEstimator):
                  machine_learner = None, min_depth = 1, max_depth = 5, max_depth_init = 5,
                  sel = 'tournament', tourn_size = 2, fit_choice = 'mse', op_weight = False,
                  seed_with_ml = False, erc = False, random_state=np.random.randint(4294967295), verbosity=0, scoring_function=r2_score,
-                 disable_update_check=False,elitism=False, boolean = False,classification=False):
+                 disable_update_check=False,elitism=False, boolean = False,classification=False,clean=False):
                 # sets up GP.
 
         # Save params to be recalled later by get_params()
@@ -87,7 +88,12 @@ class FEW(BaseEstimator):
         self.max_fit = 99999999.666
         self.boolean = boolean
         self.classification = classification
+        self.clean = clean
         # self.op_weight = op_weight
+        if self.boolean:
+            self.otype = 'b'
+        else:
+            self.otype = 'f'
 
         if "lexicase" in self.sel and ("_vec" not in self.fit_choice or "_rel" not in self.fit_choice):
             self.fit_choice += "_vec"
@@ -105,14 +111,15 @@ class FEW(BaseEstimator):
         self.non_feature_columns = ['label', 'group', 'guess']
 
         # function set
-        if self.boolean:
-            self.func_set = [('!',1),('&',2),('|',2),('==',1),('>_f',2),('<_f',2),
+        self.func_set = [('+',2),('-',2),('*',2),('/',2),
+                     ('sin',1),('cos',1),('exp',1),('log',1),
+                     ('^2',1),('^3',1),('sqrt',1)]
+        if self.boolean: # include boolean functions
+            self.func_set += [('!',1),('&',2),('|',2),('==',2),('>_f',2),('<_f',2),
                             ('>=_f',2),('<=_f',2),('>_b',2),('<_b',2),
                             ('>=_b',2),('<=_b',2)]
-        else:
-            self.func_set = [('+',2),('-',2),('*',2),('/',2),
-                         ('sin',1),('cos',1),('exp',1),('log',1),
-                         ('^2',1),('^3',1),('sqrt',1)]
+
+
         # terminal set
         self.term_set = []
 
@@ -123,6 +130,9 @@ class FEW(BaseEstimator):
 
         # Train-test split routine for internal validation
         ####
+        if self.clean:
+            features = self.impute_data(features)
+
         train_val_data = pd.DataFrame(data=features)
         train_val_data['labels'] = labels
         # print("train val data:",train_val_data[::10])
@@ -149,7 +159,7 @@ class FEW(BaseEstimator):
         ####
 
         # initial model
-        print("y_t:",y_t.shape,y_t)
+        # pdb.set_trace()
         self._best_estimator = copy.deepcopy(self.ml.fit(x_t,y_t))
         self._best_score = self._best_estimator.score(x_v,y_v)
         if self.verbosity > 2: print("initial estimator size:",self._best_estimator.coef_.shape)
@@ -164,7 +174,7 @@ class FEW(BaseEstimator):
 
         # Create initial population
         pop = self.init_pop()
-
+        # pdb.set_trace()
         # Evaluate the entire population
         # X represents a matrix of the population outputs (number os samples x population size)
         # pop.X = np.asarray(list(map(lambda I: out(I,x_t,labels), pop.individuals)))
@@ -251,7 +261,7 @@ class FEW(BaseEstimator):
             while len(offspring) < self.population_size:
                 #make new offspring to replace the invalid ones
                 offspring.append(Ind())
-                make_program(offspring[-1].stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1))
+                make_program(offspring[-1].stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1),self.otype)
                 offspring[-1].stack = list(reversed(offspring[-1].stack))
 
             # print("offspring:",stacks_2_eqns(offspring))
@@ -296,8 +306,8 @@ class FEW(BaseEstimator):
             # print("survivors:",stacks_2_eqns(survivors))
             pop.individuals[:] = survivors
             pop.X = np.vstack((pop.X, X_offspring))[survivor_index,:]
-            if pop.X.shape[0] != self.population_size:
-                pdb.set_trace()
+            # if pop.X.shape[0] != self.population_size:
+            #     pdb.set_trace()
             # print("new pop.X:",pop.X[:,:4])
             # pdb.set_trace()
             # pop.X = pop.X[survivor_index,:]
@@ -317,6 +327,11 @@ class FEW(BaseEstimator):
         else:
             return np.asarray(list(map(lambda I: out(I,x,labels), self._best_inds)),order='F')
 
+    def impute_data(self,x):
+        """Imputes data set containing Nan values"""
+        imp = Imputer(missing_values='NaN', strategy='mean', axis=0)
+        return imp.fit_transform(x)
+
     def clean(self,x):
         """remove nan and inf rows from x"""
         return x[~np.any(np.isnan(x) | np.isinf(x),axis=1)]
@@ -330,6 +345,9 @@ class FEW(BaseEstimator):
         """predict on a holdout data set."""
         # print("best_inds:",self._best_inds)
         # print("best estimator size:",self._best_estimator.coef_.shape)
+        if self.clean:
+            testing_features = self.impute_data(testing_features)
+
         if self._best_inds is None:
             return self._best_estimator.predict(testing_features)
         else:
@@ -413,7 +431,7 @@ class FEW(BaseEstimator):
                         p.stack = [('x',0,i)]
                     elif p is not None:
                         # make program if pop is bigger than model componennts
-                        make_program(p.stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1))
+                        make_program(p.stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1),self.otype)
                         p.stack = list(reversed(p.stack))
             else: # seed with raw features
                 # if list(self.ml.coef_):
@@ -427,7 +445,7 @@ class FEW(BaseEstimator):
                          if i is not None:
                              p.stack = [('x',0,i)]
                          else:
-                             make_program(p.stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1))
+                             make_program(p.stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1),self.otype)
                              p.stack = list(reversed(p.stack))
 
             # print initial population
@@ -440,7 +458,7 @@ class FEW(BaseEstimator):
                 # print("hex(id(I)):",hex(id(I)))
                 # depth = 2;
                 # print("initial I.stack:",I.stack)
-                make_program(I.stack,self.func_set,self.term_set,depth)
+                make_program(I.stack,self.func_set,self.term_set,depth,self.otype)
                 # print(I.stack)
                 I.stack = list(reversed(I.stack))
 
@@ -529,7 +547,8 @@ ml_dict = {
         'rfc': RandomForestClassifier(),
         'rfr': RandomForestRegressor(),
         'dtc': DecisionTreeClassifier(),
-        'dtr': DecisionTreeRegressor()
+        'dtr': DecisionTreeRegressor(),
+        None: None
         # 'dist': DistanceClassifier(),
 }
 # main functions
@@ -561,8 +580,9 @@ def main():
     parser.add_argument('-xr', action='store', dest='CROSSOVER_RATE', default=0.2,
                         type=float_range, help='GP crossover rate in the range [0.0, 1.0].')
 
-    parser.add_argument('-ml', action='store', dest='MACHINE_LEARNER', default='lasso', choices = ['lasso','svr'],
-                        type=str, help='ML algorithm to pair with features. Default: Lasso')
+    parser.add_argument('-ml', action='store', dest='MACHINE_LEARNER', default=None,
+                        choices = ['lasso','svr','lsvr','lr','svc','rfc','rfr','dtc','dtr'],
+                        type=str, help='ML algorithm to pair with features. Default: Lasso (regression), LogisticRegression (classification)')
 
     parser.add_argument('-min_depth', action='store', dest='MIN_DEPTH', default=1,
                         type=positive_integer, help='Minimum length of GP programs.')
@@ -600,6 +620,9 @@ def main():
 
     parser.add_argument('--class', action='store_true', dest='CLASSIFICATION', default=False,
                     help='Flag to conduct clasisfication rather than regression.')
+
+    parser.add_argument('--clean', action='store_true', dest='CLEAN', default=False,
+                    help='Flag to clean input data of missing values.')
 
     parser.add_argument('-s', action='store', dest='RANDOM_STATE', default=np.random.randint(4294967295),
                         type=int, help='Random number generator seed for reproducibility. Note that using multi-threading may '
@@ -654,7 +677,7 @@ def main():
                 seed_with_ml = args.SEED_WITH_ML, op_weight = args.OP_WEIGHT,
                 erc = args.ERC, random_state=args.RANDOM_STATE, verbosity=args.VERBOSITY,
                 disable_update_check=args.DISABLE_UPDATE_CHECK,fit_choice = args.FIT_CHOICE,
-                boolean=args.BOOLEAN,classification=args.CLASSIFICATION)
+                boolean=args.BOOLEAN,classification=args.CLASSIFICATION,clean = args.CLEAN)
 
     learner.fit(training_features, training_labels)
 

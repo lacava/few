@@ -7,6 +7,7 @@ license: GNU/GPLv3
 """
 import numpy as np
 import copy
+import pdb
 eqn_dict = {
     '+': lambda n,stack_eqn: '(' + stack_eqn.pop() + '+' + stack_eqn.pop() + ')',
     '-': lambda n,stack_eqn: '(' + stack_eqn.pop() + '-' + stack_eqn.pop()+ ')',
@@ -77,15 +78,27 @@ def eval_eqn(n,stack_eqn):
         # if any(np.isnan(stack_eqn[-1])) or any(np.isinf(stack_eqn[-1])):
         #     print("problem operator:",n)
 
-def make_program(stack,func_set,term_set,max_d):
+def make_program(stack,func_set,term_set,max_d,ntype):
     """makes a program stack"""
     # print("stack:",stack,"max d:",max_d)
     if max_d == 0: #or np.random.rand() < float(len(term_set))/(len(term_set)+len(func_set)):
-        stack.append(term_set[np.random.choice(len(term_set))])
+        ts = [t for t in term_set if out_type[t[0]]==ntype]
+
+        if not ts:
+            pdb.set_trace()
+        #     fs = [f for f in func_set if out_type[f[0]]==ntype and in_type[f[0]]==ntype]
+        #     stack.append(fs[np.random.choice(len(fs))])
+        #     for i in np.arange(stack[-1][1]):
+        #         make_program(stack,func_set,term_set,max_d-1,in_type[stack[-1][0]])
+
+        stack.append(ts[np.random.choice(len(ts))])
     else:
-        stack.append(func_set[np.random.choice(len(func_set))])
+        fs = [f for f in func_set if (out_type[f[0]]==ntype and (in_type[f[0]]=='f' or max_d>1))]
+        if not fs:
+            pdb.set_trace()
+        stack.append(fs[np.random.choice(len(fs))])
         for i in np.arange(stack[-1][1]):
-            make_program(stack,func_set,term_set,max_d-1)
+            make_program(stack,func_set,term_set,max_d-1,in_type[stack[-1][0]])
     # return stack
     # print("current stack:",stack)
 
@@ -105,3 +118,22 @@ def init(population_size,n_samples,func_set,term_set,min_depth,max_depth):
     # print(I.stack)
 
     return pop
+
+in_type = {
+# float operations
+    '+':'f', '-':'f', '*':'f', '/':'f', 'sin':'f', 'cos':'f', 'exp': 'f',
+    'log':'f', 'x':'f', 'k':'f', '^2':'f', '^3':'f', 'sqrt': 'f',
+    # 'rbf': ,
+# bool operations
+    '!':'b', '&':'b', '|':'b', '==':'b', '>_f':'f', '<_f':'f', '>=_f':'f',
+    '<=_f':'f', '>_b':'b', '<_b':'b', '>=_b':'b', '<=_b':'b',
+}
+out_type = {
+# float operations
+    '+': 'f','-': 'f','*': 'f','/': 'f','sin': 'f','cos': 'f','exp': 'f',
+    'log': 'f','x':  'f','k': 'f','^2': 'f','^3': 'f','sqrt': 'f',
+    # 'rbf': ,
+# bool operations
+    '!': 'b', '&': 'b','|': 'b','==': 'b','>_f': 'b','<_f': 'b','>=_f': 'b',
+    '<=_f': 'b','>_b': 'b','<_b': 'b','>=_b': 'b','<=_b': 'b',
+}
