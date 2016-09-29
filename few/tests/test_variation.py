@@ -27,7 +27,7 @@ def test_cross_makes_valid_program():
     # I = (a+b)*x
     p1 = [('a',0,1),('b',0,2),('+',2),('x',0,3),('*',2)]
     # J = (x/z)-(n*b)
-    p2 = [('x',0,1),('z',0,2),('/',2),('n',0,3),('b',0,4),('*',2),('-',2)]
+    p2 = [('x',0,1),('z',0,2),('/',2),('k',0,3),('b',0,4),('*',2),('-',2)]
 
     for i in np.arange(1000):
         cross(p1,p2)
@@ -37,13 +37,13 @@ def test_mutate_makes_valid_program():
     """test_variation.py: mutation makes valid programs """
     func_set = [('+',2),('-',2),('*',2),('/',2),('sin',1),('cos',1),('exp',1),('log',1)]
     # terminal set
-    term_set = [('x',0),('z',0),('n',0),('b',0)]
+    term_set = []
     # numbers represent column indices of features
     for i in np.arange(10):
-        term_set.append(('n',0,i)) # features
-        term_set.append(('erc',0,np.random.rand())) # ephemeral random constants
+        term_set.append(('x',0,i)) # features
+        term_set.append(('k',0,np.random.rand())) # ephemeral random constants
 
-    p = [('n',0,5),('n',0,6),('/',2),('n',0,7),('n',0,8),('*',2),('-',2)]
+    p = [('k',0,5),('x',0,6),('/',2),('k',0,7),('x',0,8),('*',2),('-',2)]
     for i in np.arange(1000):
         mutate(p,func_set,term_set)
         assert is_valid_program(p)

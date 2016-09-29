@@ -51,7 +51,7 @@ def test_pop_init():
     n_features = 3
     # numbers represent column indices of features
     for i in np.arange(n_features):
-        term_set.append(('x'+str(i),0,i)) # features
+        term_set.append(('x',0,i)) # features
         # term_set.append(('erc',0,np.random.rand())) # ephemeral random constants
 
     pop = init(10,500,func_set,term_set,1,5)

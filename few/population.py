@@ -111,7 +111,7 @@ def init(population_size,n_samples,func_set,term_set,min_depth,max_depth):
         # print("hex(id(I)):",hex(id(I)))
         # depth = 2;
         # print("initial I.stack:",I.stack)
-        make_program(I.stack,func_set,term_set,depth)
+        make_program(I.stack,func_set,term_set,depth,'f')
         # print(I.stack)
         I.stack = list(reversed(I.stack))
 

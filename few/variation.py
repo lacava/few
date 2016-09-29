@@ -6,7 +6,7 @@ license: GNU/GPLv3
 
 """
 import numpy as np
-from .population import make_program, Ind
+from .population import make_program, Ind, in_type, out_type
 from itertools import accumulate
 import pdb
 # from few.tests.test_population import is_valid_program
@@ -43,7 +43,7 @@ def cross(p_i,p_j, max_depth = 3):
     tmpi[x_i_begin:x_i_end+1:],tmpj[x_j_begin:x_j_end+1:] = tmpj[x_j_begin:x_j_end+1:],tmpi[x_i_begin:x_i_end+1:]
 
     if not is_valid_program(p_i) or not is_valid_program(p_j):
-        pdb.set_trace()
+        # pdb.set_trace()
         print("parent 1:",p_i,"x_i_begin:",x_i_begin,"x_i_end:",x_i_end)
         print("parent 2:",p_j,"x_j_begin:",x_j_begin,"x_j_end:",x_j_end)
         print("child 1:",tmpi)
@@ -65,14 +65,15 @@ def mutate(p_i,func_set,term_set):
     arity = p_i[x][1]
     wholeset = func_set+term_set
     reps = [n for n in func_set+term_set
-            if n[1]==arity and out_type[n[0]]==out_type[p_i[0]] and in_type[n[0]]==in_type[p_i[0]]]
+            if n[1]==arity and out_type[n[0]]==out_type[p_i[x][0]] and in_type[n[0]]==in_type[p_i[x][0]]]
     tmp = reps[np.random.randint(len(reps))]
     tmp_p = p_i[:]
     p_i[x] = tmp
     if not is_valid_program(p_i):
         print("old:",tmp_p)
         print("new:",p_i)
-        pdb.set_trace()
+        raise ValueError('Mutation produced an invalid program.')
+
 
 def is_valid_program(p):
     """checks whether program p makes a syntactically valid tree.
@@ -92,22 +93,3 @@ def is_valid_program(p):
     # print("accu_len:",accu_len)
     # print("accu_arities < accu_len:",accu_arities<accu_len)
     return all(check) and sum(a[1] for a in p) +1 == len(p) and len(p)>0
-
-in_type = {
-# float operations
-    '+':'f', '-':'f', '*':'f', '/':'f', 'sin':'f', 'cos':'f', 'exp': 'f',
-    'log':'f', 'x':'f', 'k':'f', '^2':'f', '^3':'f', 'sqrt': 'f',
-    # 'rbf': ,
-# bool operations
-    '!':'b', '&':'b', '|':'b', '==':'b', '>_f':'f', '<_f':'f', '>=_f':'f',
-    '<=_f':'f', '>_b':'b', '<_b':'b', '>=_b':'b', '<=_b':'b',
-}
-out_type = {
-# float operations
-    '+': 'f','-': 'f','*': 'f','/': 'f','sin': 'f','cos': 'f','exp': 'f',
-    'log': 'f','x':  'f','k': 'f','^2': 'f','^3': 'f','sqrt': 'f',
-    # 'rbf': ,
-# bool operations
-    '!': 'b', '&': 'b','|': 'b','==': 'b','>_f': 'b','<_f': 'b','>=_f': 'b',
-    '<=_f': 'b','>_b': 'b','<_b': 'b','>=_b': 'b','<=_b': 'b',
-}

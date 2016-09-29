@@ -65,7 +65,7 @@ def test_lexicase_survival_shapes():
     n_features = 3
     # numbers represent column indices of features
     for i in np.arange(n_features):
-        term_set.append(('x'+str(i),0,i)) # features
+        term_set.append(('x',0,i)) # features
         # term_set.append(('erc',0,np.random.rand())) # ephemeral random constants
 
     pop = init(257,10,func_set,term_set,1,5)

@@ -11,7 +11,7 @@ import itertools as it
 import math
 import pdb
 from numpy.linalg import norm
-
+from .population import in_type, out_type
 # evaluation functions. these can be sped up using a GPU!
 eval_dict = {
 # float operations
@@ -127,22 +127,3 @@ def r2_score_vec(y_true,y_pred):
     output_scores[nonzero_numerator & ~nonzero_denominator] = 0.
 
     return output_scores
-
-in_type = {
-# float operations
-    '+':'f', '-':'f', '*':'f', '/':'f', 'sin':'f', 'cos':'f', 'exp': 'f',
-    'log':'f', 'x':'f', 'k':'f', '^2':'f', '^3':'f', 'sqrt': 'f',
-    # 'rbf': ,
-# bool operations
-    '!':'b', '&':'b', '|':'b', '==':'b', '>_f':'f', '<_f':'f', '>=_f':'f',
-    '<=_f':'f', '>_b':'b', '<_b':'b', '>=_b':'b', '<=_b':'b',
-}
-out_type = {
-# float operations
-    '+': 'f','-': 'f','*': 'f','/': 'f','sin': 'f','cos': 'f','exp': 'f',
-    'log': 'f','x':  'f','k': 'f','^2': 'f','^3': 'f','sqrt': 'f',
-    # 'rbf': ,
-# bool operations
-    '!': 'b', '&': 'b','|': 'b','==': 'b','>_f': 'b','<_f': 'b','>=_f': 'b',
-    '<=_f': 'b','>_b': 'b','<_b': 'b','>=_b': 'b','<=_b': 'b',
-}
