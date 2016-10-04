@@ -12,6 +12,7 @@ import math
 import pdb
 from numpy.linalg import norm
 from .population import in_type, out_type
+from sklearn.metrics import silhouette_samples, silhouette_score
 # evaluation functions. these can be sped up using a GPU!
 eval_dict = {
 # float operations
@@ -49,12 +50,14 @@ f = { # available fitness metrics
 'mdae': lambda y,yhat: median_absolute_error(y,yhat),
 'r2':  lambda y,yhat: 1-r2_score(y,yhat),
 'vaf': lambda y,yhat: 1-explained_variance_score(y,yhat),
+'silhouette': lambda y,yhat: 1 - silhouette_score(yhat.reshape(-1,1),y),
 # non-aggregated fitness calculations
 'mse_vec': lambda y,yhat: (y - yhat) ** 2, #mean_squared_error(y,yhat,multioutput = 'raw_values'),
 'mae_vec': lambda y,yhat: np.abs(y-yhat), #mean_absolute_error(y,yhat,multioutput = 'raw_values'),
 'mdae_vec': lambda y,yhat: median_absolute_error(y,yhat,multioutput = 'raw_values'),
 'r2_vec':  lambda y,yhat: 1-r2_score_vec(y,yhat),
-'vaf_vec': lambda y,yhat: 1-explained_variance_score(y,yhat,multioutput = 'raw_values')
+'vaf_vec': lambda y,yhat: 1-explained_variance_score(y,yhat,multioutput = 'raw_values'),
+'silhouette_vec': lambda y,yhat: 1 - silhouette_samples(yhat.reshape(-1,1),y),
 }
 
 def safe(x):

@@ -42,5 +42,5 @@ This project is hosted at https://github.com/lacava/few
         'Programming Language :: Python :: 3.5',
         'Topic :: Scientific/Engineering :: Artificial Intelligence'
     ],
-    keywords=['data science', 'machine learning', 'feature engineering', 'genetic programming', 'evolutionary computation'],
+    keywords=['data science', 'machine learning', 'classification'],
 )

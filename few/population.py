@@ -84,8 +84,8 @@ def make_program(stack,func_set,term_set,max_d,ntype):
     if max_d == 0: #or np.random.rand() < float(len(term_set))/(len(term_set)+len(func_set)):
         ts = [t for t in term_set if out_type[t[0]]==ntype]
 
-        if not ts:
-            pdb.set_trace()
+        # if not ts:
+        #     pdb.set_trace()
         #     fs = [f for f in func_set if out_type[f[0]]==ntype and in_type[f[0]]==ntype]
         #     stack.append(fs[np.random.choice(len(fs))])
         #     for i in np.arange(stack[-1][1]):
@@ -94,8 +94,8 @@ def make_program(stack,func_set,term_set,max_d,ntype):
         stack.append(ts[np.random.choice(len(ts))])
     else:
         fs = [f for f in func_set if (out_type[f[0]]==ntype and (in_type[f[0]]=='f' or max_d>1))]
-        if not fs:
-            pdb.set_trace()
+        # if not fs:
+        #     pdb.set_trace()
         stack.append(fs[np.random.choice(len(fs))])
         for i in np.arange(stack[-1][1]):
             make_program(stack,func_set,term_set,max_d-1,in_type[stack[-1][0]])

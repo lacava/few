@@ -18,9 +18,11 @@ from sklearn.linear_model import LassoLarsCV, LogisticRegression
 from sklearn.svm import SVR, LinearSVR, SVC, LinearSVC
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.cross_validation import train_test_split
-from sklearn.metrics import r2_score
+from sklearn.metrics import r2_score, accuracy_score
 from sklearn.preprocessing import Imputer
+from DistanceClassifier import DistanceClassifier
 import numpy as np
 import pandas as pd
 import warnings
@@ -42,9 +44,9 @@ class FEW(BaseEstimator):
 
     def __init__(self, population_size=100, generations=100,
                  mutation_rate=0.2, crossover_rate=0.8,
-                 machine_learner = None, min_depth = 1, max_depth = 5, max_depth_init = 5,
-                 sel = 'tournament', tourn_size = 2, fit_choice = 'mse', op_weight = False,
-                 seed_with_ml = False, erc = False, random_state=np.random.randint(4294967295), verbosity=0, scoring_function=r2_score,
+                 ml = None, min_depth = 1, max_depth = 3, max_depth_init = 2,
+                 sel = 'tournament', tourn_size = 2, fit_choice = None, op_weight = False,
+                 seed_with_ml = False, erc = False, random_state=np.random.randint(4294967295), verbosity=0, scoring_function=None,
                  disable_update_check=False,elitism=False, boolean = False,classification=False,clean=False):
                 # sets up GP.
 
@@ -70,7 +72,6 @@ class FEW(BaseEstimator):
         self.generations = generations
         self.mutation_rate = mutation_rate
         self.crossover_rate = crossover_rate
-        self.machine_learner = machine_learner
         self.min_depth = min_depth
         self.max_depth = max_depth
         self.max_depth_init = max_depth_init
@@ -89,24 +90,48 @@ class FEW(BaseEstimator):
         self.boolean = boolean
         self.classification = classification
         self.clean = clean
+        self.ml = ml
         # self.op_weight = op_weight
         if self.boolean:
             self.otype = 'b'
         else:
             self.otype = 'f'
 
-        if "lexicase" in self.sel and ("_vec" not in self.fit_choice or "_rel" not in self.fit_choice):
-            self.fit_choice += "_vec"
+
         # pdb.set_trace()
         # instantiate sklearn estimator according to specified machine learner
-        if machine_learner:
-            self.ml = machine_learner
-        else:
+        if not self.ml:
             if self.classification:
                 self.ml = LogisticRegression()
             else:
                 self.ml = LassoLarsCV(n_jobs=-1)
+        if not self.scoring_function:
+            if self.classification:
+                self.scoring_function = accuracy_score
+            else:
+                self.scoring_function = r2_score
 
+        # set default fitness metrics for various learners
+        default_fitchoice = {
+            type(LassoLarsCV()): 'mse',
+            type(SVR()): 'mae',
+            type(LinearSVR()): 'mae',
+            type(LogisticRegression()): 'silhouette',
+            type(SVC()): 'silhouette',
+            type(LinearSVC()): 'silhouette',
+            type(RandomForestClassifier()): 'gini',
+            type(RandomForestRegressor()): 'gini',
+            type(DecisionTreeClassifier()): 'gini',
+            type(DecisionTreeRegressor()): 'gini',
+            type(DistanceClassifier()): 'silhouette',
+            type(KNeighborsClassifier()): 'silhouette'
+        }
+        if not self.fit_choice:
+            self.fit_choice = default_fitchoice[type(self.ml)]
+
+        # use dis-aggregated fitness metrics for lexicase selection
+        if "lexicase" in self.sel and ("_vec" not in self.fit_choice or "_rel" not in self.fit_choice):
+            self.fit_choice += "_vec"
         # Columns to always ignore when in an operator
         self.non_feature_columns = ['label', 'group', 'guess']
 
@@ -157,13 +182,16 @@ class FEW(BaseEstimator):
         self._training_labels = y_t
 
         ####
-
+        if self.verbosity > 1:
+            for arg in self.get_params():
+                print('{}\t=\t{}'.format(arg, self.get_params()[arg]))
+            print('')
         # initial model
         # pdb.set_trace()
         self._best_estimator = copy.deepcopy(self.ml.fit(x_t,y_t))
         self._best_score = self._best_estimator.score(x_v,y_v)
         if self.verbosity > 2: print("initial estimator size:",self._best_estimator.coef_.shape)
-        if self.verbosity > 1: print("initial score:",self._best_score)
+        if self.verbosity > 0: print("initial validation score:",self._best_score)
         # create terminal set
         for i in np.arange(x_t.shape[1]):
             # (.,.,.): node type, arity, feature column index or value
@@ -182,7 +210,7 @@ class FEW(BaseEstimator):
         pop.X = np.asarray(Parallel(n_jobs=-1,backend="threading")(delayed(out)(I,x_t,y_t) for I in pop.individuals), order = 'F')
         # pdb.set_trace()
         # calculate fitness of individuals
-        # fitnesses = list(map(lambda I: fitness(I,y_t,self.machine_learner),pop.X))
+        # fitnesses = list(map(lambda I: fitness(I,y_t,self.ml),pop.X))
         fitnesses = calc_fitness(pop.X,y_t,self.fit_choice)
 
         # print("fitnesses:",fitnesses)
@@ -202,13 +230,14 @@ class FEW(BaseEstimator):
         ### Main GP loop
         # for each generation g
         for g in tqdm(np.arange(self.generations)):
-            if self.verbosity > 0: print(".",end='')
+            if self.verbosity > 1: print(".",end='')
             if self.verbosity > 1: print(str(g)+".)",end='')
             # if self.verbosity > 1: print("population:",stacks_2_eqns(pop.individuals))
             if self.verbosity > 2: print("pop fitnesses:", ["%0.2f" % x.fitness for x in pop.individuals])
             if self.verbosity > 1: print("median fitness pop: %0.2f" % np.median([x.fitness for x in pop.individuals]))
             if self.verbosity > 1: print("best fitness pop: %0.2f" % np.min([x.fitness for x in pop.individuals]))
 
+            if self.verbosity > 2: print("ml fitting...")
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 try:
@@ -222,7 +251,7 @@ class FEW(BaseEstimator):
                     if self.verbosity > 1: print("---\ndetailed error message:",detail)
                     raise(ValueError)
 
-            if self.verbosity > 1: print("number of non-zero regressors:",self.ml.coef_.shape[0])
+            # if self.verbosity > 1: print("number of non-zero regressors:",self.ml.coef_.shape[0])
             # keep best model
             # try:
             tmp = self.ml.score(self.transform(x_v,pop.individuals)[self.valid_loc(pop.individuals),:].transpose(),y_v)
@@ -238,6 +267,7 @@ class FEW(BaseEstimator):
 
             offspring = []
 
+            if self.verbosity > 2: print("copying new pop...")
             # clone individuals for offspring creation
             if self.sel == 'lasso':
                 # for lasso, filter individuals with 0 coefficients
@@ -250,6 +280,7 @@ class FEW(BaseEstimator):
                 elite = copy.deepcopy(pop.individuals[elite_index])
 
             # Apply crossover and mutation on the offspring
+            if self.verbosity > 2: print("variation...")
             for child1, child2 in zip(offspring[::2], offspring[1::2]):
                 if np.random.rand() < self.crossover_rate:
                     cross(child1.stack, child2.stack, self.max_depth)
@@ -266,9 +297,10 @@ class FEW(BaseEstimator):
 
             # print("offspring:",stacks_2_eqns(offspring))
             # X_offspring = self.transform(x_t,offspring)
+            if self.verbosity > 2: print("output...")
             X_offspring = np.asarray(Parallel(n_jobs=-1,backend="threading")(delayed(out)(O,x_t,y_t) for O in offspring), order = 'F')
             # X_offspring = np.asarray([out(O,x_t,y_t) for O in offspring], order = 'F')
-
+            if self.verbosity > 2: print("fitness...")
             F_offspring = calc_fitness(X_offspring,y_t,self.fit_choice)
             # F_offspring = parallel(delayed(f[self.fit_choice])(y_t,yhat) for yhat in X_offspring)
             # print("fitnesses:",fitnesses)
@@ -286,6 +318,7 @@ class FEW(BaseEstimator):
             # if self.verbosity > 0: print("median fitness offspring: %0.2f" % np.median([x.fitness for x in offspring]))
 
             # Survival the next generation individuals
+            if self.verbosity > 2: print("survival..")
             if self.sel == 'tournament':
                 survivors, survivor_index = tournament(pop.individuals + offspring, self.tourn_size, num_selections = len(pop.individuals))
             elif self.sel == 'lexicase':
@@ -318,7 +351,8 @@ class FEW(BaseEstimator):
             ####################
         if self.verbosity > 0: print("finished. best internal val score:",self._best_score)
         if self.verbosity > 2: print("features:",stacks_2_eqns(self._best_inds))
-        return self.score(features,labels)
+
+        return self
 
     def transform(self,x,inds=None,labels = None):
         """return a transformation of x using population outputs"""
@@ -424,7 +458,7 @@ class FEW(BaseEstimator):
         # make programs
         if self.seed_with_ml:
             # initial population is the components of the default ml model
-            if self.machine_learner == 'lasso':
+            if type(self.ml) == type(LassoLarsCV()):
                 # add all model components with non-zero coefficients
                 for i,(c,p) in enumerate(it.zip_longest([c for c in self.ml.coef_ if c !=0],pop.individuals,fillvalue=None)):
                     if c is not None and p is not None:
@@ -435,12 +469,16 @@ class FEW(BaseEstimator):
                         p.stack = list(reversed(p.stack))
             else: # seed with raw features
                 # if list(self.ml.coef_):
-                if self.population_size < self.ml.coef_.shape[0]:
-                    # seed pop with highest coefficients
-                    coef_order = np.argsort(self.ml.coef_[::-1])
-                    for c,p in zip(coef_order,pop.individuals):
-                        p.stack = [('x',0,c)]
-                else: # seed pop with raw features
+                #pdb.set_trace()
+                try:
+                    if self.population_size < self.ml.coef_.shape[0]:
+                        # seed pop with highest coefficients
+                        coef_order = np.argsort(self.ml.coef_[::-1])
+                        for c,p in zip(coef_order,pop.individuals):
+                            p.stack = [('x',0,c)]
+                    else:
+                        raise(ValueError)
+                except: # seed pop with raw features
                      for i,p in it.zip_longest(range(self._training_features.shape[1]),pop.individuals,fillvalue=None):
                          if i is not None:
                              p.stack = [('x',0,i)]
@@ -548,6 +586,8 @@ ml_dict = {
         'rfr': RandomForestRegressor(),
         'dtc': DecisionTreeClassifier(),
         'dtr': DecisionTreeRegressor(),
+        'dc': DistanceClassifier(),
+        'knn': KNeighborsClassifier(),
         None: None
         # 'dist': DistanceClassifier(),
 }
@@ -581,7 +621,7 @@ def main():
                         type=float_range, help='GP crossover rate in the range [0.0, 1.0].')
 
     parser.add_argument('-ml', action='store', dest='MACHINE_LEARNER', default=None,
-                        choices = ['lasso','svr','lsvr','lr','svc','rfc','rfr','dtc','dtr'],
+                        choices = ['lasso','svr','lsvr','lr','svc','rfc','rfr','dtc','dtr','dc','knn'],
                         type=str, help='ML algorithm to pair with features. Default: Lasso (regression), LogisticRegression (classification)')
 
     parser.add_argument('-min_depth', action='store', dest='MIN_DEPTH', default=1,
@@ -602,9 +642,9 @@ def main():
     parser.add_argument('-tourn_size', action='store', dest='TOURN_SIZE', default=2,
                         type=positive_integer, help='Tournament size for tournament selection (Default: 2)')
 
-    parser.add_argument('-fit', action='store', dest='FIT_CHOICE', default='mse', choices = ['mse','mae','mdae','r2','vaf',
+    parser.add_argument('-fit', action='store', dest='FIT_CHOICE', default=None, choices = ['mse','mae','mdae','r2','vaf',
                         'mse_rel','mae_rel','mdae_re','r2_rel','vaf_rel'],
-                        type=str, help='Fitness metric (Default: mse)')
+                        type=str, help='Fitness metric (Default: dependent on ml used)')
 
     parser.add_argument('--seed_with_ml', action='store_true', dest='SEED_WITH_ML', default=False,
                     help='Flag to seed initial GP population with components of the ML model.')
@@ -639,13 +679,13 @@ def main():
 
     args = parser.parse_args()
 
-    if args.VERBOSITY >= 2:
-        print('\nFEW settings:')
-        for arg in sorted(args.__dict__):
-            if arg == 'DISABLE_UPDATE_CHECK':
-                continue
-            print('{}\t=\t{}'.format(arg, args.__dict__[arg]))
-        print('')
+    # if args.VERBOSITY >= 2:
+    #     print('\nFEW settings:')
+    #     for arg in sorted(args.__dict__):
+    #         if arg == 'DISABLE_UPDATE_CHECK':
+    #             continue
+    #         print('{}\t=\t{}'.format(arg, args.__dict__[arg]))
+    #     print('')
 
     # load data from csv file
     if args.INPUT_SEPARATOR is None:
@@ -672,7 +712,7 @@ def main():
 
     learner = FEW(generations=args.GENERATIONS, population_size=args.POPULATION_SIZE,
                 mutation_rate=args.MUTATION_RATE, crossover_rate=args.CROSSOVER_RATE,
-                machine_learner = ml_dict[args.MACHINE_LEARNER], min_depth = args.MIN_DEPTH,
+                ml = ml_dict[args.MACHINE_LEARNER], min_depth = args.MIN_DEPTH,
                 max_depth = args.MAX_DEPTH, sel = args.SEL, tourn_size = args.TOURN_SIZE,
                 seed_with_ml = args.SEED_WITH_ML, op_weight = args.OP_WEIGHT,
                 erc = args.ERC, random_state=args.RANDOM_STATE, verbosity=args.VERBOSITY,

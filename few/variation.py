@@ -13,30 +13,46 @@ import pdb
 
 def cross(p_i,p_j, max_depth = 3):
     """subtree-like swap crossover between programs p_i and p_j."""
-    # grab subtree of p_i
-    x_i_end = np.random.randint(0,len(p_i))
+    # only choose crossover points for out_types available in both programs
+    # pdb.set_trace()
+    # determine possible outttypes
+    types_p_i = [t for t in [out_type[p[0]] for p in p_i]]
+    types_p_j = [t for t in [out_type[p[0]] for p in p_j]]
+    types = set(types_p_i).intersection(types_p_j)
 
+    # grab subtree of p_i
+    p_i_sub = [i for i,n in enumerate(p_i) if out_type[n[0]] in types]
+    x_i_end = np.random.choice(p_i_sub)
     x_i_begin = x_i_end
     arity_sum = p_i[x_i_end][1]
     # print("x_i_end:",x_i_end)
-    while (arity_sum > 0):
+    i = 0
+    while (arity_sum > 0) and i < 1000:
         if x_i_begin == 0:
             print("arity_sum:",arity_sum,"x_i_begin:",x_i_begin,"x_i_end:",x_i_end)
         x_i_begin -= 1
         arity_sum += p_i[x_i_begin][1]-1
+        i += 1
+    if i == 1000:
+        print("in variation")
+        pdb.set_trace()
 
-    # grab subtree of p_j
-    x_j_end = np.random.randint(len(p_j))
+    # grab subtree of p_j with matching out_type to p_i[x_i_end]
+    p_j_sub = [i for i,n in enumerate(p_j) if out_type[n[0]] == out_type[p_i[x_i_end][0]]]
+    x_j_end = np.random.choice(p_j_sub)
     x_j_begin = x_j_end
     arity_sum = p_j[x_j_end][1]
-
-    while (arity_sum > 0):
+    i = 0
+    while (arity_sum > 0) and i < 1000:
         if x_j_begin == 0:
             print("arity_sum:",arity_sum,"x_j_begin:",x_j_begin,"x_j_end:",x_j_end)
             print("p_j:",p_j)
         x_j_begin -= 1
         arity_sum += p_j[x_j_begin][1]-1
-
+        i += 1
+    if i == 1000:
+        print("in variation")
+        pdb.set_trace()
     #swap subtrees
     tmpi = p_i[:]
     tmpj = p_j[:]
