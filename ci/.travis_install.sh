@@ -47,6 +47,7 @@ source activate testenv
 pip install update_checker
 pip install tqdm
 pip install joblib
+pip install DistanceClassifier
 
 if [[ "$COVERAGE" == "true" ]]; then
     pip install coverage coveralls
