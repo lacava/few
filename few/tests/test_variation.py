@@ -25,9 +25,9 @@ def test_cross_makes_valid_program():
     """test_variation.py: crossover makes valid programs """
     # np.random.seed(65)
     # I = (a+b)*x
-    p1 = [('a',0,1),('b',0,2),('+',2),('x',0,3),('*',2)]
+    p1 = [('x',0,1),('x',0,2),('+',2),('x',0,3),('*',2)]
     # J = (x/z)-(n*b)
-    p2 = [('x',0,1),('z',0,2),('/',2),('k',0,3),('b',0,4),('*',2),('-',2)]
+    p2 = [('x',0,1),('x',0,2),('/',2),('k',0,3.7),('x',0,4),('*',2),('-',2)]
 
     for i in np.arange(1000):
         cross(p1,p2)

@@ -104,7 +104,7 @@ class FEW(BaseEstimator):
             if self.classification:
                 self.ml = LogisticRegression()
             else:
-                self.ml = LassoLarsCV(n_jobs=-1)
+                self.ml = LassoLarsCV()
         if not self.scoring_function:
             if self.classification:
                 self.scoring_function = accuracy_score
@@ -205,9 +205,10 @@ class FEW(BaseEstimator):
         # pdb.set_trace()
         # Evaluate the entire population
         # X represents a matrix of the population outputs (number os samples x population size)
-        # pop.X = np.asarray(list(map(lambda I: out(I,x_t,labels), pop.individuals)))
-        # pop.X = self.transform(x_t,pop.individuals,y_t)
-        pop.X = np.asarray(Parallel(n_jobs=-1,backend="threading")(delayed(out)(I,x_t,y_t) for I in pop.individuals), order = 'F')
+        # single thread
+        pop.X = self.transform(x_t,pop.individuals,y_t)
+        # parallel:
+        # pop.X = np.asarray(Parallel(n_jobs=-1)(delayed(out)(I,x_t,y_t) for I in pop.individuals), order = 'F')
         # pdb.set_trace()
         # calculate fitness of individuals
         # fitnesses = list(map(lambda I: fitness(I,y_t,self.ml),pop.X))
@@ -225,7 +226,7 @@ class FEW(BaseEstimator):
             else:
                 ind.fitness = np.nanmin([fit,self.max_fit])
 
-        #with Parallel(n_jobs=-1,backend="threading") as parallel:
+        #with Parallel(n_jobs=10) as parallel:
         ####################
         ### Main GP loop
         # for each generation g
@@ -296,9 +297,10 @@ class FEW(BaseEstimator):
                 offspring[-1].stack = list(reversed(offspring[-1].stack))
 
             # print("offspring:",stacks_2_eqns(offspring))
-            # X_offspring = self.transform(x_t,offspring)
+
             if self.verbosity > 2: print("output...")
-            X_offspring = np.asarray(Parallel(n_jobs=-1,backend="threading")(delayed(out)(O,x_t,y_t) for O in offspring), order = 'F')
+            X_offspring = self.transform(x_t,offspring)
+            # X_offspring = np.asarray(Parallel(n_jobs=10)(delayed(out)(O,x_t,y_t) for O in offspring), order = 'F')
             # X_offspring = np.asarray([out(O,x_t,y_t) for O in offspring], order = 'F')
             if self.verbosity > 2: print("fitness...")
             F_offspring = calc_fitness(X_offspring,y_t,self.fit_choice)
@@ -357,7 +359,8 @@ class FEW(BaseEstimator):
     def transform(self,x,inds=None,labels = None):
         """return a transformation of x using population outputs"""
         if inds:
-            return np.asarray(list(map(lambda I: out(I,x,labels), inds)),order='F')
+            return np.asarray([out(I,x,labels) for I in inds],order='F')
+            # return np.asarray(list(map(lambda I: out(I,x,labels), inds)),order='F')
         else:
             return np.asarray(list(map(lambda I: out(I,x,labels), self._best_inds)),order='F')
 
@@ -477,8 +480,8 @@ class FEW(BaseEstimator):
                         for c,p in zip(coef_order,pop.individuals):
                             p.stack = [('x',0,c)]
                     else:
-                        raise(ValueError)
-                except: # seed pop with raw features
+                        raise(AttributeError)
+                except Exception: # seed pop with raw features
                      for i,p in it.zip_longest(range(self._training_features.shape[1]),pop.individuals,fillvalue=None):
                          if i is not None:
                              p.stack = [('x',0,i)]
@@ -576,7 +579,7 @@ def float_range(value):
 
 # dictionary of ml options
 ml_dict = {
-        'lasso': LassoLarsCV(n_jobs=-1),
+        'lasso': LassoLarsCV(),
         'svr': SVR(),
         'lsvr': LinearSVR(),
         'lr': LogisticRegression(),
