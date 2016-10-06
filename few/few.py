@@ -42,11 +42,11 @@ class FEW(BaseEstimator):
     """
     update_checked = False
 
-    def __init__(self, population_size=100, generations=100,
-                 mutation_rate=0.2, crossover_rate=0.8,
-                 ml = None, min_depth = 1, max_depth = 3, max_depth_init = 2,
-                 sel = 'tournament', tourn_size = 2, fit_choice = None, op_weight = False,
-                 seed_with_ml = False, erc = False, random_state=np.random.randint(4294967295), verbosity=0, scoring_function=None,
+    def __init__(self, population_size=50, generations=100,
+                 mutation_rate=0.5, crossover_rate=0.5,
+                 ml = None, min_depth = 1, max_depth = 2, max_depth_init = 2,
+                 sel = 'epsilon_lexicase', tourn_size = 2, fit_choice = None, op_weight = False,
+                 seed_with_ml = True, erc = False, random_state=np.random.randint(4294967295), verbosity=0, scoring_function=None,
                  disable_update_check=False,elitism=False, boolean = False,classification=False,clean=False):
                 # sets up GP.
 
@@ -616,13 +616,13 @@ def main():
     parser.add_argument('-g', action='store', dest='GENERATIONS', default=100,
                         type=positive_integer, help='Number of generations to run FEW.')
 
-    parser.add_argument('-p', action='store', dest='POPULATION_SIZE', default=100,
+    parser.add_argument('-p', action='store', dest='POPULATION_SIZE', default=50,
                         type=positive_integer, help='Number of individuals in the GP population.')
 
-    parser.add_argument('-mr', action='store', dest='MUTATION_RATE', default=0.8,
+    parser.add_argument('-mr', action='store', dest='MUTATION_RATE', default=0.5,
                         type=float_range, help='GP mutation rate in the range [0.0, 1.0].')
 
-    parser.add_argument('-xr', action='store', dest='CROSSOVER_RATE', default=0.2,
+    parser.add_argument('-xr', action='store', dest='CROSSOVER_RATE', default=0.5,
                         type=float_range, help='GP crossover rate in the range [0.0, 1.0].')
 
     parser.add_argument('-ml', action='store', dest='MACHINE_LEARNER', default=None,
@@ -635,13 +635,13 @@ def main():
     parser.add_argument('-max_depth', action='store', dest='MAX_DEPTH', default=2,
                         type=positive_integer, help='Maximum number of nodes in GP programs.')
 
-    parser.add_argument('-max_depth_init', action='store', dest='MAX_DEPTH_INIT', default=1,
+    parser.add_argument('-max_depth_init', action='store', dest='MAX_DEPTH_INIT', default=2,
                         type=positive_integer, help='Maximum number of nodes in initialized GP programs.')
 
     parser.add_argument('-op_weight', action='store', dest='OP_WEIGHT', default=1,
                         type=bool, help='Weight variables for inclusion in synthesized features based on ML scores. Default: off')
 
-    parser.add_argument('-sel', action='store', dest='SEL', default='tournament', choices = ['tournament','lexicase','epsilon_lexicase'],
+    parser.add_argument('-sel', action='store', dest='SEL', default='epsilon_lexicase', choices = ['tournament','lexicase','epsilon_lexicase'],
                         type=str, help='Selection method (Default: tournament)')
 
     parser.add_argument('-tourn_size', action='store', dest='TOURN_SIZE', default=2,
@@ -651,7 +651,7 @@ def main():
                         'mse_rel','mae_rel','mdae_re','r2_rel','vaf_rel'],
                         type=str, help='Fitness metric (Default: dependent on ml used)')
 
-    parser.add_argument('--seed_with_ml', action='store_true', dest='SEED_WITH_ML', default=False,
+    parser.add_argument('--seed_with_ml', action='store_true', dest='SEED_WITH_ML', default=True,
                     help='Flag to seed initial GP population with components of the ML model.')
 
     parser.add_argument('--elitism', action='store_true', dest='ELITISM', default=False,
