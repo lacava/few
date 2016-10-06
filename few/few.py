@@ -18,7 +18,7 @@ from sklearn.linear_model import LassoLarsCV, LogisticRegression
 from sklearn.svm import SVR, LinearSVR, SVC, LinearSVC
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.cross_validation import train_test_split
 from sklearn.metrics import r2_score, accuracy_score
 from sklearn.preprocessing import Imputer
@@ -124,7 +124,8 @@ class FEW(BaseEstimator):
             type(DecisionTreeClassifier()): 'gini',
             type(DecisionTreeRegressor()): 'gini',
             type(DistanceClassifier()): 'silhouette',
-            type(KNeighborsClassifier()): 'silhouette'
+            type(KNeighborsClassifier()): 'silhouette',
+            type(KNeighborsRegressor()): 'mse',
         }
         if not self.fit_choice:
             self.fit_choice = default_fitchoice[type(self.ml)]
@@ -590,7 +591,8 @@ ml_dict = {
         'dtc': DecisionTreeClassifier(),
         'dtr': DecisionTreeRegressor(),
         'dc': DistanceClassifier(),
-        'knn': KNeighborsClassifier(),
+        'knc': KNeighborsClassifier(),
+        'knr': KNeighborsRegressor(),
         None: None
         # 'dist': DistanceClassifier(),
 }
