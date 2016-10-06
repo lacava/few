@@ -19,7 +19,7 @@ from sklearn.svm import SVR, LinearSVR, SVC, LinearSVC
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
-from sklearn.cross_validation import train_test_split
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, accuracy_score
 from sklearn.preprocessing import Imputer
 from DistanceClassifier import DistanceClassifier
@@ -231,7 +231,7 @@ class FEW(BaseEstimator):
         ####################
         ### Main GP loop
         # for each generation g
-        for g in tqdm(np.arange(self.generations)):
+        for g in tqdm(np.arange(self.generations), disable=self.verbosity==0):
             if self.verbosity > 1: print(".",end='')
             if self.verbosity > 1: print(str(g)+".)",end='')
             # if self.verbosity > 1: print("population:",stacks_2_eqns(pop.individuals))
