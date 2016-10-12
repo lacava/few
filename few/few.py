@@ -153,11 +153,12 @@ class FEW(BaseEstimator):
         """Fit model to data"""
         np.random.seed(self.random_state)
         # setup data
-
-        # Train-test split routine for internal validation
-        ####
+        # imputation
         if self.clean:
             features = self.impute_data(features)
+        # Train-test split routine for internal validation
+        ####
+
 
         train_val_data = pd.DataFrame(data=features)
         train_val_data['labels'] = labels
@@ -183,6 +184,15 @@ class FEW(BaseEstimator):
         self._training_labels = y_t
 
         ####
+        # set population size
+        if type(self.population_size) is str:
+            if 'x' in self.population_size: #
+                self.population_size = int(float(self.population_size[:-1])*features.shape[1])
+            else:
+                self.population_size = int(self.population_size)
+
+        if self.verbosity >0: print("population size:",self.population_size)
+
         if self.verbosity > 1:
             for arg in self.get_params():
                 print('{}\t=\t{}'.format(arg, self.get_params()[arg]))
@@ -616,8 +626,8 @@ def main():
     parser.add_argument('-g', action='store', dest='GENERATIONS', default=100,
                         type=positive_integer, help='Number of generations to run FEW.')
 
-    parser.add_argument('-p', action='store', dest='POPULATION_SIZE', default=50,
-                        type=positive_integer, help='Number of individuals in the GP population.')
+    parser.add_argument('-p', action='store', dest='POPULATION_SIZE', default=50, #type=positive_integer,
+                         help='Number of individuals in the GP population. Follow the number with x to set population size as a multiple of raw feature size.')
 
     parser.add_argument('-mr', action='store', dest='MUTATION_RATE', default=0.5,
                         type=float_range, help='GP mutation rate in the range [0.0, 1.0].')
