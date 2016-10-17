@@ -113,19 +113,21 @@ class FEW(BaseEstimator):
 
         # set default fitness metrics for various learners
         default_fitchoice = {
+            #regression
             type(LassoLarsCV()): 'mse',
             type(SVR()): 'mae',
             type(LinearSVR()): 'mae',
+            type(KNeighborsRegressor()): 'mse',
+            type(DecisionTreeRegressor()): 'mse',
+            type(RandomForestRegressor()): 'mse',
+            #classification
             type(LogisticRegression()): 'silhouette',
             type(SVC()): 'silhouette',
             type(LinearSVC()): 'silhouette',
             type(RandomForestClassifier()): 'silhouette',
-            type(RandomForestRegressor()): 'silhouette',
             type(DecisionTreeClassifier()): 'silhouette',
-            type(DecisionTreeRegressor()): 'silhouette',
             type(DistanceClassifier()): 'silhouette',
             type(KNeighborsClassifier()): 'silhouette',
-            type(KNeighborsRegressor()): 'mse',
         }
         if not self.fit_choice:
             self.fit_choice = default_fitchoice[type(self.ml)]
@@ -593,7 +595,7 @@ ml_dict = {
         'lasso': LassoLarsCV(),
         'svr': SVR(),
         'lsvr': LinearSVR(),
-        'lr': LogisticRegression(),
+        'lr': LogisticRegression(solver='sag'),
         'svc': SVC(),
         'lsvc': LinearSVC(),
         'rfc': RandomForestClassifier(),
