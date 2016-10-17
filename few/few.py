@@ -496,11 +496,12 @@ class FEW(BaseEstimator):
                         raise(AttributeError)
                 except Exception: # seed pop with raw features
                      for i,p in it.zip_longest(range(self._training_features.shape[1]),pop.individuals,fillvalue=None):
-                         if i is not None:
-                             p.stack = [('x',0,i)]
-                         else:
-                             make_program(p.stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1),self.otype)
-                             p.stack = list(reversed(p.stack))
+                        if p is not None:
+                            if i is not None:
+                                p.stack = [('x',0,i)]
+                            else:
+                                make_program(p.stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1),self.otype)
+                                p.stack = list(reversed(p.stack))
 
             # print initial population
             if self.verbosity > 2: print("seeded initial population:",stacks_2_eqns(pop.individuals))
