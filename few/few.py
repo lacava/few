@@ -215,7 +215,7 @@ class FEW(BaseEstimator):
 
         # Create initial population
         pop = self.init_pop()
-        # pdb.set_trace()
+
         # Evaluate the entire population
         # X represents a matrix of the population outputs (number os samples x population size)
         # single thread
@@ -227,6 +227,15 @@ class FEW(BaseEstimator):
         # fitnesses = list(map(lambda I: fitness(I,y_t,self.ml),pop.X))
         fitnesses = calc_fitness(pop.X,y_t,self.fit_choice)
 
+        # max_count = 0;
+        # pdb.set_trace()
+        # max_fit = self.max_fit
+        # while len([np.mean(f) for f in fitnesses if np.mean(f) < max_fit and np.mean(f)>=0])<self.population_size and max_count < 100:
+        #     pop = self.init_pop()
+        #     pop.X = self.transform(x_t,pop.individuals,y_t)
+        #     fitnesses = calc_fitness(pop.X,y_t,self.fit_choice)
+        #
+        #     max_count+= 1
         # print("fitnesses:",fitnesses)
         # Assign fitnesses to inidividuals in population
         for ind, fit in zip(pop.individuals, fitnesses):
@@ -238,6 +247,7 @@ class FEW(BaseEstimator):
                 ind.fitness = np.mean(ind.fitness_vec)
             else:
                 ind.fitness = np.nanmin([fit,self.max_fit])
+        # pdb.set_trace()
 
         #with Parallel(n_jobs=10) as parallel:
         ####################
@@ -255,7 +265,11 @@ class FEW(BaseEstimator):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 try:
-                    self.ml.fit(pop.X[self.valid_loc(pop.individuals),:].transpose(),y_t)
+                    if len(self.valid_loc(pop.individuals)) > 0:
+                        self.ml.fit(pop.X[self.valid_loc(pop.individuals),:].transpose(),y_t)
+                    else:
+                        self.ml.fit(pop.X.transpose(),y_t)
+
                 except ValueError as detail:
                     print("warning: ValueError in ml fit. X.shape:",pop.X[self.valid_loc(pop.individuals),:].transpose().shape,"y_t shape:",y_t.shape)
                     print("First ten entries X:",pop.X[self.valid_loc(pop.individuals),:].transpose()[:10])
@@ -267,11 +281,16 @@ class FEW(BaseEstimator):
 
             # if self.verbosity > 1: print("number of non-zero regressors:",self.ml.coef_.shape[0])
             # keep best model
-            # try:
-            tmp = self.ml.score(self.transform(x_v,pop.individuals)[self.valid_loc(pop.individuals),:].transpose(),y_v)
+            try:
+                if len(self.valid_loc(pop.individuals)) > 0:
+                    tmp = self.ml.score(self.transform(x_v,pop.individuals)[self.valid_loc(pop.individuals),:].transpose(),y_v)
+                else:
+                    tmp = self.ml.score(self.transform(x_v,pop.individuals).transpose(),y_v)
+            except Exception:
+                tmp = 0
+
             if self.verbosity > 1: print("current ml validation score:",tmp)
-            # except Exception:
-            #     tmp = 0
+
 
             if tmp > self._best_score:
                 self._best_estimator = copy.deepcopy(self.ml)
@@ -524,12 +543,12 @@ class FEW(BaseEstimator):
     def valid_loc(self,individuals):
         """returns the indices of individuals with valid fitness."""
 
-        return [index for index,i in enumerate(individuals) if i.fitness < self.max_fit]
+        return [index for index,i in enumerate(individuals) if i.fitness < self.max_fit and i.fitness >= 0]
 
     def valid(self,individuals):
         """returns the sublist of individuals with valid fitness."""
 
-        return [i for i in individuals if i.fitness < self.max_fit]
+        return [i for i in individuals if i.fitness < self.max_fit and i.fitness >= 0]
 
     def get_params(self, deep=None):
         """Get parameters for this estimator
@@ -738,7 +757,7 @@ def main():
                 boolean=args.BOOLEAN,classification=args.CLASSIFICATION,clean = args.CLEAN)
 
     learner.fit(training_features, training_labels)
-
+    # pdb.set_trace()
     if args.VERBOSITY >= 1:
         print('\nTraining accuracy: {}'.format(learner.score(training_features, training_labels)))
         print('Holdout accuracy: {}'.format(learner.score(testing_features, testing_labels)))
