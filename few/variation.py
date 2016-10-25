@@ -11,7 +11,7 @@ from itertools import accumulate
 import pdb
 # from few.tests.test_population import is_valid_program
 
-def cross(p_i,p_j, max_depth = 3):
+def cross(p_i,p_j, max_depth = 2):
     """subtree-like swap crossover between programs p_i and p_j."""
     # only choose crossover points for out_types available in both programs
     # pdb.set_trace()
@@ -74,7 +74,11 @@ def cross(p_i,p_j, max_depth = 3):
 
 
 
-def mutate(p_i,func_set,term_set):
+def mutate(p_i,func_set,term_set, max_depth=2):
+    """point mutation, addition, removal"""
+    point_mutate(p_i,func_set,term_set)
+
+def point_mutate(p_i,func_set,term_set):
     """point mutation on individual p_i"""
     # point mutation
     x = np.random.randint(len(p_i))
@@ -90,6 +94,15 @@ def mutate(p_i,func_set,term_set):
         print("new:",p_i)
         raise ValueError('Mutation produced an invalid program.')
 
+def add_mutate(p_i,func_set,term_set, max_depth=2):
+    """ mutation that adds operation to program"""
+    #choose node. move it down, pick an operator to put before it, with another leaf if
+    #new operator arity requires it.
+    #make sure size requirements are not invalidated (if they are, discard changes)
+
+def sub_mutate(p_i,func_set,term_set, max_depth=2):
+    """ mutation that removes operation from program"""
+    #choose a node with arity>0. replace it and its subtree with a node with lower arity.
 
 def is_valid_program(p):
     """checks whether program p makes a syntactically valid tree.

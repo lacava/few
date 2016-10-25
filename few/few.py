@@ -21,6 +21,7 @@ from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, accuracy_score
+from sklearn.metrics.pairwise import cosine_distances
 from sklearn.preprocessing import Imputer
 from DistanceClassifier import DistanceClassifier
 import numpy as np
@@ -47,7 +48,8 @@ class FEW(BaseEstimator):
                  ml = None, min_depth = 1, max_depth = 2, max_depth_init = 2,
                  sel = 'epsilon_lexicase', tourn_size = 2, fit_choice = None, op_weight = False,
                  seed_with_ml = True, erc = False, random_state=np.random.randint(4294967295), verbosity=0, scoring_function=None,
-                 disable_update_check=False,elitism=False, boolean = False,classification=False,clean=False):
+                 disable_update_check=False,elitism=False, boolean = False,classification=False,clean=False,
+                 track_diversity=False):
                 # sets up GP.
 
         # Save params to be recalled later by get_params()
@@ -91,6 +93,7 @@ class FEW(BaseEstimator):
         self.classification = classification
         self.clean = clean
         self.ml = ml
+        self.track_diversity = track_diversity
         # self.op_weight = op_weight
         if self.boolean:
             self.otype = 'b'
@@ -150,6 +153,8 @@ class FEW(BaseEstimator):
 
         # terminal set
         self.term_set = []
+        # diversity
+        self.diversity = []
 
     def fit(self, features, labels):
         """Fit model to data"""
@@ -252,15 +257,20 @@ class FEW(BaseEstimator):
         #with Parallel(n_jobs=10) as parallel:
         ####################
         ### Main GP loop
+        self.diversity=[]
         # for each generation g
         for g in tqdm(np.arange(self.generations), disable=self.verbosity==0):
+
+            if self.track_diversity:
+                self.get_diversity(pop.X)
+
             if self.verbosity > 1: print(".",end='')
             if self.verbosity > 1: print(str(g)+".)",end='')
             # if self.verbosity > 1: print("population:",stacks_2_eqns(pop.individuals))
             if self.verbosity > 2: print("pop fitnesses:", ["%0.2f" % x.fitness for x in pop.individuals])
             if self.verbosity > 1: print("median fitness pop: %0.2f" % np.median([x.fitness for x in pop.individuals]))
             if self.verbosity > 1: print("best fitness pop: %0.2f" % np.min([x.fitness for x in pop.individuals]))
-
+            if self.verbosity > 1 and self.track_diversity: print("feature diversity: %0.2f" % self.diversity[-1])
             if self.verbosity > 2: print("ml fitting...")
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
@@ -568,6 +578,15 @@ class FEW(BaseEstimator):
         """
         return self.params
 
+    def get_diversity(self,X):
+        """compute mean diversity of individual outputs"""
+        # diversity in terms of cosine distances between features
+        feature_correlations = np.zeros(X.shape[0]-1)
+        for i in np.arange(1,X.shape[0]-1):
+            feature_correlations[i] = max(0.0,r2_score(X[0],X[i]))
+        # pdb.set_trace()
+        self.diversity.append(1-np.mean(feature_correlations))
+
 def positive_integer(value):
     """Ensures that the provided value is a positive integer; throws an exception otherwise
 
@@ -698,6 +717,9 @@ def main():
     parser.add_argument('--class', action='store_true', dest='CLASSIFICATION', default=False,
                     help='Flag to conduct clasisfication rather than regression.')
 
+    parser.add_argument('--diversity', action='store_true', dest='TRACK_DIVERSITY', default=False,
+                    help='Flag to store diversity of feature transforms each generation.')
+
     parser.add_argument('--clean', action='store_true', dest='CLEAN', default=False,
                     help='Flag to clean input data of missing values.')
 
@@ -754,7 +776,8 @@ def main():
                 seed_with_ml = args.SEED_WITH_ML, op_weight = args.OP_WEIGHT,
                 erc = args.ERC, random_state=args.RANDOM_STATE, verbosity=args.VERBOSITY,
                 disable_update_check=args.DISABLE_UPDATE_CHECK,fit_choice = args.FIT_CHOICE,
-                boolean=args.BOOLEAN,classification=args.CLASSIFICATION,clean = args.CLEAN)
+                boolean=args.BOOLEAN,classification=args.CLASSIFICATION,clean = args.CLEAN,
+                track_diversity=args.TRACK_DIVERSITY)
 
     learner.fit(training_features, training_labels)
     # pdb.set_trace()
