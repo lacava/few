@@ -33,9 +33,18 @@ import pdb
 from update_checker import update_check
 from joblib import Parallel, delayed
 from tqdm import tqdm
+from mdr import MDR
+
 # import multiprocessing as mp
 # NUM_THREADS = mp.cpu_count()
 
+def run_MDR(n,stack_float,labels):
+    pdb.set_trace()
+    tmp1 = np.vstack((stack_float.pop(),stack_float.pop())).transpose()
+    if labels:
+        return n['state'].fit_transform(tmp1,labels)
+    else:
+        return n['state'].transform(tmp1)
 
 class FEW(BaseEstimator):
     """FEW uses GP to find a set of transformations from the original feature space
@@ -49,7 +58,7 @@ class FEW(BaseEstimator):
                  sel = 'epsilon_lexicase', tourn_size = 2, fit_choice = None, op_weight = False,
                  seed_with_ml = True, erc = False, random_state=np.random.randint(4294967295), verbosity=0, scoring_function=None,
                  disable_update_check=False,elitism=False, boolean = False,classification=False,clean=False,
-                 track_diversity=False):
+                 track_diversity=False,mdr=False):
                 # sets up GP.
 
         # Save params to be recalled later by get_params()
@@ -94,6 +103,7 @@ class FEW(BaseEstimator):
         self.clean = clean
         self.ml = ml
         self.track_diversity = track_diversity
+        self.mdr = mdr
         # self.op_weight = op_weight
         if self.boolean:
             self.otype = 'b'
@@ -142,20 +152,41 @@ class FEW(BaseEstimator):
         self.non_feature_columns = ['label', 'group', 'guess']
 
         # function set
-        self.func_set = [('+',2),('-',2),('*',2),('/',2),
-                     ('sin',1),('cos',1),('exp',1),('log',1),
-                     ('^2',1),('^3',1),('sqrt',1)]
-        if self.boolean: # include boolean functions
-            self.func_set += [('!',1),('&',2),('|',2),('==',2),('>_f',2),('<_f',2),
-                            ('>=_f',2),('<=_f',2),('>_b',2),('<_b',2),
-                            ('>=_b',2),('<=_b',2)]
+        self.func_set = [{'name':'+','arity':2,'in_type':'f','out_type':'f'},
+                         {'name':'-','arity':2,'in_type':'f','out_type':'f'},
+                         {'name':'*','arity':2,'in_type':'f','out_type':'f'},
+                         {'name':'/','arity':2,'in_type':'f','out_type':'f'},
+                         {'name':'sin','arity':1,'in_type':'f','out_type':'f'},
+                         {'name':'cos','arity':1,'in_type':'f','out_type':'f'},
+                         {'name':'exp','arity':1,'in_type':'f','out_type':'f'},
+                         {'name':'log','arity':1,'in_type':'f','out_type':'f'},
+                         {'name':'^2','arity':1,'in_type':'f','out_type':'f'},
+                         {'name':'^3','arity':1,'in_type':'f','out_type':'f'},
+                         {'name':'sqrt','arity':1,'in_type':'f','out_type':'f'}]
 
+        if self.boolean: # include boolean functions
+            self.func_set += [{'name':'!','arity':1,'in_type':'b','out_type':'b'},
+                            {'name':'&','arity':2,'in_type':'b','out_type':'b'},
+                            {'name':'|','arity':2,'in_type':'b','out_type':'b'},
+                            {'name':'==','arity':2,'in_type':'b','out_type':'b'},
+                            {'name':'>_f','arity':2,'in_type':'f','out_type':'b'},
+                            {'name':'<_f','arity':2,'in_type':'f','out_type':'b'},
+                            {'name':'>=_f','arity':2,'in_type':'f','out_type':'b'},
+                            {'name':'<=_f','arity':2,'in_type':'f','out_type':'b'},
+                            {'name':'>_b','arity':2,'in_type':'b','out_type':'b'},
+                            {'name':'<_b','arity':2,'in_type':'b','out_type':'b'},
+                            {'name':'>=_b','arity':2,'in_type':'b','out_type':'b'},
+                            {'name':'<=_b','arity':2,'in_type':'b','out_type':'b'}]
+
+        if self.mdr:
+            self.func_set += [{'name':'mdr2','arity':2,'state':MDR(),'eval':run_MDR,
+                                'in_type':'f','out_type':'b'}]
 
         # terminal set
         self.term_set = []
         # diversity
         self.diversity = []
-
+        pdb.set_trace()
     def fit(self, features, labels):
         """Fit model to data"""
         np.random.seed(self.random_state)
@@ -213,10 +244,10 @@ class FEW(BaseEstimator):
         # create terminal set
         for i in np.arange(x_t.shape[1]):
             # (.,.,.): node type, arity, feature column index or value
-            self.term_set.append(('x',0,i)) # features
+            self.term_set.append({'name':'x','arity':0,'loc':i,'out_type':'f','in_type':None}) # features
             # add ephemeral random constants if flag
             if self.erc:
-                self.term_set.append(('k',0,np.random.rand())) # ephemeral random constants
+                self.term_set.append({'name:':'k','arity':0,'value':np.random.rand(),'out_type':'f','in_type':None}) # ephemeral random constants
 
         # Create initial population
         pop = self.init_pop()
@@ -507,7 +538,7 @@ class FEW(BaseEstimator):
                 # add all model components with non-zero coefficients
                 for i,(c,p) in enumerate(it.zip_longest([c for c in self.ml.coef_ if c !=0],pop.individuals,fillvalue=None)):
                     if c is not None and p is not None:
-                        p.stack = [('x',0,i)]
+                        p.stack = [{'name':'x','arity':0,'loc':i,'out_type':'f','in_type':None}]
                     elif p is not None:
                         # make program if pop is bigger than model componennts
                         make_program(p.stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1),self.otype)
@@ -520,14 +551,14 @@ class FEW(BaseEstimator):
                         # seed pop with highest coefficients
                         coef_order = np.argsort(self.ml.coef_[::-1])
                         for c,p in zip(coef_order,pop.individuals):
-                            p.stack = [('x',0,c)]
+                            p.stack = [{'name':'x','arity':0,'loc':c,'out_type':'f','in_type':None}]
                     else:
                         raise(AttributeError)
                 except Exception: # seed pop with raw features
                      for i,p in it.zip_longest(range(self._training_features.shape[1]),pop.individuals,fillvalue=None):
                         if p is not None:
                             if i is not None:
-                                p.stack = [('x',0,i)]
+                                p.stack = [{'name':'x','arity':0,'loc':i,'out_type':'f','in_type':None}]
                             else:
                                 make_program(p.stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1),self.otype)
                                 p.stack = list(reversed(p.stack))
@@ -717,6 +748,9 @@ def main():
     parser.add_argument('--class', action='store_true', dest='CLASSIFICATION', default=False,
                     help='Flag to conduct clasisfication rather than regression.')
 
+    parser.add_argument('--mdr', action='store_true',dest='MDR',default=False,
+                    help='Flag to use MDR nodes.')
+
     parser.add_argument('--diversity', action='store_true', dest='TRACK_DIVERSITY', default=False,
                     help='Flag to store diversity of feature transforms each generation.')
 
@@ -752,8 +786,8 @@ def main():
     else: # use c engine for read_csv is separator is specified
         input_data = pd.read_csv(args.INPUT_FILE, sep=args.INPUT_SEPARATOR)
 
-    if 'Label' in input_data.columns.values:
-        input_data.rename(columns={'Label': 'label'}, inplace=True)
+    # if 'Label' in input_data.columns.values:
+    input_data.rename(columns={'Label': 'label','Class':'label','class':'label','target':'label'}, inplace=True)
 
     RANDOM_STATE = args.RANDOM_STATE if args.RANDOM_STATE > 0 else None
 
@@ -777,7 +811,7 @@ def main():
                 erc = args.ERC, random_state=args.RANDOM_STATE, verbosity=args.VERBOSITY,
                 disable_update_check=args.DISABLE_UPDATE_CHECK,fit_choice = args.FIT_CHOICE,
                 boolean=args.BOOLEAN,classification=args.CLASSIFICATION,clean = args.CLEAN,
-                track_diversity=args.TRACK_DIVERSITY)
+                track_diversity=args.TRACK_DIVERSITY,mdr=args.MDR)
 
     learner.fit(training_features, training_labels)
     # pdb.set_trace()

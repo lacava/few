@@ -13,37 +13,43 @@ import pdb
 from numpy.linalg import norm
 from .population import in_type, out_type
 from sklearn.metrics import silhouette_samples, silhouette_score
+
+
 # evaluation functions. these can be sped up using a GPU!
+
 eval_dict = {
 # float operations
-    '+': lambda n,features,stack_float,stack_bool: stack_float.pop() + stack_float.pop(),
-    '-': lambda n,features,stack_float,stack_bool: stack_float.pop() - stack_float.pop(),
-    '*': lambda n,features,stack_float,stack_bool: stack_float.pop() * stack_float.pop(),
-    '/': lambda n,features,stack_float,stack_bool: divs(stack_float.pop(),stack_float.pop()),
-    'sin': lambda n,features,stack_float,stack_bool: np.sin(stack_float.pop()),
-    'cos': lambda n,features,stack_float,stack_bool: np.cos(stack_float.pop()),
-    'exp': lambda n,features,stack_float,stack_bool: np.exp(stack_float.pop()),
-    'log': lambda n,features,stack_float,stack_bool: logs(stack_float.pop()),#np.log(np.abs(stack_float.pop())),
-    'x':  lambda n,features,stack_float,stack_bool: features[:,n[2]],
-    'k': lambda n,features,stack_float,stack_bool: np.ones(features.shape[0])*n[2],
-    '^2': lambda n,features,stack_float,stack_bool: stack_float.pop()**2,
-    '^3': lambda n,features,stack_float,stack_bool: stack_float.pop()**3,
-    'sqrt': lambda n,features,stack_float,stack_bool: np.sqrt(np.abs(stack_float.pop())),
-    # 'rbf': lambda n,features,stack_float,stack_bool: np.exp(-(np.norm(stack_float.pop()-stack_float.pop())**2)/2)
+    '+': lambda n,features,stack_float,stack_bool,labels: stack_float.pop() + stack_float.pop(),
+    '-': lambda n,features,stack_float,stack_bool,labels: stack_float.pop() - stack_float.pop(),
+    '*': lambda n,features,stack_float,stack_bool,labels: stack_float.pop() * stack_float.pop(),
+    '/': lambda n,features,stack_float,stack_bool,labels: divs(stack_float.pop(),stack_float.pop()),
+    'sin': lambda n,features,stack_float,stack_bool,labels: np.sin(stack_float.pop()),
+    'cos': lambda n,features,stack_float,stack_bool,labels: np.cos(stack_float.pop()),
+    'exp': lambda n,features,stack_float,stack_bool,labels: np.exp(stack_float.pop()),
+    'log': lambda n,features,stack_float,stack_bool,labels: logs(stack_float.pop()),#np.log(np.abs(stack_float.pop())),
+    'x':  lambda n,features,stack_float,stack_bool,labels: features[:,n['loc']],
+    'k': lambda n,features,stack_float,stack_bool,labels: np.ones(features.shape[0])*n['value'],
+    '^2': lambda n,features,stack_float,stack_bool,labels: stack_float.pop()**2,
+    '^3': lambda n,features,stack_float,stack_bool,labels: stack_float.pop()**3,
+    'sqrt': lambda n,features,stack_float,stack_bool,labels: np.sqrt(np.abs(stack_float.pop())),
+    # 'rbf': lambda n,features,stack_float,stack_bool,labels: np.exp(-(np.norm(stack_float.pop()-stack_float.pop())**2)/2)
 # bool operations
-    '!': lambda n,features,stack_float,stack_bool: not stack_bool.pop(),
-    '&': lambda n,features,stack_float,stack_bool: stack_bool.pop() and stack_bool.pop(),
-    '|': lambda n,features,stack_float,stack_bool: stack_bool.pop() or stack_bool.pop(),
-    '==': lambda n,features,stack_float,stack_bool: stack_bool.pop() == stack_bool.pop(),
-    '>_f': lambda n,features,stack_float,stack_bool: stack_float.pop() > stack_float.pop(),
-    '<_f': lambda n,features,stack_float,stack_bool: stack_float.pop() < stack_float.pop(),
-    '>=_f': lambda n,features,stack_float,stack_bool: stack_float.pop() >= stack_float.pop(),
-    '<=_f': lambda n,features,stack_float,stack_bool: stack_float.pop() <= stack_float.pop(),
-    '>_b': lambda n,features,stack_float,stack_bool: stack_bool.pop() > stack_bool.pop(),
-    '<_b': lambda n,features,stack_float,stack_bool: stack_bool.pop() < stack_bool.pop(),
-    '>=_b': lambda n,features,stack_float,stack_bool: stack_bool.pop() >= stack_bool.pop(),
-    '<=_b': lambda n,features,stack_float,stack_bool: stack_bool.pop() <= stack_bool.pop(),
-}
+    '!': lambda n,features,stack_float,stack_bool,labels: not stack_bool.pop(),
+    '&': lambda n,features,stack_float,stack_bool,labels: stack_bool.pop() and stack_bool.pop(),
+    '|': lambda n,features,stack_float,stack_bool,labels: stack_bool.pop() or stack_bool.pop(),
+    '==': lambda n,features,stack_float,stack_bool,labels: stack_bool.pop() == stack_bool.pop(),
+    '>_f': lambda n,features,stack_float,stack_bool,labels: stack_float.pop() > stack_float.pop(),
+    '<_f': lambda n,features,stack_float,stack_bool,labels: stack_float.pop() < stack_float.pop(),
+    '>=_f': lambda n,features,stack_float,stack_bool,labels: stack_float.pop() >= stack_float.pop(),
+    '<=_f': lambda n,features,stack_float,stack_bool,labels: stack_float.pop() <= stack_float.pop(),
+    '>_b': lambda n,features,stack_float,stack_bool,labels: stack_bool.pop() > stack_bool.pop(),
+    '<_b': lambda n,features,stack_float,stack_bool,labels: stack_bool.pop() < stack_bool.pop(),
+    '>=_b': lambda n,features,stack_float,stack_bool,labels: stack_bool.pop() >= stack_bool.pop(),
+    '<=_b': lambda n,features,stack_float,stack_bool,labels: stack_bool.pop() <= stack_bool.pop(),
+# MDR
+    'mdr2': lambda n,features,stack_float,stack_bool,labels: n['eval'](stack_float,labels),
+    }
+
 f = { # available fitness metrics
 'mse': lambda y,yhat: mean_squared_error(y,yhat),
 'mae': lambda y,yhat: mean_absolute_error(y,yhat),
@@ -81,11 +87,11 @@ def logs(x):
     return tmp
 
 
-def eval(n, features, stack_float, stack_bool):
+def eval(n, features, stack_float, stack_bool,labels=None):
     np.seterr(all='ignore')
     if (in_type[n[0]]=='f' and len(stack_float) >= n[1]) or (in_type[n[0]]=='b' and len(stack_bool) >= n[1]):
-        stack_float.append(safe(eval_dict[n[0]](n,features,stack_float,stack_bool)))
-        if any(np.isnan(stack_float[-1])) or any(np.isinf(stack_float[-1])):
+        stack_float.append(safe(eval_dict[n[0]](n,features,stack_float,stack_bool,labels)))
+        if np.isnan(stack_float[-1]).any() or np.isinf(stack_float[-1]).any():
             print("problem operator:",n)
 
 def out(I,features,labels=None):
@@ -95,7 +101,7 @@ def out(I,features,labels=None):
     # print("stack:",I.stack)
     # evaulate stack over rows of features,labels
     for n in I.stack:
-        eval(n,features,stack_float,stack_bool)
+        eval(n,features,stack_float,stack_bool,labels)
         # print("stack_float:",stack_float)
 
     return stack_float[-1]

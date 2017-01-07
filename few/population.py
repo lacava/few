@@ -21,8 +21,9 @@ eqn_dict = {
     '^3': lambda n,stack_eqn: '(' + stack_eqn.pop() + '^3)',
     'sqrt': lambda n,stack_eqn: 'sqrt(|' + stack_eqn.pop() + '|)',
     # 'rbf': lambda n,stack_eqn: 'exp(-||' + stack_eqn.pop()-stack_eqn.pop() '||^2/2)',
-    'x':  lambda n,stack_eqn: 'x_' + str(n[2]),
-    'k': lambda n,stack_eqn: str(n[2])
+    'x':  lambda n,stack_eqn: 'x_' + str(n['loc']),
+    'k': lambda n,stack_eqn: str(n[2]),
+    'mdr2': lambda n,stack_eqn: 'mdr2(' + stack_eqn.pop() + ',' + stack_eqn.pop() + ')',
 }
 
 class Ind(object):
@@ -74,7 +75,7 @@ def stack_2_eqn(p):
 
 def eval_eqn(n,stack_eqn):
     if len(stack_eqn) >= n[1]:
-        stack_eqn.append(eqn_dict[n[0]](n,stack_eqn))
+        stack_eqn.append(eqn_dict[n['name']](n,stack_eqn))
         # if any(np.isnan(stack_eqn[-1])) or any(np.isinf(stack_eqn[-1])):
         #     print("problem operator:",n)
 
@@ -82,7 +83,7 @@ def make_program(stack,func_set,term_set,max_d,ntype):
     """makes a program stack"""
     # print("stack:",stack,"max d:",max_d)
     if max_d == 0: #or np.random.rand() < float(len(term_set))/(len(term_set)+len(func_set)):
-        ts = [t for t in term_set if out_type[t[0]]==ntype]
+        ts = [t for t in term_set if t['out_type']==ntype]
 
         # if not ts:
         #     pdb.set_trace()
@@ -93,12 +94,13 @@ def make_program(stack,func_set,term_set,max_d,ntype):
 
         stack.append(ts[np.random.choice(len(ts))])
     else:
-        fs = [f for f in func_set if (out_type[f[0]]==ntype and (in_type[f[0]]=='f' or max_d>1))]
-        # if not fs:
-        #     pdb.set_trace()
+        fs = [f for f in func_set if (f['out_type']==ntype and (f['in_type']=='f' or max_d>1))]
+        if not fs:
+            pdb.set_trace()
         stack.append(fs[np.random.choice(len(fs))])
-        for i in np.arange(stack[-1][1]):
-            make_program(stack,func_set,term_set,max_d-1,in_type[stack[-1][0]])
+        tmp = copy.copy(stack[-1])
+        for i in np.arange(tmp['arity']):
+            make_program(stack,func_set,term_set,max_d-1,tmp['in_type'])
     # return stack
     # print("current stack:",stack)
 
@@ -111,7 +113,7 @@ def init(population_size,n_samples,func_set,term_set,min_depth,max_depth):
         # print("hex(id(I)):",hex(id(I)))
         # depth = 2;
         # print("initial I.stack:",I.stack)
-        make_program(I.stack,func_set,term_set,depth,'f')
+        make_program(I.stack,func_set,term_set,depth,'b')
         # print(I.stack)
         I.stack = list(reversed(I.stack))
 
@@ -127,6 +129,8 @@ in_type = {
 # bool operations
     '!':'b', '&':'b', '|':'b', '==':'b', '>_f':'f', '<_f':'f', '>=_f':'f',
     '<=_f':'f', '>_b':'b', '<_b':'b', '>=_b':'b', '<=_b':'b',
+# mdr
+    'mdr2':'f',
 }
 out_type = {
 # float operations
@@ -136,4 +140,6 @@ out_type = {
 # bool operations
     '!': 'b', '&': 'b','|': 'b','==': 'b','>_f': 'b','<_f': 'b','>=_f': 'b',
     '<=_f': 'b','>_b': 'b','<_b': 'b','>=_b': 'b','<=_b': 'b',
+# mdr
+    'mdr2':'f',
 }
