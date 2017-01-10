@@ -39,7 +39,7 @@ from mdr import MDR
 # NUM_THREADS = mp.cpu_count()
 
 def run_MDR(n,stack_float,labels):
-    pdb.set_trace()
+    # pdb.set_trace()
     tmp1 = np.vstack((stack_float.pop(),stack_float.pop())).transpose()
     if labels:
         return n['state'].fit_transform(tmp1,labels)
@@ -58,7 +58,7 @@ class FEW(BaseEstimator):
                  sel = 'epsilon_lexicase', tourn_size = 2, fit_choice = None, op_weight = False,
                  seed_with_ml = True, erc = False, random_state=np.random.randint(4294967295), verbosity=0, scoring_function=None,
                  disable_update_check=False,elitism=False, boolean = False,classification=False,clean=False,
-                 track_diversity=False,mdr=False):
+                 track_diversity=False,mdr=False,otype='f'):
                 # sets up GP.
 
         # Save params to be recalled later by get_params()
@@ -104,11 +104,12 @@ class FEW(BaseEstimator):
         self.ml = ml
         self.track_diversity = track_diversity
         self.mdr = mdr
+        self.otype = otype
         # self.op_weight = op_weight
-        if self.boolean:
-            self.otype = 'b'
-        else:
-            self.otype = 'f'
+        # if self.boolean:
+        #     self.otype = 'b'
+        # else:
+        #     self.otype = 'f'
 
 
         # pdb.set_trace()
@@ -176,7 +177,9 @@ class FEW(BaseEstimator):
                             {'name':'>_b','arity':2,'in_type':'b','out_type':'b'},
                             {'name':'<_b','arity':2,'in_type':'b','out_type':'b'},
                             {'name':'>=_b','arity':2,'in_type':'b','out_type':'b'},
-                            {'name':'<=_b','arity':2,'in_type':'b','out_type':'b'}]
+                            {'name':'<=_b','arity':2,'in_type':'b','out_type':'b'},
+                            {'name':'xor_b','arity':2,'in_type':'b','out_type':'b'},
+                            {'name':'xor_f','arity':2,'in_type':'f','out_type':'b'}]
 
         if self.mdr:
             self.func_set += [{'name':'mdr2','arity':2,'state':MDR(),'eval':run_MDR,
@@ -186,7 +189,7 @@ class FEW(BaseEstimator):
         self.term_set = []
         # diversity
         self.diversity = []
-        pdb.set_trace()
+
     def fit(self, features, labels):
         """Fit model to data"""
         np.random.seed(self.random_state)
@@ -432,10 +435,10 @@ class FEW(BaseEstimator):
     def transform(self,x,inds=None,labels = None):
         """return a transformation of x using population outputs"""
         if inds:
-            return np.asarray([out(I,x,labels) for I in inds],order='F')
+            return np.asarray([out(I,x,self.otype,labels) for I in inds],order='F')
             # return np.asarray(list(map(lambda I: out(I,x,labels), inds)),order='F')
         else:
-            return np.asarray(list(map(lambda I: out(I,x,labels), self._best_inds)),order='F')
+            return np.asarray(list(map(lambda I: out(I,x,self.otype,labels), self._best_inds)),order='F')
 
     def impute_data(self,x):
         """Imputes data set containing Nan values"""
@@ -461,7 +464,7 @@ class FEW(BaseEstimator):
         if self._best_inds is None:
             return self._best_estimator.predict(testing_features)
         else:
-            X_transform = (np.asarray(list(map(lambda I: out(I,testing_features), self._best_inds))))
+            X_transform = (np.asarray(list(map(lambda I: out(I,testing_features,self.otype), self._best_inds))))
             return self._best_estimator.predict(X_transform[self.valid_loc(self._best_inds),:].transpose())
 
     def fit_predict(self, features, labels):
@@ -676,7 +679,6 @@ ml_dict = {
         'knc': KNeighborsClassifier(),
         'knr': KNeighborsRegressor(),
         None: None
-        # 'dist': DistanceClassifier(),
 }
 # main functions
 def main():
@@ -743,7 +745,10 @@ def main():
                     help='Flag to use ephemeral random constants in GP feature construction.')
 
     parser.add_argument('--bool', action='store_true', dest='BOOLEAN', default=False,
-                    help='Flag to construct boolean-values features instead of continuous.')
+                    help='Flag to include boolean operators when constructing features.')
+
+    parser.add_argument('-otype', action='store', dest='OTYPE', default='f',choices=['f','b'],
+                    type=str,help='Feature output type. f: float, b: boolean.')
 
     parser.add_argument('--class', action='store_true', dest='CLASSIFICATION', default=False,
                     help='Flag to conduct clasisfication rather than regression.')
@@ -811,7 +816,7 @@ def main():
                 erc = args.ERC, random_state=args.RANDOM_STATE, verbosity=args.VERBOSITY,
                 disable_update_check=args.DISABLE_UPDATE_CHECK,fit_choice = args.FIT_CHOICE,
                 boolean=args.BOOLEAN,classification=args.CLASSIFICATION,clean = args.CLEAN,
-                track_diversity=args.TRACK_DIVERSITY,mdr=args.MDR)
+                track_diversity=args.TRACK_DIVERSITY,mdr=args.MDR,otype=args.OTYPE)
 
     learner.fit(training_features, training_labels)
     # pdb.set_trace()

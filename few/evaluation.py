@@ -46,6 +46,8 @@ eval_dict = {
     '<_b': lambda n,features,stack_float,stack_bool,labels: stack_bool.pop() < stack_bool.pop(),
     '>=_b': lambda n,features,stack_float,stack_bool,labels: stack_bool.pop() >= stack_bool.pop(),
     '<=_b': lambda n,features,stack_float,stack_bool,labels: stack_bool.pop() <= stack_bool.pop(),
+    'xor_b': lambda n,features,stack_float,stack_bool,labels: stack_bool.pop() != stack_bool.pop(),
+    'xor_f': lambda n,features,stack_float,stack_bool,labels: bool(stack_float.pop()) != bool(stack_bool.pop()),
 # MDR
     'mdr2': lambda n,features,stack_float,stack_bool,labels: n['eval'](stack_float,labels),
     }
@@ -89,22 +91,29 @@ def logs(x):
 
 def eval(n, features, stack_float, stack_bool,labels=None):
     np.seterr(all='ignore')
-    if (in_type[n[0]]=='f' and len(stack_float) >= n[1]) or (in_type[n[0]]=='b' and len(stack_bool) >= n[1]):
-        stack_float.append(safe(eval_dict[n[0]](n,features,stack_float,stack_bool,labels)))
+    if n['in_type']==None or (n['in_type']=='f' and len(stack_float) >= n['arity']) or (n['in_type']=='b' and len(stack_bool) >= n['arity']):
+        if n['out_type'] == 'f':
+            stack_float.append(safe(eval_dict[n['name']](n,features,stack_float,stack_bool,labels)))
+        else:
+            stack_bool.append(safe(eval_dict[n['name']](n,features,stack_float,stack_bool,labels)))
+
         if np.isnan(stack_float[-1]).any() or np.isinf(stack_float[-1]).any():
             print("problem operator:",n)
 
-def out(I,features,labels=None):
+def out(I,features,otype='f',labels=None):
     """computes the output for individual I"""
     stack_float = []
     stack_bool = []
     # print("stack:",I.stack)
     # evaulate stack over rows of features,labels
+    # pdb.set_trace()
     for n in I.stack:
         eval(n,features,stack_float,stack_bool,labels)
         # print("stack_float:",stack_float)
-
-    return stack_float[-1]
+    if otype=='f':
+        return stack_float[-1]
+    else:
+        return stack_bool[-1]
 
 def calc_fitness(X,labels,fit_choice):
     """computes fitness of individual output yhat.

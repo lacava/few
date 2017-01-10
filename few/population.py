@@ -104,7 +104,7 @@ def make_program(stack,func_set,term_set,max_d,ntype):
     # return stack
     # print("current stack:",stack)
 
-def init(population_size,n_samples,func_set,term_set,min_depth,max_depth):
+def init(population_size,n_samples,func_set,term_set,min_depth,max_depth,otype):
     """initializes population of features as GP stacks"""
     pop = Pop(population_size,n_samples)
 
@@ -113,7 +113,7 @@ def init(population_size,n_samples,func_set,term_set,min_depth,max_depth):
         # print("hex(id(I)):",hex(id(I)))
         # depth = 2;
         # print("initial I.stack:",I.stack)
-        make_program(I.stack,func_set,term_set,depth,'b')
+        make_program(I.stack,func_set,term_set,depth,otype)
         # print(I.stack)
         I.stack = list(reversed(I.stack))
 
