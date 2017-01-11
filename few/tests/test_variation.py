@@ -25,9 +25,19 @@ def test_cross_makes_valid_program():
     """test_variation.py: crossover makes valid programs """
     # np.random.seed(65)
     # I = (a+b)*x
-    p1 = [('x',0,1),('x',0,2),('+',2),('x',0,3),('*',2)]
+    p1 = [{'name':'x','arity':0,'loc':1,'in_type':None,'out_type':'f'},
+          {'name':'x','arity':0,'loc':2,'in_type':None,'out_type':'f'},
+          {'name':'+','arity':2,'in_type':'f','out_type':'f'},
+          {'name':'x','arity':0,'loc':3,'in_type':None,'out_type':'f'},
+          {'name':'*','arity':2,'in_type':'f','out_type':'f'}]
     # J = (x/z)-(n*b)
-    p2 = [('x',0,1),('x',0,2),('/',2),('k',0,3.7),('x',0,4),('*',2),('-',2)]
+    p2 = [{'name':'x','arity':0,'loc':1,'in_type':None,'out_type':'f'},
+          {'name':'x','arity':0,'loc':2,'in_type':None,'out_type':'f'},
+          {'name':'/','arity':2,'in_type':'f','out_type':'f'},
+          {'name':'k','arity':0,'value':3.7,'in_type':None,'out_type':'f'},
+          {'name':'x','arity':0,'loc':4,'in_type':None,'out_type':'f'},
+          {'name':'*','arity':2,'in_type':'f','out_type':'f'},
+          {'name':'-','arity':2,'in_type':'f','out_type':'f'}]
 
     for i in np.arange(1000):
         cross(p1,p2)
@@ -35,15 +45,19 @@ def test_cross_makes_valid_program():
 
 def test_mutate_makes_valid_program():
     """test_variation.py: mutation makes valid programs """
-    func_set = [('+',2),('-',2),('*',2),('/',2),('sin',1),('cos',1),('exp',1),('log',1)]
+    func_set = [{'name':'+','arity':2,'in_type':'f','out_type':'f'},{'name':'-','arity':2,'in_type':'f','out_type':'f'},{'name':'*','arity':2,'in_type':'f','out_type':'f'},
+                {'name':'/','arity':2,'in_type':'f','out_type':'f'},{'name':'sin','arity':1,'in_type':'f','out_type':'f'},{'name':'cos','arity':1,'in_type':'f','out_type':'f'},
+                {'name':'exp','arity':1,'in_type':'f','out_type':'f'},{'name':'log','arity':1,'in_type':'f','out_type':'f'}]
     # terminal set
     term_set = []
     # numbers represent column indices of features
     for i in np.arange(10):
-        term_set.append(('x',0,i)) # features
-        term_set.append(('k',0,np.random.rand())) # ephemeral random constants
+        term_set.append({'name':'x','arity':0,'loc':i,'in_type':None,'out_type':'f'}) # features
+        term_set.append({'name':'k','arity':0,'value':np.random.rand(),'in_type':None,'out_type':'f'}) # ephemeral random constants
 
-    p = [('k',0,5),('x',0,6),('/',2),('k',0,7),('x',0,8),('*',2),('-',2)]
+    p = [{'name':'k','arity':0,'value':5,'in_type':None,'out_type':'f'},{'name':'x','arity':0,'loc':6,'in_type':None,'out_type':'f'},{'name':'/','arity':2,'in_type':'f','out_type':'f'},
+         {'name':'k','arity':0,'value':7,'in_type':None,'out_type':'f'},{'name':'x','arity':0,'loc':8,'in_type':None,'out_type':'f'},
+         {'name':'*','arity':2,'in_type':'f','out_type':'f'},{'name':'-','arity':2,'in_type':'f','out_type':'f'}]
     for i in np.arange(1000):
         mutate(p,func_set,term_set)
         assert is_valid_program(p)

@@ -22,7 +22,7 @@ eqn_dict = {
     'sqrt': lambda n,stack_eqn: 'sqrt(|' + stack_eqn.pop() + '|)',
     # 'rbf': lambda n,stack_eqn: 'exp(-||' + stack_eqn.pop()-stack_eqn.pop() '||^2/2)',
     'x':  lambda n,stack_eqn: 'x_' + str(n['loc']),
-    'k': lambda n,stack_eqn: str(n[2]),
+    'k': lambda n,stack_eqn: str(n['value']),
     'mdr2': lambda n,stack_eqn: 'mdr2(' + stack_eqn.pop() + ',' + stack_eqn.pop() + ')',
 }
 
@@ -74,7 +74,7 @@ def stack_2_eqn(p):
     return []
 
 def eval_eqn(n,stack_eqn):
-    if len(stack_eqn) >= n[1]:
+    if len(stack_eqn) >= n['arity']:
         stack_eqn.append(eqn_dict[n['name']](n,stack_eqn))
         # if any(np.isnan(stack_eqn[-1])) or any(np.isinf(stack_eqn[-1])):
         #     print("problem operator:",n)

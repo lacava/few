@@ -16,7 +16,7 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 
 """
 import numpy as np
-
+from few import FEW
 from few.population import *
 from itertools import accumulate
 # unit tests for population methods.
@@ -40,24 +40,27 @@ def test_pop_shape():
     assert len(pop.individuals) == 73
     assert pop.X.shape == (5,73)
     assert pop.E.shape == (0,)
-    
+
 # NOTE: popultation initialization is done in the ellyn class now. this test needs to be rewritten.
-# def test_pop_init():
-#     """test_population.py: population initialization makes valid trees """
-#     # define function set
-#     # function set
-#     func_set = [('+',2),('-',2),('*',2),('/',2),('sin',1),('cos',1),('exp',1),('log',1)]
-#     # terminal set
-#     term_set = []
-#     n_features = 3
-#     # numbers represent column indices of features
-#     for i in np.arange(n_features):
-#         term_set.append(('x',0,i)) # features
-#         # term_set.append(('erc',0,np.random.rand())) # ephemeral random constants
-#
-#     pop = init(10,500,func_set,term_set,1,5)
-#     for I in pop.individuals:
-#         assert is_valid_program(I.stack)
+def test_pop_init():
+    """test_population.py: population initialization makes valid trees """
+    # define function set
+    # function set
+    # func_set = [('+',2),('-',2),('*',2),('/',2),('sin',1),('cos',1),('exp',1),('log',1)]
+    # terminal set
+    term_set = []
+    n_features = 3
+    # numbers represent column indices of features
+    for i in np.arange(n_features):
+        term_set.append({'name':'x','arity':0,'loc':i,'out_type':'f','in_type':None}) # features
+        # term_set.append(('erc',0,np.random.rand())) # ephemeral random constants
+    few = FEW(seed_with_ml=False)
+    few.term_set = term_set
+
+    pop = few.init_pop(n_features)
+
+    for I in pop.individuals:
+        assert is_valid_program(I.stack)
 
 def is_valid_program(p):
     """ checks that the accumulated program length is always greater than the
@@ -66,11 +69,11 @@ def is_valid_program(p):
     exactly equals the length of the stack, indicating that there are no
     missing arguments. """
     # print("p:",p)
-    arities = list(a[1] for a in p)
+    arities = list(a['arity'] for a in p)
     accu_arities = list(accumulate(arities))
     accu_len = list(np.arange(len(p))+1)
     check = list(a < b for a,b in zip(accu_arities,accu_len))
     # print("accu_arities:",accu_arities)
     # print("accu_len:",accu_len)
     # print("accu_arities < accu_len:",accu_arities<accu_len)
-    return all(check) and sum(a[1] for a in p) +1 == len(p) and len(p)>0
+    return all(check) and sum(a['arity'] for a in p) +1 == len(p) and len(p)>0
