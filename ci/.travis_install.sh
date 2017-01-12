@@ -48,6 +48,7 @@ pip install update_checker
 pip install tqdm
 pip install joblib
 pip install DistanceClassifier
+pip install scikit-mdr
 
 if [[ "$COVERAGE" == "true" ]]; then
     pip install coverage coveralls
