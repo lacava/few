@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/lacava/few.svg?branch=master)](https://travis-ci.org/lacava/few)
 [![Code Health](https://landscape.io/github/lacava/few/master/landscape.svg?style=flat)](https://landscape.io/github/lacava/few/master)
 [![Coverage Status](https://coveralls.io/repos/github/lacava/few/badge.svg?branch=master)](https://coveralls.io/github/lacava/few?branch=master)
-
+[![DOI](https://zenodo.org/badge/65411376.svg)](https://zenodo.org/badge/latestdoi/65411376)
 Few
 ===
 
