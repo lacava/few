@@ -56,7 +56,7 @@ class FEW(BaseEstimator):
                  mutation_rate=0.5, crossover_rate=0.5,
                  ml = None, min_depth = 1, max_depth = 2, max_depth_init = 2,
                  sel = 'epsilon_lexicase', tourn_size = 2, fit_choice = None, op_weight = False,
-                 seed_with_ml = True, erc = False, random_state=np.random.randint(4294967295), verbosity=0, scoring_function=None,
+                 seed_with_ml = True, erc = False, random_state=np.random.randint(9999999), verbosity=0, scoring_function=None,
                  disable_update_check=False,elitism=False, boolean = False,classification=False,clean=False,
                  track_diversity=False,mdr=False,otype='f',term_set=None):
                 # sets up GP.
