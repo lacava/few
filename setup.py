@@ -32,7 +32,7 @@ e-mail: lacava@upenn.edu
 This project is hosted at https://github.com/lacava/few
 ''',
     zip_safe=True,
-    install_requires=['numpy', 'scipy', 'pandas', 'scikit-learn', 'update_checker', 'tqdm', 'joblib','DistanceClassifier'],
+    install_requires=['numpy', 'scipy', 'pandas', 'scikit-learn', 'update_checker', 'tqdm', 'joblib','DistanceClassifier', 'mdr'],
     classifiers=[
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
