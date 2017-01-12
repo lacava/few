@@ -34,7 +34,7 @@ from update_checker import update_check
 from joblib import Parallel, delayed
 from tqdm import tqdm
 from mdr import MDR
-
+import uuid
 # import multiprocessing as mp
 # NUM_THREADS = mp.cpu_count()
 
@@ -362,11 +362,24 @@ class FEW(BaseEstimator):
             for child1, child2 in zip(offspring[::2], offspring[1::2]):
                 if np.random.rand() < self.crossover_rate:
                     cross(child1.stack, child2.stack, self.max_depth)
+                    # update ids
+                    child1.parentid = [child1.id,child2.id]
+                    child1.id = uuid.uuid4()
+                    child2.parentid = [child1.id,child2.id]
+                    child2.id = uuid.uuid4()
                 else:
                     mutate(child1.stack,self.func_set,self.term_set)
                     mutate(child2.stack,self.func_set,self.term_set)
+                    # update ids
+                    child1.parentid = [child1.id]
+                    child1.id = uuid.uuid4()
+                    child2.parentid = [child2.id]
+                    child2.id = uuid.uuid4()
+                # set default fitness
                 child1.fitness = -1
                 child2.fitness = -1
+
+
             while len(offspring) < self.population_size:
                 #make new offspring to replace the invalid ones
                 offspring.append(Ind())
@@ -404,6 +417,8 @@ class FEW(BaseEstimator):
                 survivors, survivor_index = lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True)
             elif self.sel == 'epsilon_lexicase':
                 survivors, survivor_index = epsilon_lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True)
+            elif self.sel == 'deterministic_crowding':
+                survivors, survivor_index = deterministic_crowding(pop.individuals,offspring,pop.X,X_offspring)
 
             if self.elitism and min([x.fitness for x in survivors]) > elite.fitness:
                 # if the elite individual did not survive and elitism is on, replace worst individual with elite
@@ -755,7 +770,7 @@ def main():
     parser.add_argument('-op_weight', action='store', dest='OP_WEIGHT', default=1,
                         type=bool, help='Weight variables for inclusion in synthesized features based on ML scores. Default: off')
 
-    parser.add_argument('-sel', action='store', dest='SEL', default='epsilon_lexicase', choices = ['tournament','lexicase','epsilon_lexicase'],
+    parser.add_argument('-sel', action='store', dest='SEL', default='epsilon_lexicase', choices = ['tournament','lexicase','epsilon_lexicase','deterministic_crowding'],
                         type=str, help='Selection method (Default: tournament)')
 
     parser.add_argument('-tourn_size', action='store', dest='TOURN_SIZE', default=2,

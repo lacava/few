@@ -8,6 +8,8 @@ license: GNU/GPLv3
 import numpy as np
 import copy
 import pdb
+import uuid
+
 eqn_dict = {
     '+': lambda n,stack_eqn: '(' + stack_eqn.pop() + '+' + stack_eqn.pop() + ')',
     '-': lambda n,stack_eqn: '(' + stack_eqn.pop() + '-' + stack_eqn.pop()+ ')',
@@ -34,7 +36,8 @@ class Ind(object):
         self.fitness = fitness
         self.fitness_vec = []
         self.fitness_bool = []
-
+        self.parentid = []
+        self.id = uuid.uuid4()
         if stack is None:
             self.stack = []
         else:

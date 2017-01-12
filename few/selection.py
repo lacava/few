@@ -8,6 +8,7 @@ license: GNU/GPLv3
 import numpy as np
 import copy
 import pdb
+from sklearn.metrics import r2_score
 from .population import stacks_2_eqns
 
 def tournament(individuals,tourn_size, num_selections=None):
@@ -129,3 +130,39 @@ def epsilon_lexicase(individuals, num_selections=None, survival = False):
 def mad(x, axis=None):
     """median absolute deviation statistic"""
     return np.median(np.abs(x - np.median(x, axis)), axis)
+
+def deterministic_crowding(parents,offspring,X_parents,X_offspring):
+    """deterministic crowding implementation (for non-steady state).
+    offspring compete against the parent they are most similar to, here defined as
+    the parent they are most correlated with.
+    the offspring only replace their parent if they are more fit.
+    """
+    # pdb.set_trace()
+    # order offspring so that they are lined up with their most similar parent
+    # get children locations produced from crossover
+    cross_children = [i for i,o in enumerate(offspring) if len(o.parentid) > 1]
+
+    for i in cross_children[::2]:
+        # get parent locations
+        p_loc = [j for j,p in enumerate(parents) if p.id in offspring[i].parentid]
+        # if child is more correlated with its non-root parent
+        if r2_score(X_parents[p_loc[0]],X_offspring[i]) + r2_score(X_parents[p_loc[1]],X_offspring[i+1]) < r2_score(X_parents[p_loc[0]],X_offspring[i+1]) + r2_score(X_parents[p_loc[1]],X_offspring[i]):
+            # swap offspring
+            offspring[i],offspring[i+1] = offspring[i+1],offspring[i]
+
+    survivors = []
+    survivor_index = []
+
+    for i,(p,o) in enumerate(zip(parents,offspring)):
+        if p.fitness >= o.fitness:
+            survivors.append(copy.deepcopy(p))
+            survivor_index.append(i)
+        else:
+            survivors.append(copy.deepcopy(o))
+            survivor_index.append(i+len(parents))
+
+    return survivors, survivor_index
+    # run competition
+    # for in offspring:
+
+    # return survivors along with their indicies

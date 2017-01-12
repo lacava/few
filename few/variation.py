@@ -73,7 +73,6 @@ def cross(p_i,p_j, max_depth = 2):
         p_j[:] = tmpj
 
 
-
 def mutate(p_i,func_set,term_set, max_depth=2):
     """point mutation, addition, removal"""
     point_mutate(p_i,func_set,term_set)
