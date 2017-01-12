@@ -34,7 +34,7 @@ def test_few_fit_shapes():
     learner = FEW(generations=1, population_size=5,
                 mutation_rate=0.2, crossover_rate=0.8,
                 ml = LassoLarsCV(), min_depth = 1, max_depth = 3,
-                sel = 'epsilon_lexicase', tourn_size = 2, random_state=0, verbosity=2,
+                sel = 'epsilon_lexicase', tourn_size = 2, random_state=0, verbosity=0,
                 disable_update_check=False, fit_choice = 'mse')
 
     score = learner.fit(boston.data[:300], boston.target[:300])
@@ -60,7 +60,7 @@ def test_few_at_least_as_good_as_default():
     learner = FEW(generations=1, population_size=5,
                 mutation_rate=1, crossover_rate=1,
                 ml = LassoLarsCV(), min_depth = 1, max_depth = 3,
-                sel = 'epsilon_lexicase', fit_choice = 'r2',tourn_size = 2, random_state=0, verbosity=1,
+                sel = 'epsilon_lexicase', fit_choice = 'r2',tourn_size = 2, random_state=0, verbosity=0,
                 disable_update_check=False)
 
     learner.fit(features[:300], target[:300])
