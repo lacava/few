@@ -137,18 +137,21 @@ def deterministic_crowding(parents,offspring,X_parents,X_offspring):
     the parent they are most correlated with.
     the offspring only replace their parent if they are more fit.
     """
-    # pdb.set_trace()
-    # order offspring so that they are lined up with their most similar parent
+
+    # try:
+
     # get children locations produced from crossover
     cross_children = [i for i,o in enumerate(offspring) if len(o.parentid) > 1]
-
-    for i in cross_children[::2]:
+    # order offspring so that they are lined up with their most similar parent
+    for c1,c2 in zip(cross_children[::2], cross_children[1::2]):
         # get parent locations
-        p_loc = [j for j,p in enumerate(parents) if p.id in offspring[i].parentid]
+        p_loc = [j for j,p in enumerate(parents) if p.id in offspring[c1].parentid]
+        if len(p_loc) != 2:
+            pdb.set_trace()
         # if child is more correlated with its non-root parent
-        if r2_score(X_parents[p_loc[0]],X_offspring[i]) + r2_score(X_parents[p_loc[1]],X_offspring[i+1]) < r2_score(X_parents[p_loc[0]],X_offspring[i+1]) + r2_score(X_parents[p_loc[1]],X_offspring[i]):
+        if r2_score(X_parents[p_loc[0]],X_offspring[c1]) + r2_score(X_parents[p_loc[1]],X_offspring[c2]) < r2_score(X_parents[p_loc[0]],X_offspring[c2]) + r2_score(X_parents[p_loc[1]],X_offspring[c1]):
             # swap offspring
-            offspring[i],offspring[i+1] = offspring[i+1],offspring[i]
+            offspring[c1],offspring[c2] = offspring[c2],offspring[c1]
 
     survivors = []
     survivor_index = []
@@ -161,8 +164,7 @@ def deterministic_crowding(parents,offspring,X_parents,X_offspring):
             survivors.append(copy.deepcopy(o))
             survivor_index.append(i+len(parents))
 
+    # except:
+    #     pdb.set_trace()
+    # return survivors along with their indices
     return survivors, survivor_index
-    # run competition
-    # for in offspring:
-
-    # return survivors along with their indicies

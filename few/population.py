@@ -26,6 +26,22 @@ eqn_dict = {
     'x':  lambda n,stack_eqn: 'x_' + str(n['loc']),
     'k': lambda n,stack_eqn: str(n['value']),
     'mdr2': lambda n,stack_eqn: 'mdr2(' + stack_eqn.pop() + ',' + stack_eqn.pop() + ')',
+# bool operations
+    '!': lambda n,stack_eqn: '(!' + stack_eqn.pop() + ')',
+    '&': lambda n,stack_eqn: '(' + stack_eqn.pop() + '&' + stack_eqn.pop() + ')',
+    '|': lambda n,stack_eqn: '(' + stack_eqn.pop() + '|' + stack_eqn.pop() + ')',
+    '==': lambda n,stack_eqn: '(' + stack_eqn.pop() + '==' + stack_eqn.pop() + ')',
+    '>_f': lambda n,stack_eqn: '(' + stack_eqn.pop() + '>' + stack_eqn.pop() + ')',
+    '<_f': lambda n,stack_eqn: '(' + stack_eqn.pop() + '<' + stack_eqn.pop() + ')',
+    '>=_f': lambda n,stack_eqn: '(' + stack_eqn.pop() + '>=' + stack_eqn.pop() + ')',
+    '<=_f': lambda n,stack_eqn: '(' + stack_eqn.pop() + '<=' + stack_eqn.pop() + ')',
+    '>_b': lambda n,stack_eqn: '(' + stack_eqn.pop() + '>' + stack_eqn.pop() + ')',
+    '<_b': lambda n,stack_eqn: '(' + stack_eqn.pop() + '<' + stack_eqn.pop() + ')',
+    '>=_b': lambda n,stack_eqn: '(' + stack_eqn.pop() + '>=' + stack_eqn.pop() + ')',
+    '<=_b': lambda n,stack_eqn: '(' + stack_eqn.pop() + '<=' + stack_eqn.pop() + ')',
+    'xor_b': lambda n,stack_eqn: '(' + stack_eqn.pop() + ' XOR ' + stack_eqn.pop() + ')',
+    'xor_f': lambda n,stack_eqn: '(' + stack_eqn.pop() + ' XOR ' + stack_eqn.pop() + ')',
+
 }
 
 class Ind(object):

@@ -30,7 +30,7 @@ import warnings
 import copy
 import itertools as it
 import pdb
-from update_checker import update_check
+# from update_checker import update_check
 from joblib import Parallel, delayed
 from tqdm import tqdm
 from mdr import MDR
@@ -65,14 +65,14 @@ class FEW(BaseEstimator):
         self.params = locals()  # Must be placed before any local variable definitions
         self.params.pop('self')
 
-        # Do not prompt the user to update during this session if they ever disabled the update check
-        if disable_update_check:
-            FEW.update_checked = True
-
-        # Prompt the user if their version is out of date
-        if not disable_update_check and not FEW.update_checked:
-            update_check('FEW', __version__)
-            FEW.update_checked = True
+        # # Do not prompt the user to update during this session if they ever disabled the update check
+        # if disable_update_check:
+        #     FEW.update_checked = True
+        #
+        # # Prompt the user if their version is out of date
+        # if not disable_update_check and not FEW.update_checked:
+        #     update_check('FEW', __version__)
+        #     FEW.update_checked = True
 
         self._best_estimator = None
         self._training_features = None
@@ -185,7 +185,12 @@ class FEW(BaseEstimator):
         if self.mdr:
             self.func_set += [{'name':'mdr2','arity':2,'state':MDR(),'eval':run_MDR,
                                 'in_type':'f','out_type':'b'}]
-
+        # if boolean operators are included but the output type is set to float, then
+        # # include the if and if-else operations that allow use of both stacks
+        # if self.boolean and self.otype=='f':
+        #     self.func_set += [
+        #     {'name:','if','arity':2,'in_type':}
+        #     ]
         # terminal set
         self.term_set = []
         # diversity
@@ -244,7 +249,7 @@ class FEW(BaseEstimator):
         self._best_estimator = copy.deepcopy(self.ml.fit(x_t,y_t))
         self._best_score = self._best_estimator.score(x_v,y_v)
         if self.verbosity > 2: print("initial estimator size:",self._best_estimator.coef_.shape)
-        if self.verbosity > 0: print("initial validation score:",self._best_score)
+        if self.verbosity > 0: print("initial ML CV: {:1.3f}".format(self._best_score))
         # create terminal set
         for i in np.arange(x_t.shape[1]):
             # dictionary of node name, arity, feature column index, output type and input type
@@ -255,7 +260,10 @@ class FEW(BaseEstimator):
 
         # Create initial population
         pop = self.init_pop(self._training_features.shape[0])
-
+        # check that uuids are unique in population
+        uuids = [p.id for p in pop.individuals]
+        if len(uuids) != len(set(uuids)):
+            pdb.set_trace()
         # Evaluate the entire population
         # X represents a matrix of the population outputs (number os samples x population size)
         # single thread
@@ -294,7 +302,8 @@ class FEW(BaseEstimator):
         ### Main GP loop
         self.diversity=[]
         # for each generation g
-        for g in tqdm(np.arange(self.generations), disable=self.verbosity==0):
+        pbar = tqdm(total=self.generations,disable = self.verbosity==0,desc='Internal CV: {:1.3f}'.format(self._best_score,3))
+        for g in np.arange(self.generations):
 
             if self.track_diversity:
                 self.get_diversity(pop.X)
@@ -359,15 +368,29 @@ class FEW(BaseEstimator):
 
             # Apply crossover and mutation on the offspring
             if self.verbosity > 2: print("variation...")
-            for child1, child2 in zip(offspring[::2], offspring[1::2]):
-                if np.random.rand() < self.crossover_rate:
+            for child1, child2 in it.zip_longest(offspring[::2], offspring[1::2],fillvalue=None):
+
+                if np.random.rand() < self.crossover_rate and child2 != None:
+                # crossover
                     cross(child1.stack, child2.stack, self.max_depth)
                     # update ids
                     child1.parentid = [child1.id,child2.id]
                     child1.id = uuid.uuid4()
                     child2.parentid = [child1.id,child2.id]
                     child2.id = uuid.uuid4()
+                    # set default fitness
+                    child1.fitness = -1
+                    child2.fitness = -1
+                elif child2 == None:
+                # single mutation
+                    mutate(child1.stack,self.func_set,self.term_set)
+                    # update ids
+                    child1.parentid = [child1.id]
+                    child1.id = uuid.uuid4()
+                    # set default fitness
+                    child1.fitness = -1
                 else:
+                #double mutation
                     mutate(child1.stack,self.func_set,self.term_set)
                     mutate(child2.stack,self.func_set,self.term_set)
                     # update ids
@@ -375,10 +398,9 @@ class FEW(BaseEstimator):
                     child1.id = uuid.uuid4()
                     child2.parentid = [child2.id]
                     child2.id = uuid.uuid4()
-                # set default fitness
-                child1.fitness = -1
-                child2.fitness = -1
-
+                    # set default fitness
+                    child1.fitness = -1
+                    child2.fitness = -1
 
             while len(offspring) < self.population_size:
                 #make new offspring to replace the invalid ones
@@ -386,8 +408,7 @@ class FEW(BaseEstimator):
                 make_program(offspring[-1].stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1),self.otype)
                 offspring[-1].stack = list(reversed(offspring[-1].stack))
 
-            # print("offspring:",stacks_2_eqns(offspring))
-
+            # evaluate offspring
             if self.verbosity > 2: print("output...")
             X_offspring = self.transform(x_t,offspring)
             # X_offspring = np.asarray(Parallel(n_jobs=10)(delayed(out)(O,x_t,y_t) for O in offspring), order = 'F')
@@ -433,6 +454,7 @@ class FEW(BaseEstimator):
             # print("survivors:",stacks_2_eqns(survivors))
             pop.individuals[:] = survivors
             pop.X = np.vstack((pop.X, X_offspring))[survivor_index,:]
+
             # if pop.X.shape[0] != self.population_size:
             #     pdb.set_trace()
             # print("new pop.X:",pop.X[:,:4])
@@ -441,10 +463,13 @@ class FEW(BaseEstimator):
             #[[s for s in survivor_index if s<len(pop.individuals)],:],
                                     #  X_offspring[[s-len(pop.individuals) for s in survivor_index if s>=len(pop.individuals)],:]))
             if self.verbosity > 2: print("median fitness survivors: %0.2f" % np.median([x.fitness for x in pop.individuals]))
+
+            pbar.set_description('Internal CV: {:1.3f}'.format(self._best_score,3))
+            pbar.update(1)
         # end of main GP loop
             ####################
-        if self.verbosity > 0: print("finished. best internal val score:",self._best_score)
-        if self.verbosity > 1: print("final model:",self.print_model())
+        if self.verbosity > 0: print('finished. best internal val score: {:1.3f}'.format(self._best_score,3))
+        if self.verbosity > 0: print("final model:\n",self.print_model())
 
         return self
 
@@ -615,7 +640,7 @@ class FEW(BaseEstimator):
                         s = np.argsort(np.abs(self.ml.coef_))[::-1]
                         scoef = self.ml.coef_[s]
                     bi = [self._best_inds[k] for k in s]
-                    model = ' + '.join([str(round(c,3))+'*'+stack_2_eqn(f) for i,(f,c) in enumerate(zip(bi,scoef)) if round(scoef[i],3) != 0])
+                    model = ' +\n'.join([str(round(c,3))+'*'+stack_2_eqn(f) for i,(f,c) in enumerate(zip(bi,scoef)) if round(scoef[i],3) != 0])
                 else:
                     # more than one decision function is fit. print all.
                     for coef in self.ml.coef_:
@@ -780,8 +805,8 @@ def main():
                         'mse_rel','mae_rel','mdae_re','r2_rel','vaf_rel'],
                         type=str, help='Fitness metric (Default: dependent on ml used)')
 
-    parser.add_argument('--seed_with_ml', action='store_true', dest='SEED_WITH_ML', default=True,
-                    help='Flag to seed initial GP population with components of the ML model.')
+    parser.add_argument('--no_seed', action='store_false', dest='SEED_WITH_ML', default=True,
+                    help='Flag to NOT seed initial GP population with components of the ML model.')
 
     parser.add_argument('--elitism', action='store_true', dest='ELITISM', default=False,
                     help='Flag to force survival of best individual in GP population.')
@@ -866,8 +891,8 @@ def main():
     learner.fit(training_features, training_labels)
     # pdb.set_trace()
     if args.VERBOSITY >= 1:
-        print('\nTraining accuracy: {}'.format(learner.score(training_features, training_labels)))
-        print('Holdout accuracy: {}'.format(learner.score(testing_features, testing_labels)))
+        print('\nTraining accuracy: {:1.3f}'.format(learner.score(training_features, training_labels)))
+        print('Test accuracy: {:1.3f}'.format(learner.score(testing_features, testing_labels)))
 
     if args.OUTPUT_FILE != '':
         learner.export(args.OUTPUT_FILE)
