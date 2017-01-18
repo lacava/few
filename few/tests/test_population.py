@@ -51,8 +51,7 @@ def test_pop_init():
     term_set = []
     n_features = 3
     # numbers represent column indices of features
-    for i in np.arange(n_features):
-        term_set.append({'name':'x','arity':0,'loc':i,'out_type':'f','in_type':None}) # features
+    term_set = [node('x',loc=i) for i in np.arange(n_features)]
         # term_set.append(('erc',0,np.random.rand())) # ephemeral random constants
     few = FEW(seed_with_ml=False)
     few.term_set = term_set
@@ -69,11 +68,11 @@ def is_valid_program(p):
     exactly equals the length of the stack, indicating that there are no
     missing arguments. """
     # print("p:",p)
-    arities = list(a['arity'] for a in p)
+    arities = list(a.arity[a.in_type] for a in p)
     accu_arities = list(accumulate(arities))
     accu_len = list(np.arange(len(p))+1)
     check = list(a < b for a,b in zip(accu_arities,accu_len))
     # print("accu_arities:",accu_arities)
     # print("accu_len:",accu_len)
     # print("accu_arities < accu_len:",accu_arities<accu_len)
-    return all(check) and sum(a['arity'] for a in p) +1 == len(p) and len(p)>0
+    return all(check) and sum([a.arity[a.in_type] for a in p]) +1 == len(p) and len(p)>0

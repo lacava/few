@@ -2,7 +2,7 @@ from few import FEW
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
-
+import cProfile
 
 dataset = 'd_enc.txt'
 
@@ -19,7 +19,7 @@ Y_train = input_data.loc[train_i, 'label'].values
 X_test = input_data.loc[test_i].drop('label', axis=1).values
 Y_test = input_data.loc[test_i, 'label'].values
 
-few = FEW()
+few = FEW(verbosity=1)
 few.fit(X_train,Y_train)
 
 print('\nTraining accuracy: {}'.format(few.score(X_train, Y_train)))

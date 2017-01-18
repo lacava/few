@@ -34,7 +34,7 @@ def test_out_shapes():
     term_set = []
     # numbers represent column indices of features
     for i in np.arange(n_features):
-        term_set.append({'name':'x','arity':0,'loc':i,'out_type':'f','in_type':None}) # features
+        term_set.append(node('x',loc=i)) # features
         # term_set.append(('k',0,np.random.rand())) # ephemeral random constants
 
     # initialize population
@@ -62,36 +62,18 @@ def test_out_is_correct():
     p3 = Ind()
     p4 = Ind()
     p5 = Ind()
-    p1.stack = [{'name':'x', 'arity':0, 'loc':4,'in_type':None,'out_type':'f'},
-                {'name':'x','arity':0,'loc':5,'in_type':None,'out_type':'f'},
-                {'name':'-','arity':2,'in_type':'f','out_type':'f'},
-                {'name':'k', 'arity':0, 'value':.175,'in_type':None,'out_type':'f'},
-                {'name':'log','arity':1,'in_type':'f','out_type':'f'},
-                {'name':'-','arity':2,'in_type':'f','out_type':'f'}
-                ]
 
-    p2.stack = [{'name':'x','arity':0,'loc':7,'in_type':None,'out_type':'f'},
-                {'name':'x','arity':0,'loc':8,'in_type':None,'out_type':'f'},
-                {'name':'*','arity':2,'in_type':'f','out_type':'f'}
-                ]
+    p1.stack = [node('x',loc=4), node('x',loc=5), node('-'),
+                node('k',value=0.175), node('log'), node('-')]
 
-    p3.stack =  [{'name':'x','arity':0,'loc':0,'in_type':None,'out_type':'f'},
-                 {'name':'exp','arity':1,'in_type':'f','out_type':'f'},
-                 {'name':'x','arity':0,'loc':5,'in_type':None,'out_type':'f'},
-                 {'name':'x','arity':0,'loc':7,'in_type':None,'out_type':'f'},
-                 {'name':'*','arity':2,'in_type':'f','out_type':'f'},
-                 {'name':'/','arity':2,'in_type':'f','out_type':'f'}
-                 ]
-    p4.stack =  [{'name':'x', 'arity':0, 'loc':12,'in_type':None,'out_type':'f'},
-                 {'name':'sin','arity':1,'in_type':'f','out_type':'f'}
-                 ]
-    p5.stack = [{'name':'k', 'arity':0, 'value':178.3,'in_type':None,'out_type':'f'},
-                {'name':'x','arity':0,'loc':8,'in_type':None,'out_type':'f'},
-                {'name':'*','arity':2,'in_type':'f','out_type':'f'},
-                {'name':'x','arity':0,'loc':7,'in_type':None,'out_type':'f'},
-                {'name':'cos','arity':1,'in_type':'f','out_type':'f'},
-                {'name':'+','arity':2,'in_type':'f','out_type':'f'}
-                ]
+    p2.stack = [node('x',loc=7),node('x',loc=8),node('*')]
+
+    p3.stack =  [node('x',loc=0),node('exp'), node('x',loc=5),node('x',loc=7),
+                node('*'),node('/')]
+
+    p4.stack =  [node('x',loc=12),node('sin')]
+
+    p5.stack = [node('k',value=178.3),node('x',loc=8),node('*'),node('x',loc=7),node('cos'),node('+')]
 
     y1 = safe(np.log(0.175) - (X[:,5] - X[:,4]))
     y2 = safe(X[:,7]*X[:,8])
@@ -123,7 +105,7 @@ def test_calc_fitness_shape():
     term_set = []
     # numbers represent column indices of features
     for i in np.arange(n_features):
-        term_set.append({'name':'x','arity':0,'loc':i,'out_type':'f','in_type':None}) # features
+        term_set.append(node('x',loc=i)) # features
         # term_set.append(('k',0,np.random.rand())) # ephemeral random constants
 
     # initialize population

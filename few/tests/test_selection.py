@@ -24,7 +24,7 @@ def test_tournament_shapes():
     """test_selection.py: tournament selection returns correct shape"""
 
     few = FEW(seed_with_ml=False,population_size=257)
-    few.term_set = [{'name':'x','arity':0,'loc':0,'out_type':'f','in_type':None}]
+    few.term_set = [node('x',loc=0)]
     pop = few.init_pop()
     offspring,locs = tournament(pop.individuals,2)
     assert len(offspring) == 257
@@ -34,7 +34,7 @@ def test_tournament_shapes():
 
     # smaller popsize than tournament size
     few = FEW(seed_with_ml=False,population_size=2)
-    few.term_set = [{'name':'x','arity':0,'loc':0,'out_type':'f','in_type':None}]
+    few.term_set = [node('x',loc=0)]
     pop = few.init_pop()
     offspring,locs = tournament(pop.individuals,5)
     assert len(offspring) == 2;
@@ -42,14 +42,14 @@ def test_tournament_shapes():
 def test_lexicase_shapes():
     """test_selection.py: lexicase selection returns correct shape"""
     few = FEW(seed_with_ml=False,population_size=257)
-    few.term_set = [{'name':'x','arity':0,'loc':0,'out_type':'f','in_type':None}]
+    few.term_set = [node('x',loc=0)]
     pop = few.init_pop()
     offspring,locs = lexicase(pop.individuals)
     assert len(offspring) == 257
 
     # smaller popsize than tournament size
     few = FEW(seed_with_ml=False,population_size=2)
-    few.term_set = [{'name':'x','arity':0,'loc':0,'out_type':'f','in_type':None}]
+    few.term_set = [node('x',loc=0)]
     pop = few.init_pop()
     offspring,locs = lexicase(pop.individuals)
     assert len(offspring) == 2;
@@ -58,14 +58,14 @@ def test_epsilon_lexicase_shapes():
     """test_selection.py: epsilon lexicase selection returns correct shape"""
 
     few = FEW(seed_with_ml=False,population_size=257)
-    few.term_set = [{'name':'x','arity':0,'loc':0,'out_type':'f','in_type':None}]
+    few.term_set = [node('x',loc=0)]
     pop = few.init_pop()
     offspring,locs = lexicase(pop.individuals, epsilon=True)
     assert len(offspring) == 257
 
     # smaller popsize than tournament size
     few = FEW(seed_with_ml=False,population_size=2)
-    few.term_set = [{'name':'x','arity':0,'loc':0,'out_type':'f','in_type':None}]
+    few.term_set = [node('x',loc=0)]
     pop = few.init_pop()
     offspring,locs = lexicase(pop.individuals,epsilon=True)
     assert len(offspring) == 2;
@@ -73,13 +73,16 @@ def test_epsilon_lexicase_shapes():
 
 def test_lexicase_survival_shapes():
     """test_selection.py: lexicase survival returns correct shape"""
-    func_set = [('+',2),('-',2),('*',2),('/',2),('sin',1),('cos',1),('exp',1),('log',1)]
+    # func_set = [node('+'), node('-'), node('*'), node('/'), node('sin'),
+    #                  node('cos'), node('exp'),node('log'), node('^2'),
+    #                  node('^3'), node('sqrt')]
     # terminal set
     term_set = []
     n_features = 3
     # numbers represent column indices of features
-    for i in np.arange(n_features):
-        term_set.append({'name':'x','arity':0,'loc':i,'out_type':'f','in_type':None}) # features
+    # for i in np.arange(n_features):
+    #     term_set.append(node('x',loc=i)) # features
+    term_set = [node('x',loc=i) for i in np.arange(n_features)]
         # term_set.append(('erc',0,np.random.rand())) # ephemeral random constants
 
     few = FEW(seed_with_ml=False,population_size=257)

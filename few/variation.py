@@ -9,6 +9,7 @@ import numpy as np
 from .population import make_program, Ind
 from itertools import accumulate
 import pdb
+
 # from few.tests.test_population import is_valid_program
 
 def cross(p_i,p_j, max_depth = 2):
@@ -16,39 +17,39 @@ def cross(p_i,p_j, max_depth = 2):
     # only choose crossover points for out_types available in both programs
     # pdb.set_trace()
     # determine possible outttypes
-    types_p_i = [t for t in [p['out_type'] for p in p_i]]
-    types_p_j = [t for t in [p['out_type'] for p in p_j]]
+    types_p_i = [t for t in [p.out_type for p in p_i]]
+    types_p_j = [t for t in [p.out_type for p in p_j]]
     types = set(types_p_i).intersection(types_p_j)
 
     # grab subtree of p_i
-    p_i_sub = [i for i,n in enumerate(p_i) if n['out_type'] in types]
+    p_i_sub = [i for i,n in enumerate(p_i) if n.out_type in types]
     x_i_end = np.random.choice(p_i_sub)
     x_i_begin = x_i_end
-    arity_sum = p_i[x_i_end]['arity']
+    arity_sum = p_i[x_i_end].arity[p_i[x_i_end].in_type]
     # print("x_i_end:",x_i_end)
     i = 0
     while (arity_sum > 0) and i < 1000:
         if x_i_begin == 0:
             print("arity_sum:",arity_sum,"x_i_begin:",x_i_begin,"x_i_end:",x_i_end)
         x_i_begin -= 1
-        arity_sum += p_i[x_i_begin]['arity']-1
+        arity_sum += p_i[x_i_begin].arity[p_i[x_i_begin].in_type]-1
         i += 1
     if i == 1000:
         print("in variation")
         pdb.set_trace()
 
     # grab subtree of p_j with matching out_type to p_i[x_i_end]
-    p_j_sub = [i for i,n in enumerate(p_j) if n['out_type'] == p_i[x_i_end]['out_type']]
+    p_j_sub = [i for i,n in enumerate(p_j) if n.out_type == p_i[x_i_end].out_type]
     x_j_end = np.random.choice(p_j_sub)
     x_j_begin = x_j_end
-    arity_sum = p_j[x_j_end]['arity']
+    arity_sum = p_j[x_j_end].arity[p_j[x_j_end].in_type]
     i = 0
     while (arity_sum > 0) and i < 1000:
         if x_j_begin == 0:
             print("arity_sum:",arity_sum,"x_j_begin:",x_j_begin,"x_j_end:",x_j_end)
             print("p_j:",p_j)
         x_j_begin -= 1
-        arity_sum += p_j[x_j_begin]['arity']-1
+        arity_sum += p_j[x_j_begin].arity[p_j[x_j_begin].in_type]-1
         i += 1
     if i == 1000:
         print("in variation")
@@ -81,11 +82,11 @@ def point_mutate(p_i,func_set,term_set):
     """point mutation on individual p_i"""
     # point mutation
     x = np.random.randint(len(p_i))
-    arity = p_i[x]['arity']
+    arity = p_i[x].arity[p_i[x].in_type]
     # find eligible replacements based on arity and type
     reps = [n for n in func_set+term_set
-            if n['arity']==arity and n['out_type']==p_i[x]['out_type']
-            and n['in_type']==p_i[x]['in_type']]
+            if n.arity[n.in_type]==arity and n.out_type==p_i[x].out_type
+            and n.in_type==p_i[x].in_type]
 
     tmp = reps[np.random.randint(len(reps))]
     tmp_p = p_i[:]
@@ -115,11 +116,11 @@ def is_valid_program(p):
     missing arguments.
     """
     # print("p:",p)
-    arities = list(a['arity'] for a in p)
+    arities = list(a.arity[a.in_type] for a in p)
     accu_arities = list(accumulate(arities))
     accu_len = list(np.arange(len(p))+1)
     check = list(a < b for a,b in zip(accu_arities,accu_len))
     # print("accu_arities:",accu_arities)
     # print("accu_len:",accu_len)
     # print("accu_arities < accu_len:",accu_arities<accu_len)
-    return all(check) and sum(a['arity'] for a in p) +1 == len(p) and len(p)>0
+    return all(check) and sum(a.arity[a.in_type] for a in p) +1 == len(p) and len(p)>0

@@ -14,7 +14,7 @@ from .variation import *
 from .selection import *
 
 from sklearn.base import BaseEstimator
-from sklearn.linear_model import LassoLarsCV, LogisticRegression
+from sklearn.linear_model import LassoLarsCV, LogisticRegression, SGDClassifier
 from sklearn.svm import SVR, LinearSVR, SVC, LinearSVC
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
@@ -33,18 +33,11 @@ import pdb
 # from update_checker import update_check
 from joblib import Parallel, delayed
 from tqdm import tqdm
-from mdr import MDR
 import uuid
 # import multiprocessing as mp
 # NUM_THREADS = mp.cpu_count()
 
-def run_MDR(n,stack_float,labels):
-    # pdb.set_trace()
-    tmp1 = np.vstack((stack_float.pop(),stack_float.pop())).transpose()
-    if labels:
-        return n['state'].fit_transform(tmp1,labels)
-    else:
-        return n['state'].transform(tmp1)
+
 
 class FEW(BaseEstimator):
     """FEW uses GP to find a set of transformations from the original feature space
@@ -117,7 +110,7 @@ class FEW(BaseEstimator):
         # instantiate sklearn estimator according to specified machine learner
         if not self.ml:
             if self.classification:
-                self.ml = LogisticRegression()
+                self.ml = LogisticRegression(solver='sag')
             else:
                 self.ml = LassoLarsCV()
         if not self.scoring_function:
@@ -136,6 +129,7 @@ class FEW(BaseEstimator):
             type(DecisionTreeRegressor()): 'mse',
             type(RandomForestRegressor()): 'mse',
             #classification
+            type(SGDClassifier()): 'silhouette',
             type(LogisticRegression()): 'silhouette',
             type(SVC()): 'silhouette',
             type(LinearSVC()): 'silhouette',
@@ -154,37 +148,18 @@ class FEW(BaseEstimator):
         self.non_feature_columns = ['label', 'group', 'guess']
 
         # function set
-        self.func_set = [{'name':'+','arity':2,'in_type':'f','out_type':'f'},
-                         {'name':'-','arity':2,'in_type':'f','out_type':'f'},
-                         {'name':'*','arity':2,'in_type':'f','out_type':'f'},
-                         {'name':'/','arity':2,'in_type':'f','out_type':'f'},
-                         {'name':'sin','arity':1,'in_type':'f','out_type':'f'},
-                         {'name':'cos','arity':1,'in_type':'f','out_type':'f'},
-                         {'name':'exp','arity':1,'in_type':'f','out_type':'f'},
-                         {'name':'log','arity':1,'in_type':'f','out_type':'f'},
-                         {'name':'^2','arity':1,'in_type':'f','out_type':'f'},
-                         {'name':'^3','arity':1,'in_type':'f','out_type':'f'},
-                         {'name':'sqrt','arity':1,'in_type':'f','out_type':'f'}]
+        self.func_set = [node('+'), node('-'), node('*'), node('/'), node('sin'),
+                         node('cos'), node('exp'),node('log'), node('^2'),
+                         node('^3'), node('sqrt')]
 
-        if self.boolean: # include boolean functions
-            self.func_set += [{'name':'!','arity':1,'in_type':'b','out_type':'b'},
-                            {'name':'&','arity':2,'in_type':'b','out_type':'b'},
-                            {'name':'|','arity':2,'in_type':'b','out_type':'b'},
-                            {'name':'==','arity':2,'in_type':'b','out_type':'b'},
-                            {'name':'>_f','arity':2,'in_type':'f','out_type':'b'},
-                            {'name':'<_f','arity':2,'in_type':'f','out_type':'b'},
-                            {'name':'>=_f','arity':2,'in_type':'f','out_type':'b'},
-                            {'name':'<=_f','arity':2,'in_type':'f','out_type':'b'},
-                            {'name':'>_b','arity':2,'in_type':'b','out_type':'b'},
-                            {'name':'<_b','arity':2,'in_type':'b','out_type':'b'},
-                            {'name':'>=_b','arity':2,'in_type':'b','out_type':'b'},
-                            {'name':'<=_b','arity':2,'in_type':'b','out_type':'b'},
-                            {'name':'xor_b','arity':2,'in_type':'b','out_type':'b'},
-                            {'name':'xor_f','arity':2,'in_type':'f','out_type':'b'}]
+        if self.boolean or self.otype=='b': # include boolean functions
+            self.func_set += [node('!'), node('&'), node('|'), node('=='),
+                            node('>_f'), node('<_f'), node('>=_f'), node('<=_f'),
+                            node('>_b'), node('<_b'), node('>=_b'), node('<=_b'),
+                            node('xor_b'), node('xor_f')]
 
         if self.mdr:
-            self.func_set += [{'name':'mdr2','arity':2,'state':MDR(),'eval':run_MDR,
-                                'in_type':'f','out_type':'b'}]
+            self.func_set += [node('mdr2')]
         # if boolean operators are included but the output type is set to float, then
         # # include the if and if-else operations that allow use of both stacks
         # if self.boolean and self.otype=='f':
@@ -253,10 +228,10 @@ class FEW(BaseEstimator):
         # create terminal set
         for i in np.arange(x_t.shape[1]):
             # dictionary of node name, arity, feature column index, output type and input type
-            self.term_set.append({'name':'x','arity':0,'loc':i,'out_type':'f','in_type':None}) # features
+            self.term_set.append(node('x',loc=i)) # features
             # add ephemeral random constants if flag
             if self.erc:
-                self.term_set.append({'name:':'k','arity':0,'value':np.random.rand(),'out_type':'f','in_type':None}) # ephemeral random constants
+                self.term_set.append(node('k',value=np.random.rand())) # ephemeral random constants
 
         # Create initial population
         pop = self.init_pop(self._training_features.shape[0])
@@ -274,7 +249,7 @@ class FEW(BaseEstimator):
         # calculate fitness of individuals
         # fitnesses = list(map(lambda I: fitness(I,y_t,self.ml),pop.X))
         fitnesses = calc_fitness(pop.X,y_t,self.fit_choice)
-
+        # pdb.set_trace()
         # max_count = 0;
         # pdb.set_trace()
         # max_fit = self.max_fit
@@ -301,8 +276,9 @@ class FEW(BaseEstimator):
         ####################
         ### Main GP loop
         self.diversity=[]
-        # for each generation g
+        # progress bar
         pbar = tqdm(total=self.generations,disable = self.verbosity==0,desc='Internal CV: {:1.3f}'.format(self._best_score,3))
+        # for each generation g
         for g in np.arange(self.generations):
 
             if self.track_diversity:
@@ -315,7 +291,7 @@ class FEW(BaseEstimator):
             if self.verbosity > 1: print("median fitness pop: %0.2f" % np.median([x.fitness for x in pop.individuals]))
             if self.verbosity > 1: print("best fitness pop: %0.2f" % np.min([x.fitness for x in pop.individuals]))
             if self.verbosity > 1 and self.track_diversity: print("feature diversity: %0.2f" % self.diversity[-1])
-            if self.verbosity > 2: print("ml fitting...")
+            if self.verbosity > 1: print("ml fitting...")
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 try:
@@ -582,7 +558,7 @@ class FEW(BaseEstimator):
                 # add all model components with non-zero coefficients
                 for i,(c,p) in enumerate(it.zip_longest([c for c in self.ml.coef_ if c !=0],pop.individuals,fillvalue=None)):
                     if c is not None and p is not None:
-                        p.stack = [{'name':'x','arity':0,'loc':i,'out_type':'f','in_type':None}]
+                        p.stack = [node('x',loc=i)]
                     elif p is not None:
                         # make program if pop is bigger than model componennts
                         make_program(p.stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1),self.otype)
@@ -595,14 +571,14 @@ class FEW(BaseEstimator):
                         # seed pop with highest coefficients
                         coef_order = np.argsort(self.ml.coef_[::-1])
                         for c,p in zip(coef_order,pop.individuals):
-                            p.stack = [{'name':'x','arity':0,'loc':c,'out_type':'f','in_type':None}]
+                            p.stack = [node('x',loc=c)]
                     else:
                         raise(AttributeError)
                 except Exception: # seed pop with raw features
                      for i,p in it.zip_longest(range(self._training_features.shape[1]),pop.individuals,fillvalue=None):
                         if p is not None:
                             if i is not None:
-                                p.stack = [{'name':'x','arity':0,'loc':i,'out_type':'f','in_type':None}]
+                                p.stack = [node('x',loc=i)]
                             else:
                                 make_program(p.stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1),self.otype)
                                 p.stack = list(reversed(p.stack))
@@ -617,6 +593,7 @@ class FEW(BaseEstimator):
                 # print("hex(id(I)):",hex(id(I)))
                 # depth = 2;
                 # print("initial I.stack:",I.stack)
+
                 make_program(I.stack,self.func_set,self.term_set,depth,self.otype)
                 # print(I.stack)
                 I.stack = list(reversed(I.stack))
@@ -739,6 +716,7 @@ ml_dict = {
         'svr': SVR(),
         'lsvr': LinearSVR(),
         'lr': LogisticRegression(solver='sag'),
+        'sgd': SGDClassifier(loss='log',penalty='l1'),
         'svc': SVC(),
         'lsvc': LinearSVC(),
         'rfc': RandomForestClassifier(),
@@ -780,7 +758,7 @@ def main():
                         type=float_range, help='GP crossover rate in the range [0.0, 1.0].')
 
     parser.add_argument('-ml', action='store', dest='MACHINE_LEARNER', default=None,
-                        choices = ['lasso','svr','lsvr','lr','svc','rfc','rfr','dtc','dtr','dc','knn'],
+                        choices = ['lasso','svr','lsvr','lr','svc','rfc','rfr','dtc','dtr','dc','knn','sgd'],
                         type=str, help='ML algorithm to pair with features. Default: Lasso (regression), LogisticRegression (classification)')
 
     parser.add_argument('-min_depth', action='store', dest='MIN_DEPTH', default=1,
