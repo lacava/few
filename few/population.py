@@ -55,13 +55,13 @@ def run_MDR(n,stack_float,labels=None):
     if len(np.unique(x1))<=3 and len(np.unique(x2))<=3:
         tmp = np.vstack((x1,x2)).transpose()
 
-        if labels != None: # training
+        if labels is None: # prediction
+            return n.model.transform(tmp)[:,0]
+        else: # training
             out =  n.model.fit_transform(tmp,labels)[:,0]
             if out.shape != (900,):
                 pdb.set_trace()
             return out
-        else: # prediction
-            return n.model.transform(tmp)[:,0]
     else:
         return np.zeros(x1.shape[0])
 
