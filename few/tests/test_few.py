@@ -17,9 +17,10 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 """
 # test FEW methods
 from few.few import FEW
-from sklearn.datasets import load_boston
+from sklearn.datasets import load_boston, load_iris
 from sklearn.metrics import r2_score
 from sklearn.linear_model import LassoLarsCV
+from sklearn.model_selection import train_test_split
 import pandas as pd
 import numpy as np
 
@@ -60,7 +61,7 @@ def test_few_at_least_as_good_as_default():
     learner = FEW(generations=1, population_size=5,
                 mutation_rate=1, crossover_rate=1,
                 ml = LassoLarsCV(), min_depth = 1, max_depth = 3,
-                sel = 'epsilon_lexicase', fit_choice = 'r2',tourn_size = 2, random_state=0, verbosity=0,
+                sel = 'tournament', fit_choice = 'r2',tourn_size = 2, random_state=0, verbosity=0,
                 disable_update_check=False)
 
     learner.fit(features[:300], target[:300])
@@ -77,3 +78,22 @@ def test_few_at_least_as_good_as_default():
     print("lasso coefficients:",lasso.coef_)
 
     # assert False
+def test_few_classification():
+    """test_few.py: tests default classification settings"""
+    np.random.seed(42)
+    X, y = load_iris(return_X_y=True)
+    train,test = train_test_split(np.arange(X.shape[0]), train_size=0.75, test_size=0.25)
+    few = FEW(classification=True,population_size='1x',generations=10)
+    few.fit(X[train],y[train])
+
+    print('train score:', few.score(X[train],y[train]))
+    print('test score:', few.score(X[test],y[test]))
+
+    # test boolean output
+    few = FEW(classification=True,otype='b',population_size='2x',seed_with_ml=False,
+              generations=10)
+    few.fit(X[train],y[train])
+
+    print('train score:', few.score(X[train],y[train]))
+    print('test score:', few.score(X[test],y[test]))
+    few.print_model()

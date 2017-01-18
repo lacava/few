@@ -50,7 +50,7 @@ class FEW(BaseEstimator):
                  ml = None, min_depth = 1, max_depth = 2, max_depth_init = 2,
                  sel = 'epsilon_lexicase', tourn_size = 2, fit_choice = None, op_weight = False,
                  seed_with_ml = True, erc = False, random_state=np.random.randint(9999999), verbosity=0, scoring_function=None,
-                 disable_update_check=False,elitism=False, boolean = False,classification=False,clean=False,
+                 disable_update_check=False,elitism=True, boolean = False,classification=False,clean=False,
                  track_diversity=False,mdr=False,otype='f',term_set=None):
                 # sets up GP.
 
@@ -120,28 +120,27 @@ class FEW(BaseEstimator):
                 self.scoring_function = r2_score
 
         # set default fitness metrics for various learners
-        default_fitchoice = {
-            #regression
-            type(LassoLarsCV()): 'mse',
-            type(SVR()): 'mae',
-            type(LinearSVR()): 'mae',
-            type(KNeighborsRegressor()): 'mse',
-            type(DecisionTreeRegressor()): 'mse',
-            type(RandomForestRegressor()): 'mse',
-            #classification
-            type(SGDClassifier()): 'silhouette',
-            type(LogisticRegression()): 'silhouette',
-            type(SVC()): 'silhouette',
-            type(LinearSVC()): 'silhouette',
-            type(RandomForestClassifier()): 'silhouette',
-            type(DecisionTreeClassifier()): 'silhouette',
-            type(DistanceClassifier()): 'silhouette',
-            type(KNeighborsClassifier()): 'silhouette',
-        }
         if not self.fit_choice:
-            self.fit_choice = default_fitchoice[type(self.ml)]
+            self.fit_choice =  {
+                            #regression
+                            type(LassoLarsCV()): 'mse',
+                            type(SVR()): 'mae',
+                            type(LinearSVR()): 'mae',
+                            type(KNeighborsRegressor()): 'mse',
+                            type(DecisionTreeRegressor()): 'mse',
+                            type(RandomForestRegressor()): 'mse',
+                            #classification
+                            type(SGDClassifier()): 'silhouette',
+                            type(LogisticRegression()): 'silhouette',
+                            type(SVC()): 'silhouette',
+                            type(LinearSVC()): 'silhouette',
+                            type(RandomForestClassifier()): 'silhouette',
+                            type(DecisionTreeClassifier()): 'silhouette',
+                            type(DistanceClassifier()): 'silhouette',
+                            type(KNeighborsClassifier()): 'silhouette',
+            }[type(self.ml)]
 
-        # use dis-aggregated fitness metrics for lexicase selection
+        # use de-aggregated fitness metrics for lexicase selection
         if "lexicase" in self.sel and ("_vec" not in self.fit_choice or "_rel" not in self.fit_choice):
             self.fit_choice += "_vec"
         # Columns to always ignore when in an operator
@@ -244,7 +243,7 @@ class FEW(BaseEstimator):
         # single thread
         pop.X = self.transform(x_t,pop.individuals,y_t)
         # parallel:
-        # pop.X = np.asarray(Parallel(n_jobs=-1)(delayed(out)(I,x_t,y_t) for I in pop.individuals), order = 'F')
+        # pop.X = np.asarray(Parallel(n_jobs=-1)(delayed(out)(I,x_t,self.otype,y_t) for I in pop.individuals), order = 'F')
         # pdb.set_trace()
         # calculate fitness of individuals
         # fitnesses = list(map(lambda I: fitness(I,y_t,self.ml),pop.X))
@@ -387,8 +386,9 @@ class FEW(BaseEstimator):
             # evaluate offspring
             if self.verbosity > 2: print("output...")
             X_offspring = self.transform(x_t,offspring)
-            # X_offspring = np.asarray(Parallel(n_jobs=10)(delayed(out)(O,x_t,y_t) for O in offspring), order = 'F')
-            # X_offspring = np.asarray([out(O,x_t,y_t) for O in offspring], order = 'F')
+            #parallel:
+            # X_offspring = np.asarray(Parallel(n_jobs=-1)(delayed(out)(O,x_t,y_t,self.otype) for O in offspring), order = 'F')
+
             if self.verbosity > 2: print("fitness...")
             F_offspring = calc_fitness(X_offspring,y_t,self.fit_choice)
             # F_offspring = parallel(delayed(f[self.fit_choice])(y_t,yhat) for yhat in X_offspring)
@@ -452,10 +452,10 @@ class FEW(BaseEstimator):
     def transform(self,x,inds=None,labels = None):
         """return a transformation of x using population outputs"""
         if inds:
-            return np.asarray([out(I,x,self.otype,labels) for I in inds],order='F')
+            return np.asarray([out(I,x,labels,self.otype) for I in inds],order='F')
             # return np.asarray(list(map(lambda I: out(I,x,labels), inds)),order='F')
         else:
-            return np.asarray(list(map(lambda I: out(I,x,self.otype,labels), self._best_inds)),order='F')
+            return np.asarray(list(map(lambda I: out(I,x,labels,self.otype), self._best_inds)),order='F')
 
     def impute_data(self,x):
         """Imputes data set containing Nan values"""
@@ -481,7 +481,7 @@ class FEW(BaseEstimator):
         if self._best_inds is None:
             return self._best_estimator.predict(testing_features)
         else:
-            X_transform = (np.asarray(list(map(lambda I: out(I,testing_features,self.otype), self._best_inds))))
+            X_transform = (np.asarray(list(map(lambda I: out(I,testing_features,otype=self.otype), self._best_inds))))
             return self._best_estimator.predict(X_transform[self.valid_loc(self._best_inds),:].transpose())
 
     def fit_predict(self, features, labels):

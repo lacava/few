@@ -107,7 +107,7 @@ def eval(n, features, stack_float, stack_bool,labels=None):
 
 
 
-def out(I,features,otype='f',labels=None):
+def out(I,features,labels=None,otype='f'):
     """computes the output for individual I"""
     stack_float = []
     stack_bool = []
