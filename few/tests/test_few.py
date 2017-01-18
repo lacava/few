@@ -92,6 +92,7 @@ def test_few_classification():
     # test boolean output
     few = FEW(classification=True,otype='b',population_size='2x',seed_with_ml=False,
               generations=10)
+    np.random.seed(42)
     few.fit(X[train],y[train])
 
     print('train score:', few.score(X[train],y[train]))

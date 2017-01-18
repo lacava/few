@@ -620,7 +620,7 @@ class FEW(BaseEstimator):
                     model = ' +\n'.join([str(round(c,3))+'*'+stack_2_eqn(f) for i,(f,c) in enumerate(zip(bi,scoef)) if round(scoef[i],3) != 0])
                 else:
                     # more than one decision function is fit. print all.
-                    for coef in self.ml.coef_:
+                    for j,coef in enumerate(self.ml.coef_):
                         s = np.argsort(np.abs(coef))[::-1]
                         scoef = coef[s]
                         bi =[self._best_inds[k] for k in s]

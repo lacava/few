@@ -189,22 +189,3 @@ def make_program(stack,func_set,term_set,max_d,ntype):
             make_program(stack,func_set,term_set,max_d-1,'f')
         for i in np.arange(tmp.arity['b']):
             make_program(stack,func_set,term_set,max_d-1,'b')
-    # return stack
-    # print("current stack:",stack)
-
-def init(population_size,n_samples,func_set,term_set,min_depth,max_depth,otype):
-    """initializes population of features as GP stacks"""
-    pop = Pop(population_size,n_samples)
-
-    for I in pop.individuals:
-        depth = np.random.randint(min_depth,max_depth+1)
-        # print("hex(id(I)):",hex(id(I)))
-        # depth = 2;
-        # print("initial I.stack:",I.stack)
-        make_program(I.stack,func_set,term_set,depth,otype)
-        # print(I.stack)
-        I.stack = list(reversed(I.stack))
-
-    # print(I.stack)
-
-    return pop
