@@ -7,10 +7,7 @@ license: GNU/GPLv3
 """
 import numpy as np
 from sklearn.metrics import explained_variance_score, mean_absolute_error, mean_squared_error, median_absolute_error, r2_score
-import itertools as it
-import math
 import pdb
-from numpy.linalg import norm
 from sklearn.metrics import silhouette_samples, silhouette_score, accuracy_score
 
 
@@ -48,7 +45,7 @@ eval_dict = {
     'xor_b': lambda n,features,stack_float,stack_bool,labels: np.logical_xor(stack_bool.pop(),stack_bool.pop()),
     'xor_f': lambda n,features,stack_float,stack_bool,labels: np.logical_xor(stack_float.pop().astype(bool), stack_float.pop().astype(bool)),
 # MDR
-    'mdr2': lambda n,features,stack_float,stack_bool,labels: n.eval(n,stack_float,labels),
+    'mdr2': lambda n,features,stack_float,stack_bool,labels: n.evaluate(n,stack_float,labels),
 # control flow:
     # 'if': lambda n,features,stack_float,stack_bool,labels: stack_float.pop() if stack_bool.pop(),
     # 'ife': lambda n,features,stack_float,stack_bool,labels: stack_float.pop() if stack_bool.pop() else stack_float.pop(),
@@ -65,7 +62,7 @@ f = { # available fitness metrics
 # non-aggregated fitness calculations
 'mse_vec': lambda y,yhat: (y - yhat) ** 2, #mean_squared_error(y,yhat,multioutput = 'raw_values'),
 'mae_vec': lambda y,yhat: np.abs(y-yhat), #mean_absolute_error(y,yhat,multioutput = 'raw_values'),
-'mdae_vec': lambda y,yhat: median_absolute_error(y,yhat,multioutput = 'raw_values'),
+# 'mdae_vec': lambda y,yhat: median_absolute_error(y,yhat,multioutput = 'raw_values'),
 'r2_vec':  lambda y,yhat: 1-r2_score_vec(y,yhat),
 'vaf_vec': lambda y,yhat: 1-explained_variance_score(y,yhat,multioutput = 'raw_values'),
 'silhouette_vec': lambda y,yhat: 1 - silhouette_samples(yhat.reshape(-1,1),y),
@@ -93,7 +90,7 @@ def logs(x):
     return tmp
 
 
-def eval(n, features, stack_float, stack_bool,labels=None):
+def evaluate(n, features, stack_float, stack_bool,labels=None):
     np.seterr(all='ignore')
     if len(stack_float) >= n.arity['f'] and len(stack_bool) >= n.arity['b']:
         if n.out_type == 'f':
@@ -115,7 +112,7 @@ def out(I,features,labels=None,otype='f'):
     # evaulate stack over rows of features,labels
     # pdb.set_trace()
     for n in I.stack:
-        eval(n,features,stack_float,stack_bool,labels)
+        evaluate(n,features,stack_float,stack_bool,labels)
         # print("stack_float:",stack_float)
     if otype=='f':
         return stack_float[-1]

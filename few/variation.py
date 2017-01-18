@@ -6,7 +6,7 @@ license: GNU/GPLv3
 
 """
 import numpy as np
-from .population import make_program, Ind
+from .population import make_program
 from itertools import accumulate
 import pdb
 
@@ -27,33 +27,33 @@ def cross(p_i,p_j, max_depth = 2):
     x_i_begin = x_i_end
     arity_sum = p_i[x_i_end].arity[p_i[x_i_end].in_type]
     # print("x_i_end:",x_i_end)
-    i = 0
-    while (arity_sum > 0) and i < 1000:
+    # i = 0
+    while (arity_sum > 0): #and i < 1000:
         if x_i_begin == 0:
             print("arity_sum:",arity_sum,"x_i_begin:",x_i_begin,"x_i_end:",x_i_end)
         x_i_begin -= 1
         arity_sum += p_i[x_i_begin].arity[p_i[x_i_begin].in_type]-1
-        i += 1
-    if i == 1000:
-        print("in variation")
-        pdb.set_trace()
+    #     i += 1
+    # if i == 1000:
+    #     print("in variation")
+    #     pdb.set_trace()
 
     # grab subtree of p_j with matching out_type to p_i[x_i_end]
     p_j_sub = [i for i,n in enumerate(p_j) if n.out_type == p_i[x_i_end].out_type]
     x_j_end = np.random.choice(p_j_sub)
     x_j_begin = x_j_end
     arity_sum = p_j[x_j_end].arity[p_j[x_j_end].in_type]
-    i = 0
-    while (arity_sum > 0) and i < 1000:
+    # i = 0
+    while (arity_sum > 0): #and i < 1000:
         if x_j_begin == 0:
             print("arity_sum:",arity_sum,"x_j_begin:",x_j_begin,"x_j_end:",x_j_end)
             print("p_j:",p_j)
         x_j_begin -= 1
         arity_sum += p_j[x_j_begin].arity[p_j[x_j_begin].in_type]-1
-        i += 1
-    if i == 1000:
-        print("in variation")
-        pdb.set_trace()
+    #     i += 1
+    # if i == 1000:
+    #     print("in variation")
+    #     pdb.set_trace()
     #swap subtrees
     tmpi = p_i[:]
     tmpj = p_j[:]
@@ -74,7 +74,7 @@ def cross(p_i,p_j, max_depth = 2):
         p_j[:] = tmpj
 
 
-def mutate(p_i,func_set,term_set, max_depth=2):
+def mutate(p_i,func_set,term_set): #, max_depth=2
     """point mutation, addition, removal"""
     point_mutate(p_i,func_set,term_set)
 
@@ -95,16 +95,16 @@ def point_mutate(p_i,func_set,term_set):
         print("old:",tmp_p)
         print("new:",p_i)
         raise ValueError('Mutation produced an invalid program.')
-
-def add_mutate(p_i,func_set,term_set, max_depth=2):
-    """ mutation that adds operation to program"""
-    #choose node. move it down, pick an operator to put before it, with another leaf if
-    #new operator arity requires it.
-    #make sure size requirements are not invalidated (if they are, discard changes)
-
-def sub_mutate(p_i,func_set,term_set, max_depth=2):
-    """ mutation that removes operation from program"""
-    #choose a node with arity>0. replace it and its subtree with a node with lower arity.
+#
+# def add_mutate(p_i,func_set,term_set, max_depth=2):
+#     """ mutation that adds operation to program"""
+#     #choose node. move it down, pick an operator to put before it, with another leaf if
+#     #new operator arity requires it.
+#     #make sure size requirements are not invalidated (if they are, discard changes)
+#
+# def sub_mutate(p_i,func_set,term_set, max_depth=2):
+#     """ mutation that removes operation from program"""
+#     #choose a node with arity>0. replace it and its subtree with a node with lower arity.
 
 def is_valid_program(p):
     """checks whether program p makes a syntactically valid tree.

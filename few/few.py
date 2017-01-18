@@ -276,7 +276,7 @@ class FEW(BaseEstimator):
         ### Main GP loop
         self.diversity=[]
         # progress bar
-        pbar = tqdm(total=self.generations,disable = self.verbosity==0,desc='Internal CV: {:1.3f}'.format(self._best_score,3))
+        pbar = tqdm(total=self.generations,disable = self.verbosity==0,desc='Internal CV: {:1.3f}'.format(self._best_score))
         # for each generation g
         for g in np.arange(self.generations):
 
@@ -440,11 +440,11 @@ class FEW(BaseEstimator):
                                     #  X_offspring[[s-len(pop.individuals) for s in survivor_index if s>=len(pop.individuals)],:]))
             if self.verbosity > 2: print("median fitness survivors: %0.2f" % np.median([x.fitness for x in pop.individuals]))
 
-            pbar.set_description('Internal CV: {:1.3f}'.format(self._best_score,3))
+            pbar.set_description('Internal CV: {:1.3f}'.format(self._best_score))
             pbar.update(1)
         # end of main GP loop
             ####################
-        if self.verbosity > 0: print('finished. best internal val score: {:1.3f}'.format(self._best_score,3))
+        if self.verbosity > 0: print('finished. best internal val score: {:1.3f}'.format(self._best_score))
         if self.verbosity > 0: print("final model:\n",self.print_model())
 
         return self
@@ -779,8 +779,8 @@ def main():
     parser.add_argument('-tourn_size', action='store', dest='TOURN_SIZE', default=2,
                         type=positive_integer, help='Tournament size for tournament selection (Default: 2)')
 
-    parser.add_argument('-fit', action='store', dest='FIT_CHOICE', default=None, choices = ['mse','mae','mdae','r2','vaf',
-                        'mse_rel','mae_rel','mdae_re','r2_rel','vaf_rel'],
+    parser.add_argument('-fit', action='store', dest='FIT_CHOICE', default=None, choices = ['mse','mae','r2','vaf',
+                        'mse_rel','mae_rel','r2_rel','vaf_rel'],
                         type=str, help='Fitness metric (Default: dependent on ml used)')
 
     parser.add_argument('--no_seed', action='store_false', dest='SEED_WITH_ML', default=True,

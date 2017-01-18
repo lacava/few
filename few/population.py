@@ -108,7 +108,7 @@ class node(object):
 
         if 'mdr' in self.name:
             self.model = MDR()
-            self.eval = run_MDR
+            self.evaluate = run_MDR
 
         self.loc = loc
         self.value = value
