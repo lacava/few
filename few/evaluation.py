@@ -117,10 +117,7 @@ def out(I,features,labels=None,otype='f'):
     if otype=='f':
         return stack_float[-1]
     else:
-        try:
-            return stack_bool[-1]
-        except:
-            pdb.set_trace()
+        return stack_bool[-1]
 
 def calc_fitness(X,labels,fit_choice):
     """computes fitness of individual output yhat.

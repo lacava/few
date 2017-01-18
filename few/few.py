@@ -8,9 +8,9 @@ license: GNU/GPLv3
 
 import argparse
 from ._version import __version__
-from .evaluation import out, calc_fitness, f
+from .evaluation import out, calc_fitness
 from .population import *
-from .variation import *
+from .variation import cross, mutate
 from .selection import *
 
 from sklearn.base import BaseEstimator
@@ -21,7 +21,6 @@ from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, accuracy_score
-from sklearn.metrics.pairwise import cosine_distances
 from sklearn.preprocessing import Imputer
 from DistanceClassifier import DistanceClassifier
 import numpy as np
@@ -31,7 +30,7 @@ import copy
 import itertools as it
 import pdb
 # from update_checker import update_check
-from joblib import Parallel, delayed
+# from joblib import Parallel, delayed
 from tqdm import tqdm
 import uuid
 # import multiprocessing as mp
@@ -51,7 +50,7 @@ class FEW(BaseEstimator):
                  sel = 'epsilon_lexicase', tourn_size = 2, fit_choice = None, op_weight = False,
                  seed_with_ml = True, erc = False, random_state=np.random.randint(9999999), verbosity=0, scoring_function=None,
                  disable_update_check=False,elitism=True, boolean = False,classification=False,clean=False,
-                 track_diversity=False,mdr=False,otype='f',term_set=None):
+                 track_diversity=False,mdr=False,otype='f'):
                 # sets up GP.
 
         # Save params to be recalled later by get_params()
