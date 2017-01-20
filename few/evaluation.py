@@ -91,6 +91,7 @@ def logs(x):
 
 
 def evaluate(n, features, stack_float, stack_bool,labels=None):
+    """evaluate node in program"""
     np.seterr(all='ignore')
     if len(stack_float) >= n.arity['f'] and len(stack_bool) >= n.arity['b']:
         if n.out_type == 'f':
