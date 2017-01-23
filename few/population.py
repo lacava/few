@@ -59,8 +59,7 @@ def run_MDR(n,stack_float,labels=None):
             return n.model.transform(tmp)[:,0]
         else: # training
             out =  n.model.fit_transform(tmp,labels)[:,0]
-            if out.shape != (900,):
-                pdb.set_trace()
+
             return out
     else:
         return np.zeros(x1.shape[0])
@@ -180,8 +179,7 @@ def make_program(stack,func_set,term_set,max_d,ntype):
         stack.append(ts[np.random.choice(len(ts))])
     else:
         fs = [f for f in func_set if (f.out_type==ntype and (f.in_type=='f' or max_d>1))]
-        if not fs:
-            pdb.set_trace()
+        
         stack.append(fs[np.random.choice(len(fs))])
         tmp = copy.copy(stack[-1])
 

@@ -98,9 +98,9 @@ class FEW(BaseEstimator):
         self.mdr = mdr
         self.otype = otype
 
-        # self.op_weight = op_weight
-        # if self.boolean:
-        #     self.otype = 'b'
+        # if otype is b, boolean functions must be turned on
+        if self.otype=='b':
+            self.boolean = True
         # else:
         #     self.otype = 'f'
 
