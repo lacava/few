@@ -139,9 +139,7 @@ class FEW(BaseEstimator):
                             type(KNeighborsClassifier()): 'silhouette',
             }[type(self.ml)]
 
-        # use de-aggregated fitness metrics for lexicase selection
-        if "lexicase" in self.sel and ("_vec" not in self.fit_choice or "_rel" not in self.fit_choice):
-            self.fit_choice += "_vec"
+
         # Columns to always ignore when in an operator
         self.non_feature_columns = ['label', 'group', 'guess']
 
@@ -150,14 +148,7 @@ class FEW(BaseEstimator):
                          node('cos'), node('exp'),node('log'), node('^2'),
                          node('^3'), node('sqrt')]
 
-        if self.boolean or self.otype=='b': # include boolean functions
-            self.func_set += [node('!'), node('&'), node('|'), node('=='),
-                            node('>_f'), node('<_f'), node('>=_f'), node('<=_f'),
-                            node('>_b'), node('<_b'), node('>=_b'), node('<=_b'),
-                            node('xor_b'), node('xor_f')]
 
-        if self.mdr:
-            self.func_set += [node('mdr2')]
         # if boolean operators are included but the output type is set to float, then
         # # include the if and if-else operations that allow use of both stacks
         # if self.boolean and self.otype=='f':
@@ -178,8 +169,6 @@ class FEW(BaseEstimator):
             features = self.impute_data(features)
         # Train-test split routine for internal validation
         ####
-
-
         train_val_data = pd.DataFrame(data=features)
         train_val_data['labels'] = labels
         # print("train val data:",train_val_data[::10])
@@ -202,8 +191,8 @@ class FEW(BaseEstimator):
         # Store the training features and classes for later use
         self._training_features = x_t
         self._training_labels = y_t
-
         ####
+
         # set population size
         if type(self.population_size) is str:
             if 'x' in self.population_size: #
@@ -212,17 +201,18 @@ class FEW(BaseEstimator):
                 self.population_size = int(self.population_size)
 
         if self.verbosity >0: print("population size:",self.population_size)
-
+        # print few settings
         if self.verbosity > 1:
             for arg in self.get_params():
                 print('{}\t=\t{}'.format(arg, self.get_params()[arg]))
             print('')
+
         # initial model
-        # pdb.set_trace()
         self._best_estimator = copy.deepcopy(self.ml.fit(x_t,y_t))
         self._best_score = self._best_estimator.score(x_v,y_v)
         if self.verbosity > 2: print("initial estimator size:",self._best_estimator.coef_.shape)
         if self.verbosity > 0: print("initial ML CV: {:1.3f}".format(self._best_score))
+
         # create terminal set
         for i in np.arange(x_t.shape[1]):
             # dictionary of node name, arity, feature column index, output type and input type
@@ -231,6 +221,20 @@ class FEW(BaseEstimator):
             if self.erc:
                 self.term_set.append(node('k',value=np.random.rand())) # ephemeral random constants
 
+        # edit function set if boolean
+        if self.boolean or self.otype=='b': # include boolean functions
+            self.func_set += [node('!'), node('&'), node('|'), node('=='),
+                            node('>_f'), node('<_f'), node('>=_f'), node('<=_f'),
+                            node('>_b'), node('<_b'), node('>=_b'), node('<=_b'),
+                            node('xor_b'), node('xor_f')]
+
+        # add mdr if specified
+        if self.mdr:
+            self.func_set += [node('mdr2')]
+
+        # use de-aggregated fitness metrics for lexicase selection
+        if "lexicase" in self.sel and ("_vec" not in self.fit_choice or "_rel" not in self.fit_choice):
+            self.fit_choice += "_vec"
         # Create initial population
         pop = self.init_pop(self._training_features.shape[0])
         # check that uuids are unique in population
@@ -607,7 +611,8 @@ class FEW(BaseEstimator):
         model = ''
         if self._best_inds:
             # pdb.set_trace()
-            if hasattr(self.ml,'coef_'):
+            # if hasattr(self.ml,'coef_'):
+            try:
                 if self.ml.coef_.shape[0]==1 or len(self.ml.coef_.shape)==1:
                     if self.ml.coef_.shape[0]==1:
                         s = np.argsort(np.abs(self.ml.coef_[0]))[::-1]
@@ -625,11 +630,16 @@ class FEW(BaseEstimator):
                         bi =[self._best_inds[k] for k in s]
                         model += '\nclass'+str(j)+' :'+' + '.join([str(round(c,3))+'*'+stack_2_eqn(f) for i,(f,c) in enumerate(zip(bi,coef)) if coef[i] != 0])
 
-            else:
+            except:
                 return stacks_2_eqns(self._best_inds)
         else:
             return 'original features'
         return model
+        
+    def model(self):
+        """return stacks_2_eqns output"""
+        return stacks_2_eqns(self._best_inds)
+
     def valid_loc(self,individuals):
         """returns the indices of individuals with valid fitness."""
 

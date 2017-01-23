@@ -179,7 +179,8 @@ def make_program(stack,func_set,term_set,max_d,ntype):
         stack.append(ts[np.random.choice(len(ts))])
     else:
         fs = [f for f in func_set if (f.out_type==ntype and (f.in_type=='f' or max_d>1))]
-        
+        if len(fs)==0:
+            print('ntype:',ntype,'\nfunc_set:',[f.name for f in func_set])
         stack.append(fs[np.random.choice(len(fs))])
         tmp = copy.copy(stack[-1])
 
