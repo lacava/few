@@ -303,6 +303,7 @@ class FEW(BaseEstimator):
                         self.ml.fit(pop.X.transpose(),y_t)
 
                 except ValueError as detail:
+                    pdb.set_trace()
                     print("warning: ValueError in ml fit. X.shape:",pop.X[self.valid_loc(pop.individuals),:].transpose().shape,"y_t shape:",y_t.shape)
                     print("First ten entries X:",pop.X[self.valid_loc(pop.individuals),:].transpose()[:10])
                     print("First ten entries y_t:",y_t[:10])
