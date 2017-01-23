@@ -103,7 +103,16 @@ def evaluate(n, features, stack_float, stack_bool,labels=None):
             if np.isnan(stack_bool[-1]).any() or np.isinf(stack_bool[-1]).any():
                 print("problem operator:",n)
 
-
+def all_finite(X):
+    """returns true if X is finite, false, otherwise"""
+    # Adapted from sklearn utils: _assert_all_finite(X)
+    # First try an O(n) time, O(1) space solution for the common case that
+    # everything is finite; fall back to O(n) space np.isfinite to prevent
+    # false positives from overflow in sum method.
+    if (X.dtype.char in np.typecodes['AllFloat'] and not np.isfinite(X.sum())
+        and not np.isfinite(X).all()):
+        return False
+    return True
 
 def out(I,features,labels=None,otype='f'):
     """computes the output for individual I"""
@@ -116,9 +125,9 @@ def out(I,features,labels=None,otype='f'):
         evaluate(n,features,stack_float,stack_bool,labels)
         # print("stack_float:",stack_float)
     if otype=='f':
-        return stack_float[-1]
+        return stack_float[-1] if all_finite(stack_float[-1]) else np.zeros(len(features))
     else:
-        return stack_bool[-1]
+        return stack_bool[-1] if all_finite(stack_bool[-1]) else np.zeros(len(features))
 
 def calc_fitness(X,labels,fit_choice):
     """computes fitness of individual output yhat.
@@ -127,7 +136,8 @@ def calc_fitness(X,labels,fit_choice):
     fit_choice: choice of fitness function
     """
 
-    # pdb.set_trace()
+
+
     return list(map(lambda yhat: f[fit_choice](labels,yhat),X))
 
 def r2_score_vec(y_true,y_pred):

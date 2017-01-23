@@ -635,7 +635,7 @@ class FEW(BaseEstimator):
         else:
             return 'original features'
         return model
-        
+
     def model(self):
         """return stacks_2_eqns output"""
         return stacks_2_eqns(self._best_inds)
