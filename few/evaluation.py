@@ -129,7 +129,7 @@ def out(I,features,labels=None,otype='f'):
     if otype=='f':
         return stack_float[-1] if all_finite(stack_float[-1]) else np.zeros(len(features))
     else:
-        return stack_bool[-1] if all_finite(stack_bool[-1]) else np.zeros(len(features))
+        return stack_bool[-1].astype(float) if all_finite(stack_bool[-1]) else np.zeros(len(features))
 
 def calc_fitness(X,labels,fit_choice):
     """computes fitness of individual output yhat.

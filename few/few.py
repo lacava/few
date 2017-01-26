@@ -424,7 +424,7 @@ class FEW(BaseEstimator):
                 survivors, survivor_index = epsilon_lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True)
             elif self.sel == 'deterministic_crowding':
                 survivors, survivor_index = deterministic_crowding(pop.individuals,offspring,pop.X,X_offspring)
-
+                
             if self.elitism and min([x.fitness for x in survivors]) > elite.fitness:
                 # if the elite individual did not survive and elitism is on, replace worst individual with elite
                 rep_index = np.argmax([x.fitness for x in survivors])
