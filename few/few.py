@@ -236,6 +236,10 @@ class FEW(BaseEstimator):
         if "lexicase" in self.sel and ("_vec" not in self.fit_choice or "_rel" not in self.fit_choice):
             self.fit_choice += "_vec"
         # Create initial population
+        # for now, force seed_with_ml to be off if otype is 'b', since data types`
+        # are assumed to be float
+        if self.otype=='b':
+            self.seed_with_ml = False
         pop = self.init_pop(self._training_features.shape[0])
         # check that uuids are unique in population
         uuids = [p.id for p in pop.individuals]
