@@ -251,13 +251,11 @@ class FEW(BaseEstimator):
         pop.X = self.transform(x_t,pop.individuals,y_t).transpose()
         # parallel:
         # pop.X = np.asarray(Parallel(n_jobs=-1)(delayed(out)(I,x_t,self.otype,y_t) for I in pop.individuals), order = 'F')
-        # pdb.set_trace()
+
         # calculate fitness of individuals
         # fitnesses = list(map(lambda I: fitness(I,y_t,self.ml),pop.X))
         fitnesses = calc_fitness(pop.X,y_t,self.fit_choice,self.sel)
-        # pdb.set_trace()
-        # max_count = 0;
-        # pdb.set_trace()
+
         # max_fit = self.max_fit
         # while len([np.mean(f) for f in fitnesses if np.mean(f) < max_fit and np.mean(f)>=0])<self.population_size and max_count < 100:
         #     pop = self.init_pop()
@@ -276,7 +274,7 @@ class FEW(BaseEstimator):
                 ind.fitness = np.mean(ind.fitness_vec)
             else:
                 ind.fitness = np.nanmin([fit,self.max_fit])
-        # pdb.set_trace()
+
 
         #with Parallel(n_jobs=10) as parallel:
         ####################
@@ -602,8 +600,8 @@ class FEW(BaseEstimator):
                     if self.population_size < self.ml.coef_.shape[0]:
                         # seed pop with highest coefficients
                         coef_order = np.argsort(self.ml.coef_[::-1])
-                        for c,p in zip(coef_order,pop.individuals):
-                            p.stack = [node('x',loc=c)]
+                        for i,(c,p) in enumerate(zip(coef_order,pop.individuals)):
+                            p.stack = [node('x',loc=i)]
                     else:
                         raise(AttributeError)
                 except Exception: # seed pop with raw features
