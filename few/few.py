@@ -208,9 +208,12 @@ class FEW(BaseEstimator):
             print('')
 
         # initial model
-        self._best_estimator = copy.deepcopy(self.ml.fit(x_t,y_t))
-        self._best_score = self._best_estimator.score(x_v,y_v)
-        if self.verbosity > 2: print("initial estimator size:",self._best_estimator.coef_.shape)
+        initial_estimator = copy.deepcopy(self.ml.fit(x_t,y_t))
+        # self._best_estimator = copy.deepcopy(self.ml.fit(x_t,y_t))
+
+        self._best_score = self.ml.score(x_v,y_v)
+        initial_score = self._best_score
+        if self.verbosity > 2: print("initial estimator size:",self.ml.coef_.shape)
         if self.verbosity > 0: print("initial ML CV: {:1.3f}".format(self._best_score))
 
         # create terminal set
@@ -245,7 +248,7 @@ class FEW(BaseEstimator):
         # Evaluate the entire population
         # X represents a matrix of the population outputs (number os samples x population size)
         # single thread
-        pop.X = self.transform(x_t,pop.individuals,y_t)
+        pop.X = self.transform(x_t,pop.individuals,y_t).transpose()
         # parallel:
         # pop.X = np.asarray(Parallel(n_jobs=-1)(delayed(out)(I,x_t,self.otype,y_t) for I in pop.individuals), order = 'F')
         # pdb.set_trace()
@@ -298,14 +301,15 @@ class FEW(BaseEstimator):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 try:
-                    if len(self.valid_loc(pop.individuals)) > 0:
+                    # if len(self.valid_loc(pop.individuals)) > 0:
+                    if self.valid(pop.individuals):
                         self.ml.fit(pop.X[self.valid_loc(pop.individuals),:].transpose(),y_t)
-                    else:
-                        self.ml.fit(pop.X.transpose(),y_t)
+                    # else:
+                    #     self.ml.fit(pop.X.transpose(),y_t)
 
                 except ValueError as detail:
                     pdb.set_trace()
-                    print("warning: ValueError in ml fit. X.shape:",pop.X[self.valid_loc(pop.individuals),:].transpose().shape,"y_t shape:",y_t.shape)
+                    print("warning: ValueError in ml fit. X.shape:",pop.X[:,self.valid_loc(pop.individuals)].transpose().shape,"y_t shape:",y_t.shape)
                     print("First ten entries X:",pop.X[self.valid_loc(pop.individuals),:].transpose()[:10])
                     print("First ten entries y_t:",y_t[:10])
                     print("equations:",stacks_2_eqns(pop.individuals))
@@ -315,22 +319,35 @@ class FEW(BaseEstimator):
 
             # if self.verbosity > 1: print("number of non-zero regressors:",self.ml.coef_.shape[0])
             # keep best model
+            tmp_score = 0
             try:
-                if len(self.valid_loc(pop.individuals)) > 0:
-                    tmp = self.ml.score(self.transform(x_v,pop.individuals)[self.valid_loc(pop.individuals),:].transpose(),y_v)
-                else:
-                    tmp = self.ml.score(self.transform(x_v,pop.individuals).transpose(),y_v)
-            except Exception:
-                tmp = 0
+                # if len(self.valid_loc(pop.individuals)) > 0:
+                if self.valid(pop.individuals):
+                    tmp_score = self.ml.score(self.transform(x_v,pop.individuals)[:,self.valid_loc(pop.individuals)],y_v)
+                # else:
+                #     tmp_score = 0
+                    # tmp = self.ml.score(self.transform(x_v,pop.individuals),y_v)
+            except Exception as detail:
+                if self.verbosity > 1: print(detail)
+                # tmp_score = 0
 
             if self.verbosity > 1: print("current ml validation score:",tmp)
 
 
-            if tmp > self._best_score:
+            if self.valid(pop.individuals) and tmp_score > self._best_score:
                 self._best_estimator = copy.deepcopy(self.ml)
-                self._best_score = tmp
-                self._best_inds = pop.individuals[:]
+                self._best_score = tmp_score
+                self._best_inds = copy.deepcopy(self.valid(pop.individuals))
                 if self.verbosity > 1: print("updated best internal validation score:",self._best_score)
+            if self._best_inds:
+                if hasattr(self._best_estimator,'coef_'):
+                    if (len(self._best_inds)!=self._best_estimator.coef_.shape[1]):
+                        print('unequal features / model size')
+                        pdb.set_trace()
+                elif hasattr(self._best_estimator,'feature_importances_'):
+                    if (len(self.valid(self._best_inds))!=self._best_estimator.feature_importances_.shape[0]):
+                        print('unequal features / model size')
+                        pdb.set_trace()
 
             offspring = []
 
@@ -390,7 +407,7 @@ class FEW(BaseEstimator):
 
             # evaluate offspring
             if self.verbosity > 2: print("output...")
-            X_offspring = self.transform(x_t,offspring)
+            X_offspring = self.transform(x_t,offspring).transpose()
             #parallel:
             # X_offspring = np.asarray(Parallel(n_jobs=-1)(delayed(out)(O,x_t,y_t,self.otype) for O in offspring), order = 'F')
 
@@ -432,7 +449,7 @@ class FEW(BaseEstimator):
             # print("offspring:",stacks_2_eqns(offspring))
             # print("current X_offspring:",X_offspring[:,:4])
             # print("survivor index:",survivor_index)
-            # print("survivors:",stacks_2_eqns(survivors))
+
             pop.individuals[:] = survivors
             pop.X = np.vstack((pop.X, X_offspring))[survivor_index,:]
 
@@ -444,23 +461,24 @@ class FEW(BaseEstimator):
             #[[s for s in survivor_index if s<len(pop.individuals)],:],
                                     #  X_offspring[[s-len(pop.individuals) for s in survivor_index if s>=len(pop.individuals)],:]))
             if self.verbosity > 2: print("median fitness survivors: %0.2f" % np.median([x.fitness for x in pop.individuals]))
-
+            if self.verbosity>2: print("best features:",stacks_2_eqns(self._best_inds) if self._best_inds else 'original')
             pbar.set_description('Internal CV: {:1.3f}'.format(self._best_score))
             pbar.update(1)
         # end of main GP loop
             ####################
         if self.verbosity > 0: print('finished. best internal val score: {:1.3f}'.format(self._best_score))
         if self.verbosity > 0: print("final model:\n",self.print_model())
-
+        if not self._best_estimator:
+            self._best_estimator = initial_estimator
         return self
 
     def transform(self,x,inds=None,labels = None):
         """return a transformation of x using population outputs"""
         if inds:
-            return np.asarray([out(I,x,labels,self.otype) for I in inds],order='F')
+            return np.asarray([out(I,x,labels,self.otype) for I in inds]).transpose()
             # return np.asarray(list(map(lambda I: out(I,x,labels), inds)),order='F')
         else:
-            return np.asarray(list(map(lambda I: out(I,x,labels,self.otype), self._best_inds)),order='F')
+            return np.asarray(list(map(lambda I: out(I,x,labels,self.otype), self._best_inds))).transpose()
 
     def impute_data(self,x):
         """Imputes data set containing Nan values"""
@@ -483,18 +501,21 @@ class FEW(BaseEstimator):
         if self.clean:
             testing_features = self.impute_data(testing_features)
 
-        if self._best_inds is None:
-            return self._best_estimator.predict(testing_features)
-        else:
-            X_transform = (np.asarray(list(map(lambda I: out(I,testing_features,otype=self.otype), self._best_inds))))
+        if self._best_inds:
+
+            X_transform = self.transform(testing_features)#(np.asarray(list(map(lambda I: out(I,testing_features,otype=self.otype), self._best_inds))))
             try:
-                return self._best_estimator.predict(X_transform[self.valid_loc(self._best_inds),:].transpose())
+                return self._best_estimator.predict(self.transform(testing_features))
             except ValueError as detail:
+                pdb.set_trace()
                 print('shape of X:',testing_features.shape)
-                print('shape of X_transform:',X_transform[self.valid_loc(self._best_inds),:].transpose().shape)
+                print('shape of X_transform:',X_transform.transpose().shape)
                 print('best inds:',stacks_2_eqns(self._best_inds))
                 print('valid locs:',self.valid_loc(self._best_inds))
                 raise ValueError(detail)
+        else:
+            return self._best_estimator.predict(testing_features)
+
     def fit_predict(self, features, labels):
         """Convenience function that fits a pipeline then predicts on the provided features
 
