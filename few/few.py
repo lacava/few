@@ -339,15 +339,15 @@ class FEW(BaseEstimator):
                 self._best_score = tmp_score
                 self._best_inds = copy.deepcopy(self.valid(pop.individuals))
                 if self.verbosity > 1: print("updated best internal validation score:",self._best_score)
-            if self._best_inds:
-                if hasattr(self._best_estimator,'coef_'):
-                    if (len(self._best_inds)!=self._best_estimator.coef_.shape[1]):
-                        print('unequal features / model size')
-                        pdb.set_trace()
-                elif hasattr(self._best_estimator,'feature_importances_'):
-                    if (len(self.valid(self._best_inds))!=self._best_estimator.feature_importances_.shape[0]):
-                        print('unequal features / model size')
-                        pdb.set_trace()
+            # if self._best_inds:
+            #     if hasattr(self._best_estimator,'coef_'):
+            #         if (len(self._best_inds)!=self._best_estimator.coef_.shape[1]):
+            #             print('unequal features / model size')
+            #             pdb.set_trace()
+            #     elif hasattr(self._best_estimator,'feature_importances_'):
+            #         if (len(self.valid(self._best_inds))!=self._best_estimator.feature_importances_.shape[0]):
+            #             print('unequal features / model size')
+            #             pdb.set_trace()
 
             offspring = []
 
