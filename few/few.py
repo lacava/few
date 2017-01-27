@@ -492,7 +492,7 @@ class FEW(BaseEstimator):
             except ValueError as detail:
                 print('shape of X:',testing_features.shape)
                 print('shape of X_transform:',X_transform[self.valid_loc(self._best_inds),:].transpose().shape)
-                print('best inds:',stack_2_eqns(self._best_inds))
+                print('best inds:',stacks_2_eqns(self._best_inds))
                 print('valid locs:',self.valid_loc(self._best_inds))
                 raise ValueError(detail)
     def fit_predict(self, features, labels):
