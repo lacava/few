@@ -59,14 +59,16 @@ f = { # available fitness metrics
 'vaf': lambda y,yhat: 1-explained_variance_score(y,yhat),
 'silhouette': lambda y,yhat: 1 - silhouette_score(yhat.reshape(-1,1),y),
 'accuracy': lambda y,yhat: 1 - accuracy_score(yhat,y),
-# non-aggregated fitness calculations
-'mse_vec': lambda y,yhat: (y - yhat) ** 2, #mean_squared_error(y,yhat,multioutput = 'raw_values'),
-'mae_vec': lambda y,yhat: np.abs(y-yhat), #mean_absolute_error(y,yhat,multioutput = 'raw_values'),
+}
+
+f_vec = {# non-aggregated fitness calculations
+'mse': lambda y,yhat: (y - yhat) ** 2, #mean_squared_error(y,yhat,multioutput = 'raw_values'),
+'mae': lambda y,yhat: np.abs(y-yhat), #mean_absolute_error(y,yhat,multioutput = 'raw_values'),
 # 'mdae_vec': lambda y,yhat: median_absolute_error(y,yhat,multioutput = 'raw_values'),
-'r2_vec':  lambda y,yhat: 1-r2_score_vec(y,yhat),
-'vaf_vec': lambda y,yhat: 1-explained_variance_score(y,yhat,multioutput = 'raw_values'),
-'silhouette_vec': lambda y,yhat: 1 - silhouette_samples(yhat.reshape(-1,1),y),
-'accuracy_vec': lambda y,yhat: 1 - np.sum(yhat==y)/y.shape[0]
+'r2':  lambda y,yhat: 1-r2_score_vec(y,yhat),
+'vaf': lambda y,yhat: 1-explained_variance_score(y,yhat,multioutput = 'raw_values'),
+'silhouette': lambda y,yhat: 1 - silhouette_samples(yhat.reshape(-1,1),y),
+'accuracy': lambda y,yhat: 1 - np.sum(yhat==y)/y.shape[0]
 }
 
 def safe(x):
@@ -131,16 +133,16 @@ def out(I,features,labels=None,otype='f'):
     else:
         return stack_bool[-1].astype(float) if all_finite(stack_bool[-1]) else np.zeros(len(features))
 
-def calc_fitness(X,labels,fit_choice):
+def calc_fitness(X,labels,fit_choice,sel):
     """computes fitness of individual output yhat.
     yhat: output of a program.
     labels: correct outputs
     fit_choice: choice of fitness function
     """
-
-
-
-    return list(map(lambda yhat: f[fit_choice](labels,yhat),X))
+    if 'lexicase' in sel:
+        return list(map(lambda yhat: f_vec[fit_choice](labels,yhat),X))
+    else:
+        return list(map(lambda yhat: f[fit_choice](labels,yhat),X))
 
 def r2_score_vec(y_true,y_pred):
     """ returns non-aggregate version of r2 score.

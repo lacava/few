@@ -232,9 +232,6 @@ class FEW(BaseEstimator):
         if self.mdr:
             self.func_set += [node('mdr2')]
 
-        # use de-aggregated fitness metrics for lexicase selection
-        if "lexicase" in self.sel and ("_vec" not in self.fit_choice or "_rel" not in self.fit_choice):
-            self.fit_choice += "_vec"
         # Create initial population
         # for now, force seed_with_ml to be off if otype is 'b', since data types`
         # are assumed to be float
@@ -254,7 +251,7 @@ class FEW(BaseEstimator):
         # pdb.set_trace()
         # calculate fitness of individuals
         # fitnesses = list(map(lambda I: fitness(I,y_t,self.ml),pop.X))
-        fitnesses = calc_fitness(pop.X,y_t,self.fit_choice)
+        fitnesses = calc_fitness(pop.X,y_t,self.fit_choice,self.sel)
         # pdb.set_trace()
         # max_count = 0;
         # pdb.set_trace()
@@ -262,7 +259,7 @@ class FEW(BaseEstimator):
         # while len([np.mean(f) for f in fitnesses if np.mean(f) < max_fit and np.mean(f)>=0])<self.population_size and max_count < 100:
         #     pop = self.init_pop()
         #     pop.X = self.transform(x_t,pop.individuals,y_t)
-        #     fitnesses = calc_fitness(pop.X,y_t,self.fit_choice)
+        #     fitnesses = calc_fitness(pop.X,y_t,self.fit_choice,self.sel)
         #
         #     max_count+= 1
         # print("fitnesses:",fitnesses)
@@ -398,7 +395,7 @@ class FEW(BaseEstimator):
             # X_offspring = np.asarray(Parallel(n_jobs=-1)(delayed(out)(O,x_t,y_t,self.otype) for O in offspring), order = 'F')
 
             if self.verbosity > 2: print("fitness...")
-            F_offspring = calc_fitness(X_offspring,y_t,self.fit_choice)
+            F_offspring = calc_fitness(X_offspring,y_t,self.fit_choice,self.sel)
             # F_offspring = parallel(delayed(f[self.fit_choice])(y_t,yhat) for yhat in X_offspring)
             # print("fitnesses:",fitnesses)
             # Assign fitnesses to inidividuals in population
@@ -424,7 +421,7 @@ class FEW(BaseEstimator):
                 survivors, survivor_index = epsilon_lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True)
             elif self.sel == 'deterministic_crowding':
                 survivors, survivor_index = deterministic_crowding(pop.individuals,offspring,pop.X,X_offspring)
-                
+
             if self.elitism and min([x.fitness for x in survivors]) > elite.fitness:
                 # if the elite individual did not survive and elitism is on, replace worst individual with elite
                 rep_index = np.argmax([x.fitness for x in survivors])

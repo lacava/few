@@ -116,11 +116,11 @@ def test_calc_fitness_shape():
 
     pop.X = np.asarray(list(map(lambda I: out(I,boston.data), pop.individuals)))
 
-    fitnesses = calc_fitness(pop.X,boston.target,'mse')
+    fitnesses = calc_fitness(pop.X,boston.target,'mse','tournament')
     assert len(fitnesses) == len(pop.individuals)
 
     # test vectorized fitnesses
-    vec_fitnesses = calc_fitness(pop.X,boston.target,'mse_vec')
+    vec_fitnesses = calc_fitness(pop.X,boston.target,'mse','lexicase')
     fitmat = np.asarray(vec_fitnesses)
     print("fitmat.shape:",fitmat.shape)
     assert fitmat.shape == (len(pop.individuals),boston.target.shape[0])
