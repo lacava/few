@@ -487,8 +487,14 @@ class FEW(BaseEstimator):
             return self._best_estimator.predict(testing_features)
         else:
             X_transform = (np.asarray(list(map(lambda I: out(I,testing_features,otype=self.otype), self._best_inds))))
-            return self._best_estimator.predict(X_transform[self.valid_loc(self._best_inds),:].transpose())
-
+            try:
+                return self._best_estimator.predict(X_transform[self.valid_loc(self._best_inds),:].transpose())
+            except ValueError as detail:
+                print('shape of X:',testing_features.shape)
+                print('shape of X_transform:',X_transform[self.valid_loc(self._best_inds),:].transpose().shape)
+                print('best inds:',stack_2_eqns(self._best_inds))
+                print('valid locs:',self.valid_loc(self._best_inds))
+                raise ValueError(detail)
     def fit_predict(self, features, labels):
         """Convenience function that fits a pipeline then predicts on the provided features
 
