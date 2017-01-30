@@ -58,6 +58,8 @@ f = { # available fitness metrics
 'r2':  lambda y,yhat: 1-r2_score(y,yhat),
 'vaf': lambda y,yhat: 1-explained_variance_score(y,yhat),
 'silhouette': lambda y,yhat: 1 - silhouette_score(yhat.reshape(-1,1),y),
+'inertia': lambda y,yhat: inertia(yhat,y),
+'separation': lambda y,yhat: 1 - separation(yhat,y),
 'accuracy': lambda y,yhat: 1 - accuracy_score(yhat,y),
 }
 
@@ -68,6 +70,8 @@ f_vec = {# non-aggregated fitness calculations
 'r2':  lambda y,yhat: 1-r2_score_vec(y,yhat),
 'vaf': lambda y,yhat: 1-explained_variance_score(y,yhat,multioutput = 'raw_values'),
 'silhouette': lambda y,yhat: 1 - silhouette_samples(yhat.reshape(-1,1),y),
+'inertia': lambda y,yhat: inertia(yhat,y,samples=True),
+'separation': lambda y,yhat: 1 - separation(yhat,y,samples=True),
 'accuracy': lambda y,yhat: 1 - np.sum(yhat==y)/y.shape[0]
 }
 
@@ -164,3 +168,50 @@ def r2_score_vec(y_true,y_pred):
     output_scores[nonzero_numerator & ~nonzero_denominator] = 0.
 
     return output_scores
+
+def inertia(X,y,samples=False):
+    """ return the within-class squared distance from the centroid"""
+    # pdb.set_trace()
+    if samples:
+        # return within-class distance for each sample
+        inertia = np.zeros(y.shape)
+        for label in np.unique(y):
+            inertia[y==label] = (X[y==label] - np.mean(X[y==label])) ** 2
+
+    else: # return aggregate score
+        inertia = 0
+        for i,label in enumerate(np.unique(y)):
+            inertia += np.sum((X[y==label] - np.mean(X[y==label])) ** 2)/len(y[y==label])
+        inertia = inertia/len(np.unique(y))
+
+    return inertia
+
+def separation(X,y,samples=False):
+    """ return the sum of the between-class squared distance"""
+    # pdb.set_trace()
+    num_classes = len(np.unique(y))
+    total_dist = (X.max()-X.min())**2
+    if samples:
+        # return intra-class distance for each sample
+        separation = np.zeros(y.shape)
+        for label in np.unique(y):
+            for outsider in np.unique(y[y!=label]):
+                separation[y==label] += (X[y==label] - np.mean(X[y==outsider])) ** 2
+
+        #normalize between 0 and 1
+        print('separation:',separation)
+        print('num_classes:',num_classes)
+        print('total_dist:',total_dist)
+        separation = separation#/separation.max()
+        
+        print('separation after normalization:',separation)
+
+    else:
+        # return aggregate score
+        separation = 0
+        for i,label in enumerate(np.unique(y)):
+            for outsider in np.unique(y[y!=label]):
+                separation += np.sum((X[y==label] - np.mean(X[y==outsider])) ** 2)/len(y[y==label])
+        separation = separation/len(np.unique(y))
+
+    return separation

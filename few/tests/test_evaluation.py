@@ -124,3 +124,61 @@ def test_calc_fitness_shape():
     fitmat = np.asarray(vec_fitnesses)
     print("fitmat.shape:",fitmat.shape)
     assert fitmat.shape == (len(pop.individuals),boston.target.shape[0])
+
+def test_inertia():
+    """test_evaluation.py: inertia works"""
+    import pdb
+    # perfect inertia
+    x = np.hstack((np.zeros(50),np.ones(50)))
+    y = np.hstack((np.zeros(50),np.ones(50)))
+
+    mean_inertia = inertia(x,y)
+    sample_inertia = inertia(x,y,samples=True)
+    assert(mean_inertia==0)
+    assert(np.mean(sample_inertia)==mean_inertia)
+
+    # half inertia
+    x = np.hstack((np.ones(25),np.zeros(25),np.ones(25),np.zeros(25)))
+    y = np.hstack((np.zeros(50),np.ones(50)))
+
+    mean_inertia = inertia(x,y)
+    sample_inertia = inertia(x,y,samples=True)
+    print('mean_inertia:',mean_inertia)
+    print('sample_inertia',sample_inertia)
+    assert(mean_inertia==0.25)
+    assert(np.mean(sample_inertia)==mean_inertia)
+
+def test_separation():
+    """test_evaluation: separation"""
+    # perfect separation
+    x = np.hstack((np.zeros(50),np.ones(50)))
+    y = np.hstack((np.zeros(50),np.ones(50)))
+
+    mean_separation = separation(x,y)
+    sample_separation = separation(x,y,samples=True)
+    print('mean_separation:',mean_separation)
+    print('sample_separation',sample_separation)
+    assert(mean_separation==1)
+    assert(np.mean(sample_separation)==mean_separation)
+
+    # perfect separation
+    x = np.hstack((np.ones(50),np.zeros(50)))
+    y = np.hstack((np.zeros(50),np.ones(50)))
+
+    mean_separation = separation(x,y)
+    sample_separation = separation(x,y,samples=True)
+    print('mean_separation:',mean_separation)
+    print('sample_separation',sample_separation)
+    assert(mean_separation==1)
+    assert(np.mean(sample_separation)==mean_separation)
+
+    # half separation
+    x = np.hstack((np.ones(25),np.zeros(25),np.ones(25),np.zeros(25)))
+    y = np.hstack((np.zeros(50),np.ones(50)))
+
+    mean_separation = separation(x,y)
+    sample_separation = separation(x,y,samples=True)
+    print('mean_separation:',mean_separation)
+    print('sample_separation',sample_separation)
+    assert(mean_separation==0.25)
+    assert(np.mean(sample_separation)==mean_separation)
