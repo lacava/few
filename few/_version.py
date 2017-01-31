@@ -6,4 +6,4 @@ license: GNU/GPLv3
 
 """
 
-__version__ = '0.0.25'
+__version__ = '0.0.26'
