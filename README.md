@@ -28,7 +28,7 @@ learner = FEW()
 or specify the generations, population size and machine learning algorithm as:
 
 ```python
-learner = FEW(generations = 100, population_size = 25, machine_learner = LassoLarsCV())
+learner = FEW(generations = 100, population_size = 25, ml = LassoLarsCV())
 ```
 
 Given a set of data with variables X and target Y, optimize the set of feature transformations using the ```fit()``` method:
