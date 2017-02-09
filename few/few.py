@@ -441,6 +441,11 @@ class FEW(BaseEstimator):
                 survivors, survivor_index = epsilon_lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True)
             elif self.sel == 'deterministic_crowding':
                 survivors, survivor_index = deterministic_crowding(pop.individuals,offspring,pop.X,X_offspring)
+            elif self.sel == 'random':
+                # pdb.set_trace()
+                survivor_index = np.random.permutation(np.arange(2*len(pop.individuals)))[:len(pop.individuals)]
+                survivors = pop.individuals + offspring
+                survivors = [survivors[i] for i in survivor_index]
 
             if self.elitism and min([x.fitness for x in survivors]) > elite.fitness:
                 # if the elite individual did not survive and elitism is on, replace worst individual with elite
@@ -479,6 +484,7 @@ class FEW(BaseEstimator):
         """return a transformation of x using population outputs"""
         if inds:
             return np.asarray([out(I,x,labels,self.otype) for I in inds]).transpose()
+            # ,dtype={'b':bool,'f':float}[self.otype]
             # return np.asarray(list(map(lambda I: out(I,x,labels), inds)),order='F')
         else:
             return np.asarray(list(map(lambda I: out(I,x,labels,self.otype), self._best_inds))).transpose()
@@ -566,10 +572,9 @@ class FEW(BaseEstimator):
             output_file.write(self.print_model())
         # if decision tree, print tree into dot file
         if 'DecisionTree' in type(self.ml).__name__:
-
             export_graphviz(self._best_estimator, out_file=output_file_name+'.dot',
                                 feature_names = stacks_2_eqns(self._best_inds) if self._best_inds else None,
-                                label='none',filled=False,impurity = False,rotate=False)
+                                class_names=['True','False'],filled=False,impurity = True,rotate=True)
 
     def init_pop(self,num_features=1):
         """initializes population of features as GP stacks."""
@@ -796,7 +801,7 @@ def main():
                         type=float_range, help='GP crossover rate in the range [0.0, 1.0].')
 
     parser.add_argument('-ml', action='store', dest='MACHINE_LEARNER', default=None,
-                        choices = ['lasso','svr','lsvr','lr','svc','rfc','rfr','dtc','dtr','dc','knn','sgd'],
+                        choices = ['lasso','svr','lsvr','lr','svc','rfc','rfr','dtc','dtr','dc','knc','knr','sgd'],
                         type=str, help='ML algorithm to pair with features. Default: Lasso (regression), LogisticRegression (classification)')
 
     parser.add_argument('-min_depth', action='store', dest='MIN_DEPTH', default=1,
@@ -811,14 +816,14 @@ def main():
     parser.add_argument('-op_weight', action='store', dest='OP_WEIGHT', default=1,
                         type=bool, help='Weight variables for inclusion in synthesized features based on ML scores. Default: off')
 
-    parser.add_argument('-sel', action='store', dest='SEL', default='epsilon_lexicase', choices = ['tournament','lexicase','epsilon_lexicase','deterministic_crowding'],
+    parser.add_argument('-sel', action='store', dest='SEL', default='epsilon_lexicase', choices = ['tournament','lexicase','epsilon_lexicase','deterministic_crowding','random'],
                         type=str, help='Selection method (Default: tournament)')
 
     parser.add_argument('-tourn_size', action='store', dest='TOURN_SIZE', default=2,
                         type=positive_integer, help='Tournament size for tournament selection (Default: 2)')
 
     parser.add_argument('-fit', action='store', dest='FIT_CHOICE', default=None, choices = ['mse','mae','r2','vaf',
-                        'mse_rel','mae_rel','r2_rel','vaf_rel','silhouette','inertia','separation'],
+                        'mse_rel','mae_rel','r2_rel','vaf_rel','silhouette','inertia','separation','fisher','random'],
                         type=str, help='Fitness metric (Default: dependent on ml used)')
 
     parser.add_argument('--no_seed', action='store_false', dest='SEED_WITH_ML', default=True,

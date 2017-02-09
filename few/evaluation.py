@@ -9,7 +9,7 @@ import numpy as np
 from sklearn.metrics import explained_variance_score, mean_absolute_error, mean_squared_error, median_absolute_error, r2_score
 import pdb
 from sklearn.metrics import silhouette_samples, silhouette_score, accuracy_score
-
+import itertools as it
 
 # evaluation functions. these can be sped up using a GPU!
 
@@ -60,7 +60,9 @@ f = { # available fitness metrics
 'silhouette': lambda y,yhat: 1 - silhouette_score(yhat.reshape(-1,1),y),
 'inertia': lambda y,yhat: inertia(yhat,y),
 'separation': lambda y,yhat: 1 - separation(yhat,y),
+'fisher': lambda y,yhat: 1 - fisher(yhat,y),
 'accuracy': lambda y,yhat: 1 - accuracy_score(yhat,y),
+'random': lambda y,yhat: np.random.rand()
 }
 
 f_vec = {# non-aggregated fitness calculations
@@ -72,7 +74,9 @@ f_vec = {# non-aggregated fitness calculations
 'silhouette': lambda y,yhat: 1 - silhouette_samples(yhat.reshape(-1,1),y),
 'inertia': lambda y,yhat: inertia(yhat,y,samples=True),
 'separation': lambda y,yhat: 1 - separation(yhat,y,samples=True),
-'accuracy': lambda y,yhat: 1 - np.sum(yhat==y)/y.shape[0]
+'fisher': lambda y,yhat: 1 - fisher(yhat,y,samples=True),
+'accuracy': lambda y,yhat: 1 - np.sum(yhat==y)/y.shape[0],
+'random': lambda y,yhat: np.random.rand(len(y))
 }
 
 def safe(x):
@@ -203,7 +207,7 @@ def separation(X,y,samples=False):
         print('num_classes:',num_classes)
         print('total_dist:',total_dist)
         separation = separation#/separation.max()
-        
+
         print('separation after normalization:',separation)
 
     else:
@@ -215,3 +219,41 @@ def separation(X,y,samples=False):
         separation = separation/len(np.unique(y))
 
     return separation
+
+def pairwise(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = it.tee(iterable)
+    next(b, None)
+    return zip(a, b)
+
+from sklearn.metrics.pairwise import pairwise_distances
+
+def fisher(yhat,y,samples=False):
+    """Fisher criterion"""
+    classes = np.unique(y)
+    mu = np.zeros(len(classes))
+    v = np.zeros(len(classes))
+    # pdb.set_trace()
+    for c in classes.astype(int):
+        mu[c] = np.mean(yhat[y==c])
+        v[c] = np.var(yhat[y==c])
+
+    if not samples:
+        fisher = 0
+        for c1,c2 in pairwise(classes.astype(int)):
+            fisher += np.abs(mu[c1] - mu[c2])/np.sqrt(v[c1]+v[c2])
+    else:
+        # lexicase version
+        fisher = np.zeros(len(yhat))
+        # get closests classes to each class (min mu distance)
+        mu_d = pairwise_distances(mu.reshape(-1,1))
+        min_mu=np.zeros(len(classes),dtype=int)
+        for i in np.arange(len(min_mu)):
+            min_mu[i] = np.argsort(mu_d[i])[1]
+        # for c1, pairwise(classes.astype(int)):
+        #     min_mu[c1] = np.argmin()
+        for i,l in enumerate(yhat.astype(int)):
+            fisher[i] = np.abs(l - mu[min_mu[y[i]]])/np.sqrt(v[y[i]]+v[min_mu[y[i]]])
+
+    # pdb.set_trace()
+    return fisher
