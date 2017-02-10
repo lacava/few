@@ -10,7 +10,9 @@ from sklearn.metrics import explained_variance_score, mean_absolute_error, mean_
 import pdb
 from sklearn.metrics import silhouette_samples, silhouette_score, accuracy_score
 import itertools as it
-
+import sys
+sys.path.insert(0,'/media/bill/data/Dropbox/PostDoc/code/scikit-rebate/')
+from skrebate import ReliefF
 # evaluation functions. these can be sped up using a GPU!
 
 eval_dict = {
@@ -62,7 +64,8 @@ f = { # available fitness metrics
 'separation': lambda y,yhat: 1 - separation(yhat,y),
 'fisher': lambda y,yhat: 1 - fisher(yhat,y),
 'accuracy': lambda y,yhat: 1 - accuracy_score(yhat,y),
-'random': lambda y,yhat: np.random.rand()
+'random': lambda y,yhat: np.random.rand(),
+'relief': lambda y,yhat: 1-ReliefF(n_jobs=-1).fit(yhat.reshape(-1,1),y).feature_importances_
 }
 
 f_vec = {# non-aggregated fitness calculations
@@ -76,7 +79,8 @@ f_vec = {# non-aggregated fitness calculations
 'separation': lambda y,yhat: 1 - separation(yhat,y,samples=True),
 'fisher': lambda y,yhat: 1 - fisher(yhat,y,samples=True),
 'accuracy': lambda y,yhat: 1 - np.sum(yhat==y)/y.shape[0],
-'random': lambda y,yhat: np.random.rand(len(y))
+'random': lambda y,yhat: np.random.rand(len(y)),
+'relief': lambda y,yhat: 1-ReliefF(n_jobs=-1,sample_scores=True).fit(yhat.reshape(-1,1),y).feature_importances_
 }
 
 def safe(x):
@@ -147,6 +151,7 @@ def calc_fitness(X,labels,fit_choice,sel):
     labels: correct outputs
     fit_choice: choice of fitness function
     """
+
     if 'lexicase' in sel:
         return list(map(lambda yhat: f_vec[fit_choice](labels,yhat),X))
     else:

@@ -823,7 +823,7 @@ def main():
                         type=positive_integer, help='Tournament size for tournament selection (Default: 2)')
 
     parser.add_argument('-fit', action='store', dest='FIT_CHOICE', default=None, choices = ['mse','mae','r2','vaf',
-                        'mse_rel','mae_rel','r2_rel','vaf_rel','silhouette','inertia','separation','fisher','random'],
+                        'mse_rel','mae_rel','r2_rel','vaf_rel','silhouette','inertia','separation','fisher','random','relief'],
                         type=str, help='Fitness metric (Default: dependent on ml used)')
 
     parser.add_argument('--no_seed', action='store_false', dest='SEED_WITH_ML', default=True,
