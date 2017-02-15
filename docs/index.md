@@ -1,4 +1,4 @@
-[![FEW](few-diagram.jpg)]
+[![FEW](few-diagram.svg)]
 
 Feature Engineering Wrapper
 ===
