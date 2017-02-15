@@ -8,7 +8,7 @@ Publications
 ===
 If you use Few, please reference our publication:
 
-La Cava, W., and Moore, J. *A general feature engineering wrapper for machine learning using epsilon-lexicase survival*. Proceedings of the 20th European Conference on Genetic Programming (EuroGP 2017), Amsterdam, Netherlands.
+La Cava, W., and Moore, J. A general feature engineering wrapper for machine learning using epsilon-lexicase survival. *Proceedings of the 20th European Conference on Genetic Programming (EuroGP 2017)*, Amsterdam, Netherlands.
 
 (A preprint is available [here.](http://williamlacava.com/pubs/evostar_few_lacava.pdf)) 
 
