@@ -1,4 +1,3 @@
 theme: jekyll-theme-minimal
 title: FEW
 description: A general feature engineering wrapper for sklearn estimators
-show_downloads:true
