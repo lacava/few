@@ -11,8 +11,8 @@ import pdb
 from sklearn.metrics import silhouette_samples, silhouette_score, accuracy_score
 import itertools as it
 import sys
-sys.path.insert(0,'/media/bill/data/Dropbox/PostDoc/code/scikit-rebate/')
-from skrebate import ReliefF
+
+# from skrebate import ReliefF
 # evaluation functions. these can be sped up using a GPU!
 
 eval_dict = {
@@ -65,7 +65,7 @@ f = { # available fitness metrics
 'fisher': lambda y,yhat: 1 - fisher(yhat,y),
 'accuracy': lambda y,yhat: 1 - accuracy_score(yhat,y),
 'random': lambda y,yhat: np.random.rand(),
-'relief': lambda y,yhat: 1-ReliefF(n_jobs=-1).fit(yhat.reshape(-1,1),y).feature_importances_
+# 'relief': lambda y,yhat: 1-ReliefF(n_jobs=-1).fit(yhat.reshape(-1,1),y).feature_importances_
 }
 
 f_vec = {# non-aggregated fitness calculations
@@ -80,7 +80,7 @@ f_vec = {# non-aggregated fitness calculations
 'fisher': lambda y,yhat: 1 - fisher(yhat,y,samples=True),
 'accuracy': lambda y,yhat: 1 - np.sum(yhat==y)/y.shape[0],
 'random': lambda y,yhat: np.random.rand(len(y)),
-'relief': lambda y,yhat: 1-ReliefF(n_jobs=-1,sample_scores=True).fit(yhat.reshape(-1,1),y).feature_importances_
+# 'relief': lambda y,yhat: 1-ReliefF(n_jobs=-1,sample_scores=True).fit(yhat.reshape(-1,1),y).feature_importances_
 }
 
 def safe(x):
