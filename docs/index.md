@@ -1,3 +1,5 @@
+[![FEW](few-diagram.jpg)]
+
 Feature Engineering Wrapper
 ===
 **Few** is a feature engineering wrapper that pairs with any ML estimator to generate a readable representation that facilitates learning. It is implemented to pair easily with any [scikit-learn](http://sklearn.org)-base estimator. 
