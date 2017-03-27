@@ -10,7 +10,7 @@
 Few uses genetic programming to generate, search and update engineered features. It incorporates feedback from the ML process to select important features, while also scoring them internally. 
 
 
-##Install
+## Install
 
 You can use pip to install FEW from [PyPi](https://pypi.python.org/pypi/FEW) as: 
 
@@ -18,7 +18,7 @@ You can use pip to install FEW from [PyPi](https://pypi.python.org/pypi/FEW) as:
 
 or you can clone the git repo and add it to your Python path. 
 
-##Usage
+## Usage
 
 In a python script, import FEW:
 
@@ -64,11 +64,11 @@ python -m few.few data_file_name
 
 try ```python -m few.few --help``` to see options.
 
-##Examples
+## Examples
 
 Check out [few_example.py](http://github.com/lacava/few/tree/master/docs/few_example.py) to see how to apply FEW to a regression dataset. 
 
-##Publications
+## Publications
 
 If you use Few, please reference our publications:
 
@@ -77,7 +77,7 @@ La Cava, W., and Moore, J.H. A general feature engineering wrapper for machine l
 
 La Cava, W., and Moore, J.H. Ensemble representation learning: an analysis of fitness and survival for wrapper-based genetic programming methods. *Proceedings of the 2017 Conference on Genetic and Evolutionary Computation (GECCO 2017)*. Berlin, Germany. [arxiv](https://arxiv.org/abs/1703.06934)
 
-##Acknowledgments
+## Acknowledgments
 
 This method is being developed to study the genetic causes of human disease in the [Epistasis Lab at UPenn](http://epistasis.org). Work is partially supported by the [Warren Center for Network and Data Science](http://warrencenter.upenn.edu). Thanks to Randy Olson and [TPOT](http://github.com/rhiever/tpot) for Python guidance. 
 
