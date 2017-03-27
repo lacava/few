@@ -75,7 +75,7 @@ If you use Few, please reference our publications:
 La Cava, W., and Moore, J.H. A general feature engineering wrapper for machine learning using epsilon-lexicase survival. *Proceedings of the 20th European Conference on Genetic Programming (EuroGP 2017)*, Amsterdam, Netherlands.
 [preprint](http://williamlacava.com/pubs/evostar_few_lacava.pdf)
 
-La Cava, W., and Moore, J.H. Ensemble representation learning: an analysis of fitness and survival for wrapper-based genetic programming methods. *Proceedings of the 2017 Conference on Genetic and Evolutionary Computation (GECCO 2017)*. Berlin, Germany. [arxiv](https://arxiv.org/abs/1703.06934)
+La Cava, W., and Moore, J.H. Ensemble representation learning: an analysis of fitness and survival for wrapper-based genetic programming methods. *GECCO '17: Proceedings of the 2017 Genetic and Evolutionary Computation Conference*. Berlin, Germany. [arxiv](https://arxiv.org/abs/1703.06934)
 
 ## Acknowledgments
 
