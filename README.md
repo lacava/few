@@ -7,9 +7,16 @@ Few
 
 **Few** is a **Feature Engineering Wrapper** for sci-kitlearn. Few looks for a set of feature transformations that work best with a specified machine learning algorithm in order to improve model estimation and prediction. In doing so, FEW is able to provide the user with a set of concise, engineered features that describe their data.
 
+Few uses genetic programming to generate, search and update engineered features. It incorporates feedback from the ML process to select important features, while also scoring them internally. 
+
+
 Install
 ===
+You can use pip to install FEW from [PyPi](https://pypi.python.org/pypi/FEW) as: 
+
 ```pip install few```
+
+or you can clone the git repo and add it to your Python path. 
 
 Usage
 ===
@@ -57,7 +64,22 @@ python -m few.few data_file_name
 
 try ```python -m few.few --help``` to see options.
 
-See the documentation (forthcoming) for more information.
+Examples
+===
+Check out [few_example.py](http://github.com/lacava/few/tree/master/docs/few_example.py) to see how to apply FEW to a regression dataset. 
+
+Publications
+===
+If you use Few, please reference our publications:
+
+La Cava, W., and Moore, J.H. A general feature engineering wrapper for machine learning using epsilon-lexicase survival. *Proceedings of the 20th European Conference on Genetic Programming (EuroGP 2017)*, Amsterdam, Netherlands.
+[preprint](http://williamlacava.com/pubs/evostar_few_lacava.pdf)) 
+
+La Cava, W., and Moore, J.H. Ensemble representation learning: an analysis of fitness and survival for wrapper-based genetic programming methods. *Proceedings of the 2017 Conference on Genetic and Evolutionary Computation (GECCO 2017)*. Berlin, Germany. [arxiv](https://arxiv.org/abs/1703.06934)
+
+
+
+
 
 Acknowledgments
 ===
