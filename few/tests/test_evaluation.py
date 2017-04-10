@@ -17,10 +17,11 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 """
 # unit tests for evaluation methods.
 from few import FEW
-from few.evaluation import *
+from few.evaluation import divs
 from few.population import *
 from sklearn.datasets import load_boston
 import numpy as np
+
 def test_out_shapes():
     """test_evaluation.py: program output is correct size """
     # load test data set
@@ -43,7 +44,7 @@ def test_out_shapes():
     few.term_set = term_set
     pop = few.init_pop(n_features)
 
-    pop.X = np.asarray(list(map(lambda I: out(I,boston.data), pop.individuals)))
+    pop.X = np.asarray(list(map(lambda I: few.out(I,boston.data), pop.individuals)))
 
     #pop.X = out(pop.individuals[0],boston.data,boston.target)
     print("pop.X.shape:",pop.X.shape)
@@ -74,25 +75,25 @@ def test_out_is_correct():
     p4.stack =  [node('x',loc=12),node('sin')]
 
     p5.stack = [node('k',value=178.3),node('x',loc=8),node('*'),node('x',loc=7),node('cos'),node('+')]
-
-    y1 = safe(np.log(0.175) - (X[:,5] - X[:,4]))
-    y2 = safe(X[:,7]*X[:,8])
-    y3 = safe(divs(X[:,5]*X[:,7],np.exp(X[:,0])))
-    y4 = safe(np.sin(X[:,12]))
-    y5 = safe(178.3*X[:,8]+np.cos(X[:,7]))
+    few = FEW()
+    y1 = few.safe(np.log(0.175) - (X[:,5] - X[:,4]))
+    y2 = few.safe(X[:,7]*X[:,8])
+    y3 = few.safe(divs(X[:,5]*X[:,7],np.exp(X[:,0])))
+    y4 = few.safe(np.sin(X[:,12]))
+    y5 = few.safe(178.3*X[:,8]+np.cos(X[:,7]))
 
     # y1,y2,y3,y4,y5 = safe(y1),safe(y2),safe(y3),safe(y4),safe(y5)
-
-    assert np.array_equal(y1,out(p1,X))
+    few = FEW()
+    assert np.array_equal(y1,few.out(p1,X))
     print("y1 passed")
-    assert np.array_equal(y2,out(p2,X))
+    assert np.array_equal(y2,few.out(p2,X))
     print("y2 passed")
-    assert np.array_equal(y3, out(p3,X))
+    assert np.array_equal(y3, few.out(p3,X))
     print("y3 passed")
-    # print("y4:",y4,"y4hat:",out(p4,X,Y))
-    assert np.array_equal(y4, out(p4,X))
+    # print("y4:",y4,"y4hat:",few.out(p4,X,Y))
+    assert np.array_equal(y4, few.out(p4,X))
     print("y4 passed")
-    assert np.array_equal(y5, out(p5,X))
+    assert np.array_equal(y5, few.out(p5,X))
 
 def test_calc_fitness_shape():
     """test_evaluation.py: calc_fitness correct shapes """
@@ -114,13 +115,13 @@ def test_calc_fitness_shape():
     few.term_set = term_set
     pop = few.init_pop(n_features)
 
-    pop.X = np.asarray(list(map(lambda I: out(I,boston.data), pop.individuals)))
+    pop.X = np.asarray(list(map(lambda I: few.out(I,boston.data), pop.individuals)))
 
-    fitnesses = calc_fitness(pop.X,boston.target,'mse','tournament')
+    fitnesses = few.calc_fitness(pop.X,boston.target,'mse','tournament')
     assert len(fitnesses) == len(pop.individuals)
 
     # test vectorized fitnesses
-    vec_fitnesses = calc_fitness(pop.X,boston.target,'mse','lexicase')
+    vec_fitnesses = few.calc_fitness(pop.X,boston.target,'mse','lexicase')
     fitmat = np.asarray(vec_fitnesses)
     print("fitmat.shape:",fitmat.shape)
     assert fitmat.shape == (len(pop.individuals),boston.target.shape[0])
@@ -131,9 +132,9 @@ def test_inertia():
     # perfect inertia
     x = np.hstack((np.zeros(50),np.ones(50)))
     y = np.hstack((np.zeros(50),np.ones(50)))
-
-    mean_inertia = inertia(x,y)
-    sample_inertia = inertia(x,y,samples=True)
+    few = FEW()
+    mean_inertia = few.inertia(x,y)
+    sample_inertia = few.inertia(x,y,samples=True)
     assert(mean_inertia==0)
     assert(np.mean(sample_inertia)==mean_inertia)
 
@@ -141,8 +142,8 @@ def test_inertia():
     x = np.hstack((np.ones(25),np.zeros(25),np.ones(25),np.zeros(25)))
     y = np.hstack((np.zeros(50),np.ones(50)))
 
-    mean_inertia = inertia(x,y)
-    sample_inertia = inertia(x,y,samples=True)
+    mean_inertia = few.inertia(x,y)
+    sample_inertia = few.inertia(x,y,samples=True)
     print('mean_inertia:',mean_inertia)
     print('sample_inertia',sample_inertia)
     assert(mean_inertia==0.25)
@@ -153,9 +154,9 @@ def test_separation():
     # perfect separation
     x = np.hstack((np.zeros(50),np.ones(50)))
     y = np.hstack((np.zeros(50),np.ones(50)))
-
-    mean_separation = separation(x,y)
-    sample_separation = separation(x,y,samples=True)
+    few = FEW()
+    mean_separation = few.separation(x,y)
+    sample_separation = few.separation(x,y,samples=True)
     print('mean_separation:',mean_separation)
     print('sample_separation',sample_separation)
     assert(mean_separation==1)
@@ -165,8 +166,8 @@ def test_separation():
     x = np.hstack((np.ones(50),np.zeros(50)))
     y = np.hstack((np.zeros(50),np.ones(50)))
 
-    mean_separation = separation(x,y)
-    sample_separation = separation(x,y,samples=True)
+    mean_separation = few.separation(x,y)
+    sample_separation = few.separation(x,y,samples=True)
     print('mean_separation:',mean_separation)
     print('sample_separation',sample_separation)
     assert(mean_separation==1)
@@ -176,8 +177,8 @@ def test_separation():
     x = np.hstack((np.ones(25),np.zeros(25),np.ones(25),np.zeros(25)))
     y = np.hstack((np.zeros(50),np.ones(50)))
 
-    mean_separation = separation(x,y)
-    sample_separation = separation(x,y,samples=True)
+    mean_separation = few.separation(x,y)
+    sample_separation = few.separation(x,y,samples=True)
     print('mean_separation:',mean_separation)
     print('sample_separation',sample_separation)
     assert(mean_separation==0.25)

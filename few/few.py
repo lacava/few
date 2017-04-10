@@ -8,10 +8,10 @@ license: GNU/GPLv3
 
 import argparse
 from ._version import __version__
-from .evaluation import out, calc_fitness
+from .evaluation import EvaluationMixin
 from .population import *
-from .variation import cross, mutate
-from .selection import *
+from .variation import VariationMixin
+from .selection import SelectionMixin
 
 from sklearn.base import BaseEstimator
 from sklearn.linear_model import LassoLarsCV, LogisticRegression, SGDClassifier
@@ -38,7 +38,7 @@ import uuid
 
 
 
-class FEW(BaseEstimator):
+class FEW(SelectionMixin,VariationMixin,EvaluationMixin,BaseEstimator):
     """FEW uses GP to find a set of transformations from the original feature space
     that produces the best performance for a given machine learner.
     """
@@ -251,13 +251,13 @@ class FEW(BaseEstimator):
 
         # calculate fitness of individuals
         # fitnesses = list(map(lambda I: fitness(I,y_t,self.ml),pop.X))
-        fitnesses = calc_fitness(pop.X,y_t,self.fit_choice,self.sel)
+        fitnesses = self.calc_fitness(pop.X,y_t,self.fit_choice,self.sel)
 
         # max_fit = self.max_fit
         # while len([np.mean(f) for f in fitnesses if np.mean(f) < max_fit and np.mean(f)>=0])<self.population_size and max_count < 100:
         #     pop = self.init_pop()
         #     pop.X = self.transform(x_t,pop.individuals,y_t)
-        #     fitnesses = calc_fitness(pop.X,y_t,self.fit_choice,self.sel)
+        #     fitnesses = self.calc_fitness(pop.X,y_t,self.fit_choice,self.sel)
         #
         #     max_count+= 1
         # print("fitnesses:",fitnesses)
@@ -372,7 +372,7 @@ class FEW(BaseEstimator):
 
                 if np.random.rand() < self.crossover_rate and child2 != None:
                 # crossover
-                    cross(child1.stack, child2.stack, self.max_depth)
+                    self.cross(child1.stack, child2.stack, self.max_depth)
                     # update ids
                     child1.parentid = [child1.id,child2.id]
                     child1.id = uuid.uuid4()
@@ -383,7 +383,7 @@ class FEW(BaseEstimator):
                     child2.fitness = -1
                 elif child2 == None:
                 # single mutation
-                    mutate(child1.stack,self.func_set,self.term_set)
+                    self.mutate(child1.stack,self.func_set,self.term_set)
                     # update ids
                     child1.parentid = [child1.id]
                     child1.id = uuid.uuid4()
@@ -391,8 +391,8 @@ class FEW(BaseEstimator):
                     child1.fitness = -1
                 else:
                 #double mutation
-                    mutate(child1.stack,self.func_set,self.term_set)
-                    mutate(child2.stack,self.func_set,self.term_set)
+                    self.mutate(child1.stack,self.func_set,self.term_set)
+                    self.mutate(child2.stack,self.func_set,self.term_set)
                     # update ids
                     child1.parentid = [child1.id]
                     child1.id = uuid.uuid4()
@@ -415,7 +415,7 @@ class FEW(BaseEstimator):
             # X_offspring = np.asarray(Parallel(n_jobs=-1)(delayed(out)(O,x_t,y_t,self.otype) for O in offspring), order = 'F')
 
             if self.verbosity > 2: print("fitness...")
-            F_offspring = calc_fitness(X_offspring,y_t,self.fit_choice,self.sel)
+            F_offspring = self.calc_fitness(X_offspring,y_t,self.fit_choice,self.sel)
             # F_offspring = parallel(delayed(f[self.fit_choice])(y_t,yhat) for yhat in X_offspring)
             # print("fitnesses:",fitnesses)
             # Assign fitnesses to inidividuals in population
@@ -434,13 +434,13 @@ class FEW(BaseEstimator):
             # Survival the next generation individuals
             if self.verbosity > 2: print("survival..")
             if self.sel == 'tournament':
-                survivors, survivor_index = tournament(pop.individuals + offspring, self.tourn_size, num_selections = len(pop.individuals))
+                survivors, survivor_index = self.tournament(pop.individuals + offspring, self.tourn_size, num_selections = len(pop.individuals))
             elif self.sel == 'lexicase':
-                survivors, survivor_index = lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True)
+                survivors, survivor_index = self.lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True)
             elif self.sel == 'epsilon_lexicase':
-                survivors, survivor_index = epsilon_lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True)
+                survivors, survivor_index = self.epsilon_lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True)
             elif self.sel == 'deterministic_crowding':
-                survivors, survivor_index = deterministic_crowding(pop.individuals,offspring,pop.X,X_offspring)
+                survivors, survivor_index = self.deterministic_crowding(pop.individuals,offspring,pop.X,X_offspring)
             elif self.sel == 'random':
                 # pdb.set_trace()
                 survivor_index = np.random.permutation(np.arange(2*len(pop.individuals)))[:len(pop.individuals)]
@@ -483,11 +483,9 @@ class FEW(BaseEstimator):
     def transform(self,x,inds=None,labels = None):
         """return a transformation of x using population outputs"""
         if inds:
-            return np.asarray([out(I,x,labels,self.otype) for I in inds]).transpose()
-            # ,dtype={'b':bool,'f':float}[self.otype]
-            # return np.asarray(list(map(lambda I: out(I,x,labels), inds)),order='F')
+            return np.asarray([self.out(I,x,labels,self.otype) for I in inds]).transpose()
         else:
-            return np.asarray(list(map(lambda I: out(I,x,labels,self.otype), self._best_inds))).transpose()
+            return np.asarray(list(map(lambda I: self.out(I,x,labels,self.otype), self._best_inds))).transpose()
 
     def impute_data(self,x):
         """Imputes data set containing Nan values"""
@@ -511,8 +509,7 @@ class FEW(BaseEstimator):
             testing_features = self.impute_data(testing_features)
 
         if self._best_inds:
-
-            X_transform = self.transform(testing_features)#(np.asarray(list(map(lambda I: out(I,testing_features,otype=self.otype), self._best_inds))))
+            X_transform = self.transform(testing_features)
             try:
                 return self._best_estimator.predict(self.transform(testing_features))
             except ValueError as detail:
