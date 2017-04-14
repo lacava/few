@@ -129,9 +129,6 @@ class EvaluationMixin(object):
         x[np.isnan(x)] = 1
         return x
 
-
-
-
     def evaluate(self,n, features, stack_float, stack_bool,labels=None):
         """evaluate node in program"""
         np.seterr(all='ignore')

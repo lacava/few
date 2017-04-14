@@ -38,7 +38,7 @@ import uuid
 
 
 
-class FEW(SelectionMixin,VariationMixin,EvaluationMixin,BaseEstimator):
+class FEW(SelectionMixin, VariationMixin, EvaluationMixin, BaseEstimator):
     """FEW uses GP to find a set of transformations from the original feature space
     that produces the best performance for a given machine learner.
     """
