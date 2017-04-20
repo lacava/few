@@ -324,7 +324,7 @@ class FEW(BaseEstimator):
                     # tmp = self.ml.score(self.transform(x_v,pop.individuals),y_v)
             except Exception as detail:
                 if self.verbosity > 1: print(detail)
-                # tmp_score = 0
+                tmp_score = 0
 
             if self.verbosity > 1: print("current ml validation score:",tmp)
 
