@@ -295,6 +295,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
             if self.verbosity > 1: print("best fitness pop: %0.2f" % np.min([x.fitness for x in pop.individuals]))
             if self.verbosity > 1 and self.track_diversity: print("feature diversity: %0.2f" % self.diversity[-1])
             if self.verbosity > 1: print("ml fitting...")
+            # fit ml model
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 try:
@@ -326,9 +327,8 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
                     # tmp = self.ml.score(self.transform(x_v,pop.individuals),y_v)
             except Exception as detail:
                 if self.verbosity > 1: print(detail)
-                # tmp_score = 0
 
-            if self.verbosity > 1: print("current ml validation score:",tmp)
+            if self.verbosity > 1: print("current ml validation score:",tmp_score)
 
 
             if self.valid(pop.individuals) and tmp_score > self._best_score:

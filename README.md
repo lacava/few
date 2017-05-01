@@ -20,43 +20,22 @@ or you can clone the git repo and add it to your Python path.
 
 ## Usage
 
-In a python script, import FEW:
+Few uses the same nomenclature as [sklearn](http://scikit-learn.org/) supervised learning modules. Here is a simple example script:
 
 ```python
-from few.few import FEW
-```
-
-Few uses the same nomenclature as [sklearn](http://scikit-learn.org/) supervised learning modules. You can initialize a few learner in python as:
-
-```python
-learner = FEW()
-```
-
-or specify the generations, population size and machine learning algorithm as:
-
-```python
-learner = FEW(generations = 100, population_size = 25, ml = LassoLarsCV())
-```
-
-Given a set of data with variables X and target Y, optimize the set of feature transformations using the ```fit()``` method:
-
-```python
-learner.fit(X,Y)
-```
-
-You have now learned a set of feature tranformations for your data, as well as a predictor that uses the chosen machine learning algorithm with these feaures. Predict your model's response on a new set of variables as
-
-```python
+# import few
+from few import FEW
+# initialize
+learner = FEW(generations=100, population_size=25, ml = LassoLarsCV())
+# fit model
+learner.fit(X,y)
+# generate prediction
 y_pred = learner.predict(X_unseen)
+# get feature transformation
+Phi = learner.transform(X_unseen)
 ```
 
-You can use the ```transform()``` method to just perform a feature tranformation using the learned features:
-
-```python
-X_tranformed = learner.transform(X)
-``` 
-
-Call Few from the terminal as
+You can also call Few from the terminal as
 
 ```bash
 python -m few.few data_file_name 
