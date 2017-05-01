@@ -9,10 +9,76 @@ import numpy as np
 from .population import make_program
 from itertools import accumulate
 import pdb
-
+import copy
+import itertools as it
+import uuid
+from .population import Ind
 # from few.tests.test_population import is_valid_program
 class VariationMixin(object):
     """ Defines crossover and mutation operator methods."""
+    def variation(self,parents):
+        """performs variation operators on parents."""
+        # downselect to features that are important
+        if type(self.ml).__name__ != 'SVC' and type(self.ml).__name__ != 'SVR': # this is needed because svm has a bug that throws valueerror on attribute check
+            if hasattr(self.ml,'coef_'):
+                # for l1 regularization, filter individuals with 0 coefficients
+                offspring = copy.deepcopy(list(x for i,x in zip(self.ml.coef_, self.valid(parents)) if  (i != 0).any()))
+            elif hasattr(self.ml,'feature_importances_'):
+                # for tree methods, filter our individuals with 0 feature importance
+                offspring = copy.deepcopy(list(x for i,x in zip(self.ml.feature_importances_, self.valid(parents)) if  i != 0))
+            else:
+                offspring = copy.deepcopy(self.valid(parents))
+        else:
+            offspring = copy.deepcopy(self.valid(parents))
+
+        if self.elitism: # keep a copy of the elite individual
+            elite_index = np.argmin([x.fitness for x in parents])
+            elite = copy.deepcopy(parents[elite_index])
+
+        # Apply crossover and mutation on the offspring
+        if self.verbosity > 2: print("variation...")
+        for child1, child2 in it.zip_longest(offspring[::2], offspring[1::2],fillvalue=None):
+
+            if np.random.rand() < self.crossover_rate and child2 != None:
+            # crossover
+                self.cross(child1.stack, child2.stack, self.max_depth)
+                # update ids
+                child1.parentid = [child1.id,child2.id]
+                child1.id = uuid.uuid4()
+                child2.parentid = [child1.id,child2.id]
+                child2.id = uuid.uuid4()
+                # set default fitness
+                child1.fitness = -1
+                child2.fitness = -1
+            elif child2 == None:
+            # single mutation
+                self.mutate(child1.stack,self.func_set,self.term_set)
+                # update ids
+                child1.parentid = [child1.id]
+                child1.id = uuid.uuid4()
+                # set default fitness
+                child1.fitness = -1
+            else:
+            #double mutation
+                self.mutate(child1.stack,self.func_set,self.term_set)
+                self.mutate(child2.stack,self.func_set,self.term_set)
+                # update ids
+                child1.parentid = [child1.id]
+                child1.id = uuid.uuid4()
+                child2.parentid = [child2.id]
+                child2.id = uuid.uuid4()
+                # set default fitness
+                child1.fitness = -1
+                child2.fitness = -1
+
+        while len(offspring) < self.population_size:
+            #make new offspring to replace the invalid ones
+            offspring.append(Ind())
+            make_program(offspring[-1].stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1),self.otype)
+            offspring[-1].stack = list(reversed(offspring[-1].stack))
+
+        return offspring,elite,elite_index
+
     def cross(self,p_i,p_j, max_depth = 2):
         """subtree-like swap crossover between programs p_i and p_j."""
         # only choose crossover points for out_types available in both programs

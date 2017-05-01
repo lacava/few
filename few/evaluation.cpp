@@ -16,7 +16,7 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 */
 #include <iostream>
 #include "Eigen/Dense"
-
+#include <Python.h>
 using namespace Eigen;
 using namespace std;
 
@@ -31,12 +31,6 @@ typedef ArrayXd Vec;
 void evaluate(node n, ExtMat& features, vector<Vec> stack_float, vector<Vec> stack_bool)
 {
   //evalute a program node on a given set of data.
-
-}
-
-void out(vector<node> program, double* features,  char otype, int n, int d){
-  // evaluate program output.
-
   ExtMat F (features, n, d);
 
   vector<float> stack_float;
@@ -45,4 +39,8 @@ void out(vector<node> program, double* features,  char otype, int n, int d){
     // evaluate program nodes on stack
     evaluate(n,F,stack_float,stack_bool);
   }
+}
+
+void out(vector<node> program, ExtMat& features, char otype){
+  // evaluate program output.
 }

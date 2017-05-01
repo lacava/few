@@ -12,6 +12,8 @@ from sklearn.metrics import silhouette_samples, silhouette_score, accuracy_score
 import itertools as it
 import sys
 from sklearn.metrics.pairwise import pairwise_distances
+from profilehooks import profile
+from sklearn.externals.joblib import Parallel, delayed
 
 # safe division
 def divs(x,y):
@@ -179,8 +181,10 @@ class EvaluationMixin(object):
 
         if 'lexicase' in sel:
             return list(map(lambda yhat: self.f_vec[fit_choice](labels,yhat),X))
+            # return list(Parallel(n_jobs=-1)(delayed(self.f_vec[fit_choice])(labels,yhat) for yhat in X))
         else:
             return list(map(lambda yhat: self.f[fit_choice](labels,yhat),X))
+            # return list(Parallel(n_jobs=-1)(delayed(self.f[fit_choice])(labels,yhat) for yhat in X))
 
     def inertia(self,X,y,samples=False):
         """ return the within-class squared distance from the centroid"""

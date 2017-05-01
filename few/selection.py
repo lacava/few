@@ -10,11 +10,37 @@ import copy
 import pdb
 from sklearn.metrics import r2_score
 from .population import stacks_2_eqns
+from profilehooks import profile
 
-class SelectionMixin(object):
+class SurvivalMixin(object):
     """
-    class for implementing selection methods.
+    class for implementing survival methods.
     """
+    def survival(self,parents,offspring,elite=None,elite_index=None):
+        """routes to the survival method, returns survivors"""
+        if self.sel == 'tournament':
+            survivors, survivor_index = self.tournament(parents + offspring, self.tourn_size, num_selections = len(parents))
+        elif self.sel == 'lexicase':
+            survivors, survivor_index = self.lexicase(parents + offspring, num_selections = len(parents), survival = True)
+        elif self.sel == 'epsilon_lexicase':
+            survivors, survivor_index = self.epsilon_lexicase(parents + offspring, num_selections = len(parents), survival = True)
+        elif self.sel == 'deterministic_crowding':
+            survivors, survivor_index = self.deterministic_crowding(parents,offspring,pop.X,X_offspring)
+        elif self.sel == 'random':
+            # pdb.set_trace()
+            survivor_index = np.random.permutation(np.arange(2*len(parents)))[:len(parents)]
+            survivors = parents + offspring
+            survivors = [survivors[i] for i in survivor_index]
+        # elitism
+        if self.elitism:
+            if min([x.fitness for x in survivors]) > elite.fitness:
+                # if the elite individual did not survive and elitism is on, replace worst individual with elite
+                rep_index = np.argmax([x.fitness for x in survivors])
+                survivors[rep_index] = elite
+                survivor_index[rep_index] = elite_index
+        # return survivors
+        return survivors,survivor_index
+
     def tournament(self,individuals,tourn_size, num_selections=None):
         """conducts tournament selection of size tourn_size"""
         winners = []
@@ -78,7 +104,7 @@ class SelectionMixin(object):
                 individuals = list(filter(lambda x: x.stack != candidates[choice].stack, individuals))
 
         return winners, locs
-
+    
     def epsilon_lexicase(self,individuals, num_selections=None, survival = False):
         """conducts lexicase selection for de-aggregated fitness vectors"""
         if num_selections is None:
