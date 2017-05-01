@@ -12,7 +12,7 @@ from sklearn.metrics import silhouette_samples, silhouette_score, accuracy_score
 import itertools as it
 import sys
 from sklearn.metrics.pairwise import pairwise_distances
-from profilehooks import profile
+# from profilehooks import profile
 from sklearn.externals.joblib import Parallel, delayed
 
 # safe division

@@ -10,7 +10,7 @@ import copy
 import pdb
 from sklearn.metrics import r2_score
 from .population import stacks_2_eqns
-from profilehooks import profile
+# from profilehooks import profile
 
 class SurvivalMixin(object):
     """
@@ -104,7 +104,7 @@ class SurvivalMixin(object):
                 individuals = list(filter(lambda x: x.stack != candidates[choice].stack, individuals))
 
         return winners, locs
-    
+
     def epsilon_lexicase(self,individuals, num_selections=None, survival = False):
         """conducts lexicase selection for de-aggregated fitness vectors"""
         if num_selections is None:
