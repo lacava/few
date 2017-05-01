@@ -16,7 +16,7 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 
 """
 from few.population import *
-from few.selection import *
+# from few.selection import *
 from few import FEW
 import numpy as np
 # unit tests for selection methods.
@@ -26,17 +26,17 @@ def test_tournament_shapes():
     few = FEW(seed_with_ml=False,population_size=257)
     few.term_set = [node('x',loc=0)]
     pop = few.init_pop()
-    offspring,locs = tournament(pop.individuals,2)
+    offspring,locs = few.tournament(pop.individuals,2)
     assert len(offspring) == 257
 
-    offspring,locs = tournament(pop.individuals,5)
+    offspring,locs = few.tournament(pop.individuals,5)
     assert len(offspring) == 257
 
     # smaller popsize than tournament size
     few = FEW(seed_with_ml=False,population_size=2)
     few.term_set = [node('x',loc=0)]
     pop = few.init_pop()
-    offspring,locs = tournament(pop.individuals,5)
+    offspring,locs = few.tournament(pop.individuals,5)
     assert len(offspring) == 2;
 
 def test_lexicase_shapes():
@@ -44,14 +44,14 @@ def test_lexicase_shapes():
     few = FEW(seed_with_ml=False,population_size=257)
     few.term_set = [node('x',loc=0)]
     pop = few.init_pop()
-    offspring,locs = lexicase(pop.individuals)
+    offspring,locs = few.lexicase(pop.individuals)
     assert len(offspring) == 257
 
     # smaller popsize than tournament size
     few = FEW(seed_with_ml=False,population_size=2)
     few.term_set = [node('x',loc=0)]
     pop = few.init_pop()
-    offspring,locs = lexicase(pop.individuals)
+    offspring,locs = few.lexicase(pop.individuals)
     assert len(offspring) == 2;
 
 def test_epsilon_lexicase_shapes():
@@ -60,14 +60,14 @@ def test_epsilon_lexicase_shapes():
     few = FEW(seed_with_ml=False,population_size=257)
     few.term_set = [node('x',loc=0)]
     pop = few.init_pop()
-    offspring,locs = lexicase(pop.individuals, epsilon=True)
+    offspring,locs = few.lexicase(pop.individuals, epsilon=True)
     assert len(offspring) == 257
 
     # smaller popsize than tournament size
     few = FEW(seed_with_ml=False,population_size=2)
     few.term_set = [node('x',loc=0)]
     pop = few.init_pop()
-    offspring,locs = lexicase(pop.individuals,epsilon=True)
+    offspring,locs = few.lexicase(pop.individuals,epsilon=True)
     assert len(offspring) == 2;
     assert len(locs) == 2;
 
@@ -92,7 +92,7 @@ def test_lexicase_survival_shapes():
     for i in pop.individuals:
         i.fitness_vec = list(np.random.rand(10,1))
 
-    offspring,locs = lexicase(pop.individuals,num_selections=100,survival=True)
+    offspring,locs = few.lexicase(pop.individuals,num_selections=100,survival=True)
     assert len(offspring) == 100
 
     # smaller popsize than tournament size
@@ -101,5 +101,5 @@ def test_lexicase_survival_shapes():
     pop = few.init_pop()
     for i in pop.individuals:
         i.fitness_vec = np.random.rand(10,1)
-    offspring,locs = lexicase(pop.individuals,num_selections=1,survival=True)
+    offspring,locs = few.lexicase(pop.individuals,num_selections=1,survival=True)
     assert len(offspring) == 1;

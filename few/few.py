@@ -8,10 +8,10 @@ license: GNU/GPLv3
 
 import argparse
 from ._version import __version__
-from .evaluation import out, calc_fitness
+from .evaluation import EvaluationMixin
 from .population import *
-from .variation import cross, mutate
-from .selection import *
+from .variation import VariationMixin
+from .selection import SurvivalMixin
 
 from sklearn.base import BaseEstimator
 from sklearn.linear_model import LassoLarsCV, LogisticRegression, SGDClassifier
@@ -31,14 +31,16 @@ import itertools as it
 import pdb
 # from update_checker import update_check
 # from joblib import Parallel, delayed
+#from sklearn.externals.joblib import Parallel, delayed
 from tqdm import tqdm
 import uuid
+#from profilehooks import profile
 # import multiprocessing as mp
 # NUM_THREADS = mp.cpu_count()
 
 
 
-class FEW(BaseEstimator):
+class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
     """FEW uses GP to find a set of transformations from the original feature space
     that produces the best performance for a given machine learner.
     """
@@ -155,7 +157,7 @@ class FEW(BaseEstimator):
         self.term_set = []
         # diversity
         self.diversity = []
-
+    #@profile
     def fit(self, features, labels):
         """Fit model to data"""
 
@@ -251,13 +253,13 @@ class FEW(BaseEstimator):
 
         # calculate fitness of individuals
         # fitnesses = list(map(lambda I: fitness(I,y_t,self.ml),pop.X))
-        fitnesses = calc_fitness(pop.X,y_t,self.fit_choice,self.sel)
+        fitnesses = self.calc_fitness(pop.X,y_t,self.fit_choice,self.sel)
 
         # max_fit = self.max_fit
         # while len([np.mean(f) for f in fitnesses if np.mean(f) < max_fit and np.mean(f)>=0])<self.population_size and max_count < 100:
         #     pop = self.init_pop()
         #     pop.X = self.transform(x_t,pop.individuals,y_t)
-        #     fitnesses = calc_fitness(pop.X,y_t,self.fit_choice,self.sel)
+        #     fitnesses = self.calc_fitness(pop.X,y_t,self.fit_choice,self.sel)
         #
         #     max_count+= 1
         # print("fitnesses:",fitnesses)
@@ -334,88 +336,19 @@ class FEW(BaseEstimator):
                 self._best_score = tmp_score
                 self._best_inds = copy.deepcopy(self.valid(pop.individuals))
                 if self.verbosity > 1: print("updated best internal validation score:",self._best_score)
-            # if self._best_inds:
-            #     if hasattr(self._best_estimator,'coef_'):
-            #         if (len(self._best_inds)!=self._best_estimator.coef_.shape[1]):
-            #             print('unequal features / model size')
-            #             pdb.set_trace()
-            #     elif hasattr(self._best_estimator,'feature_importances_'):
-            #         if (len(self.valid(self._best_inds))!=self._best_estimator.feature_importances_.shape[0]):
-            #             print('unequal features / model size')
-            #             pdb.set_trace()
 
-            offspring = []
 
-            if self.verbosity > 2: print("copying new pop...")
-            # clone individuals for offspring creation
-            # downselect to features that are important
-
-            if type(self.ml).__name__ != 'SVC' and type(self.ml).__name__ != 'SVR': # this is needed because svm has a bug that throws valueerror on attribute check
-                if hasattr(self.ml,'coef_'):
-                    # for l1 regularization, filter individuals with 0 coefficients
-                    offspring = copy.deepcopy(list(x for i,x in zip(self.ml.coef_, self.valid(pop.individuals)) if  (i != 0).any()))
-                elif hasattr(self.ml,'feature_importances_'):
-                    # for tree methods, filter our individuals with 0 feature importance
-                    offspring = copy.deepcopy(list(x for i,x in zip(self.ml.feature_importances_, self.valid(pop.individuals)) if  i != 0))
-                else:
-                    offspring = copy.deepcopy(self.valid(pop.individuals))
-            else:
-                offspring = copy.deepcopy(self.valid(pop.individuals))
-
-            if self.elitism: # keep a copy of the elite individual
-                elite_index = np.argmin([x.fitness for x in pop.individuals])
-                elite = copy.deepcopy(pop.individuals[elite_index])
-
-            # Apply crossover and mutation on the offspring
+            # Variation
             if self.verbosity > 2: print("variation...")
-            for child1, child2 in it.zip_longest(offspring[::2], offspring[1::2],fillvalue=None):
-
-                if np.random.rand() < self.crossover_rate and child2 != None:
-                # crossover
-                    cross(child1.stack, child2.stack, self.max_depth)
-                    # update ids
-                    child1.parentid = [child1.id,child2.id]
-                    child1.id = uuid.uuid4()
-                    child2.parentid = [child1.id,child2.id]
-                    child2.id = uuid.uuid4()
-                    # set default fitness
-                    child1.fitness = -1
-                    child2.fitness = -1
-                elif child2 == None:
-                # single mutation
-                    mutate(child1.stack,self.func_set,self.term_set)
-                    # update ids
-                    child1.parentid = [child1.id]
-                    child1.id = uuid.uuid4()
-                    # set default fitness
-                    child1.fitness = -1
-                else:
-                #double mutation
-                    mutate(child1.stack,self.func_set,self.term_set)
-                    mutate(child2.stack,self.func_set,self.term_set)
-                    # update ids
-                    child1.parentid = [child1.id]
-                    child1.id = uuid.uuid4()
-                    child2.parentid = [child2.id]
-                    child2.id = uuid.uuid4()
-                    # set default fitness
-                    child1.fitness = -1
-                    child2.fitness = -1
-
-            while len(offspring) < self.population_size:
-                #make new offspring to replace the invalid ones
-                offspring.append(Ind())
-                make_program(offspring[-1].stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1),self.otype)
-                offspring[-1].stack = list(reversed(offspring[-1].stack))
+            offspring,elite,elite_index = self.variation(pop.individuals)
 
             # evaluate offspring
             if self.verbosity > 2: print("output...")
             X_offspring = self.transform(x_t,offspring).transpose()
             #parallel:
             # X_offspring = np.asarray(Parallel(n_jobs=-1)(delayed(out)(O,x_t,y_t,self.otype) for O in offspring), order = 'F')
-
             if self.verbosity > 2: print("fitness...")
-            F_offspring = calc_fitness(X_offspring,y_t,self.fit_choice,self.sel)
+            F_offspring = self.calc_fitness(X_offspring,y_t,self.fit_choice,self.sel)
             # F_offspring = parallel(delayed(f[self.fit_choice])(y_t,yhat) for yhat in X_offspring)
             # print("fitnesses:",fitnesses)
             # Assign fitnesses to inidividuals in population
@@ -427,47 +360,14 @@ class FEW(BaseEstimator):
                     ind.fitness_vec = fit
                     ind.fitness = np.mean(ind.fitness_vec)
                 else:
-                    # print("fit.shape:",fit.shape)
                     ind.fitness = np.nanmin([fit,self.max_fit])
-            # if self.verbosity > 0: print("median fitness offspring: %0.2f" % np.median([x.fitness for x in offspring]))
 
-            # Survival the next generation individuals
+            # Survival
             if self.verbosity > 2: print("survival..")
-            if self.sel == 'tournament':
-                survivors, survivor_index = tournament(pop.individuals + offspring, self.tourn_size, num_selections = len(pop.individuals))
-            elif self.sel == 'lexicase':
-                survivors, survivor_index = lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True)
-            elif self.sel == 'epsilon_lexicase':
-                survivors, survivor_index = epsilon_lexicase(pop.individuals + offspring, num_selections = len(pop.individuals), survival = True)
-            elif self.sel == 'deterministic_crowding':
-                survivors, survivor_index = deterministic_crowding(pop.individuals,offspring,pop.X,X_offspring)
-            elif self.sel == 'random':
-                # pdb.set_trace()
-                survivor_index = np.random.permutation(np.arange(2*len(pop.individuals)))[:len(pop.individuals)]
-                survivors = pop.individuals + offspring
-                survivors = [survivors[i] for i in survivor_index]
-
-            if self.elitism and min([x.fitness for x in survivors]) > elite.fitness:
-                # if the elite individual did not survive and elitism is on, replace worst individual with elite
-                rep_index = np.argmax([x.fitness for x in survivors])
-                survivors[rep_index] = elite
-                survivor_index[rep_index] = elite_index
-            # print("current population:",stacks_2_eqns(pop.individuals))
-            # print("current pop.X:",pop.X[:,:4])
-            # print("offspring:",stacks_2_eqns(offspring))
-            # print("current X_offspring:",X_offspring[:,:4])
-            # print("survivor index:",survivor_index)
-
+            survivors,survivor_index = self.survival(pop.individuals,offspring,elite,elite_index)
             pop.individuals[:] = survivors
             pop.X = np.vstack((pop.X, X_offspring))[survivor_index,:]
 
-            # if pop.X.shape[0] != self.population_size:
-            #     pdb.set_trace()
-            # print("new pop.X:",pop.X[:,:4])
-            # pdb.set_trace()
-            # pop.X = pop.X[survivor_index,:]
-            #[[s for s in survivor_index if s<len(pop.individuals)],:],
-                                    #  X_offspring[[s-len(pop.individuals) for s in survivor_index if s>=len(pop.individuals)],:]))
             if self.verbosity > 2: print("median fitness survivors: %0.2f" % np.median([x.fitness for x in pop.individuals]))
             if self.verbosity>2: print("best features:",stacks_2_eqns(self._best_inds) if self._best_inds else 'original')
             pbar.set_description('Internal CV: {:1.3f}'.format(self._best_score))
@@ -483,11 +383,12 @@ class FEW(BaseEstimator):
     def transform(self,x,inds=None,labels = None):
         """return a transformation of x using population outputs"""
         if inds:
-            return np.asarray([out(I,x,labels,self.otype) for I in inds]).transpose()
-            # ,dtype={'b':bool,'f':float}[self.otype]
-            # return np.asarray(list(map(lambda I: out(I,x,labels), inds)),order='F')
+            # return np.asarray(Parallel(n_jobs=10)(delayed(self.out)(I,x,labels,self.otype) for I in inds)).transpose()
+            return np.asarray([self.out(I,x,labels,self.otype) for I in inds]).transpose()
         else:
-            return np.asarray(list(map(lambda I: out(I,x,labels,self.otype), self._best_inds))).transpose()
+            # return np.asarray(Parallel(n_jobs=10)(delayed(self.out)(I,x,labels,self.otype) for I in self._best_inds)).transpose()
+            return np.asarray([self.out(I,x,labels,self.otype) for I in self._best_inds]).transpose()
+
 
     def impute_data(self,x):
         """Imputes data set containing Nan values"""
@@ -511,8 +412,7 @@ class FEW(BaseEstimator):
             testing_features = self.impute_data(testing_features)
 
         if self._best_inds:
-
-            X_transform = self.transform(testing_features)#(np.asarray(list(map(lambda I: out(I,testing_features,otype=self.otype), self._best_inds))))
+            X_transform = self.transform(testing_features)
             try:
                 return self._best_estimator.predict(self.transform(testing_features))
             except ValueError as detail:
@@ -630,10 +530,11 @@ class FEW(BaseEstimator):
 
         return pop
 
-    def print_model(self):
+    def print_model(self,sep='\n'):
         """prints model contained in best inds, if ml has a coefficient property.
         otherwise, prints the features generated by FEW."""
         model = ''
+
         if self._best_inds:
             if type(self.ml).__name__ != 'SVC' and type(self.ml).__name__ != 'SVR':
             # this is need because svm has a bug that throws valueerror on attribute check:
@@ -647,20 +548,21 @@ class FEW(BaseEstimator):
                             s = np.argsort(np.abs(self._best_estimator.coef_))[::-1]
                             scoef = self._best_estimator.coef_[s]
                         bi = [self._best_inds[k] for k in s]
-                        model = ' +\n'.join([str(round(c,3))+'*'+stack_2_eqn(f) for i,(f,c) in enumerate(zip(bi,scoef)) if round(scoef[i],3) != 0])
+                        model = (' +' + sep).join([str(round(c,3))+'*'+stack_2_eqn(f) for i,(f,c) in enumerate(zip(bi,scoef)) if round(scoef[i],3) != 0])
                     else:
                         # more than one decision function is fit. print all.
                         for j,coef in enumerate(self._best_estimator.coef_):
                             s = np.argsort(np.abs(coef))[::-1]
                             scoef = coef[s]
                             bi =[self._best_inds[k] for k in s]
-                            model += '\nclass'+str(j)+' :'+' + '.join([str(round(c,3))+'*'+stack_2_eqn(f) for i,(f,c) in enumerate(zip(bi,coef)) if coef[i] != 0])
+                            model += sep + 'class'+str(j)+' :'+' + '.join([str(round(c,3))+'*'+stack_2_eqn(f) for i,(f,c) in enumerate(zip(bi,coef)) if coef[i] != 0])
                 elif hasattr(self._best_estimator,'feature_importances_'):
                     s = np.argsort(self._best_estimator.feature_importances_)[::-1]
                     sfi = self._best_estimator.feature_importances_[s]
                     bi = [self._best_inds[k] for k in s]
                     model = 'importance : feature\n'
-                    model += '\n'.join([str(round(c,3))+'\t:\t'+stack_2_eqn(f) for i,(f,c) in enumerate(zip(bi,sfi)) if round(sfi[i],3) != 0])
+
+                    model += sep.join([str(round(c,3))+'\t:\t'+stack_2_eqn(f) for i,(f,c) in enumerate(zip(bi,sfi)) if round(sfi[i],3) != 0])
                 else:
                     return stacks_2_eqns(self._best_inds)
             else:
