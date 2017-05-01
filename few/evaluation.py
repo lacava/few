@@ -109,7 +109,7 @@ class EvaluationMixin(object):
     'random': lambda y,yhat: np.random.rand(),
     # 'relief': lambda y,yhat: 1-ReliefF(n_jobs=-1).fit(yhat.reshape(-1,1),y).feature_importances_
     }
-
+    #
     f_vec = {# non-aggregated fitness calculations
     'mse': lambda y,yhat: (y - yhat) ** 2, #mean_squared_error(y,yhat,multioutput = 'raw_values'),
     'mae': lambda y,yhat: np.abs(y-yhat), #mean_absolute_error(y,yhat,multioutput = 'raw_values'),
@@ -124,6 +124,21 @@ class EvaluationMixin(object):
     'random': lambda y,yhat: np.random.rand(len(y)),
     # 'relief': lambda y,yhat: 1-ReliefF(n_jobs=-1,sample_scores=True).fit(yhat.reshape(-1,1),y).feature_importances_
     }
+
+    # f_vec = {# non-aggregated fitness calculations
+    # 'mse':  (y - yhat) ** 2, #mean_squared_error(y,yhat,multioutput = 'raw_values'),
+    # 'mae':  np.abs(y-yhat), #mean_absolute_error(y,yhat,multioutput = 'raw_values'),
+    # # 'mdae_vec':  median_absolute_error(y,yhat,multioutput = 'raw_values'),
+    # 'r2':   1-r2_score_vec(y,yhat),
+    # 'vaf':  1-explained_variance_score(y,yhat,multioutput = 'raw_values'),
+    # 'silhouette':  1 - silhouette_samples(yhat.reshape(-1,1),y),
+    # 'inertia':  inertia(yhat,y,samples=True),
+    # 'separation':  1 - separation(yhat,y,samples=True),
+    # 'fisher':  1 - fisher(yhat,y,samples=True),
+    # 'accuracy':  1 - np.sum(yhat==y)/y.shape[0],
+    # 'random':  np.random.rand(len(y)),
+    # # 'relief':  1-ReliefF(n_jobs=-1,sample_scores=True).fit(yhat.reshape(-1,1),y).feature_importances_
+    # }
 
     def safe(self,x):
         """removes nans and infs from outputs."""
@@ -180,10 +195,13 @@ class EvaluationMixin(object):
         """
 
         if 'lexicase' in sel:
-            return list(map(lambda yhat: self.f_vec[fit_choice](labels,yhat),X))
+            # return list(map(lambda yhat: self.f_vec[fit_choice](labels,yhat),X))
+            return np.array([self.f_vec[fit_choice](labels,yhat) for yhat in X])
             # return list(Parallel(n_jobs=-1)(delayed(self.f_vec[fit_choice])(labels,yhat) for yhat in X))
         else:
-            return list(map(lambda yhat: self.f[fit_choice](labels,yhat),X))
+            # return list(map(lambda yhat: self.f[fit_choice](labels,yhat),X))
+            return np.array([self.f[fit_choice](labels,yhat) for yhat in X]).transpose()
+
             # return list(Parallel(n_jobs=-1)(delayed(self.f[fit_choice])(labels,yhat) for yhat in X))
 
     def inertia(self,X,y,samples=False):

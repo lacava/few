@@ -16,21 +16,22 @@ class SurvivalMixin(object):
     """
     class for implementing survival methods.
     """
-    def survival(self,parents,offspring,elite=None,elite_index=None):
+    def survival(self,parents,offspring,elite=None,elite_index=None,F=None,F_offspring=None):
         """routes to the survival method, returns survivors"""
         if self.sel == 'tournament':
             survivors, survivor_index = self.tournament(parents + offspring, self.tourn_size, num_selections = len(parents))
         elif self.sel == 'lexicase':
             survivors, survivor_index = self.lexicase(parents + offspring, num_selections = len(parents), survival = True)
         elif self.sel == 'epsilon_lexicase':
-            survivors, survivor_index = self.epsilon_lexicase(parents + offspring, num_selections = len(parents), survival = True)
+            # survivors, survivor_index = self.epsilon_lexicase(parents + offspring, num_selections = len(parents), survival = True)
+            survivor_index = self.epsilon_lexicase(np.vstack((F,F_offspring)), num_selections = F.shape[0], survival = True)
+            survivors = [(parents+ offspring)[s] for s in survivor_index]
         elif self.sel == 'deterministic_crowding':
             survivors, survivor_index = self.deterministic_crowding(parents,offspring,pop.X,X_offspring)
         elif self.sel == 'random':
             # pdb.set_trace()
             survivor_index = np.random.permutation(np.arange(2*len(parents)))[:len(parents)]
-            survivors = parents + offspring
-            survivors = [survivors[i] for i in survivor_index]
+            survivors = [(parents + offspring)[s] for s in survivor_index]
         # elitism
         if self.elitism:
             if min([x.fitness for x in survivors]) > elite.fitness:
@@ -39,6 +40,7 @@ class SurvivalMixin(object):
                 survivors[rep_index] = elite
                 survivor_index[rep_index] = elite_index
         # return survivors
+
         return survivors,survivor_index
 
     def tournament(self,individuals,tourn_size, num_selections=None):
@@ -105,57 +107,99 @@ class SurvivalMixin(object):
 
         return winners, locs
 
-    def epsilon_lexicase(self,individuals, num_selections=None, survival = False):
+    # def epsilon_lexicase(self,individuals, num_selections=None, survival = False):
+    #     """conducts lexicase selection for de-aggregated fitness vectors"""
+    #     if num_selections is None:
+    #         num_selections = len(individuals)
+    #     winners = []
+    #     locs = []
+    #     individual_locs = range(len(individuals))
+    #     # calculate epsilon thresholds based on median absolute deviation (MAD)
+    #     mad_for_case = np.empty([len(individuals[0].fitness_vec),1])
+    #     # global_best_val_for_case = np.empty([len(individuals[0].fitness_vec),1])
+    #     for i in np.arange(len(individuals[0].fitness_vec)):
+    #         mad_for_case[i] = self.mad(np.asarray(list(map(lambda x: x.fitness_vec[i], individuals))))
+    #         # global_best_val_for_case[i] = min(map(lambda x: x.fitness_vec[i], individuals))
+    #     # convert fitness values to pass/fail based on epsilon distance
+    #     # for I in individuals:
+    #     #     fail_condition = np.array(I.fitness_vec > global_best_val_for_case[:,0] + mad_for_case[:,0]) #[f > global_best_val_for_case+mad_for_case for f in I.fitness_vec]
+    #     #     I.fitness_bool = fail_condition.astype(int)
+    #
+    #     for i in np.arange(num_selections):
+    #
+    #         candidates = individuals
+    #         can_locs = individual_locs
+    #         cases = list(np.arange(len(individuals[0].fitness_vec)))
+    #         np.random.shuffle(cases)
+    #         # pdb.set_trace()
+    #         while len(cases) > 0 and len(candidates) > 1:
+    #             # get best fitness for case among candidates
+    #             # print("candidates:",stacks_2_eqns(candidates),"locations:",can_locs)
+    #             # print("fitnesses for case "+str(cases[0])+":",[x.fitness_vec[cases[0]] for x in candidates])
+    #             best_val_for_case = min([x.fitness_vec[cases[0]] for x in candidates])
+    #             # print("best_val_for_case:",best_val_for_case)
+    #             # filter individuals without an elite fitness on this case
+    #             # tmp_c,tmp_l = zip(*((x,l) for x,l in zip(candidates,can_locs) if x.fitness_vec[cases[0]] == best_val_for_case))
+    #             candidates,can_locs = zip(*((x,l) for x,l in zip(candidates,can_locs) if x.fitness_vec[cases[0]] <= best_val_for_case + mad_for_case[cases[0]]))
+    #             cases.pop(0)
+    #
+    #         choice = np.random.randint(len(candidates))
+    #         winners.append(copy.deepcopy(candidates[choice]))
+    #         locs.append(can_locs[choice])
+    #         if survival: # filter out winners from remaining selection pool
+    #             # individuals = list(filter(lambda x: x.stack != candidates[choice].stack, individuals))
+    #             try:
+    #                 individuals, individual_locs = zip(*[(x,l) for x,l in zip(individuals,individual_locs) if x.stack != candidates[choice].stack])
+    #             except ValueError: # there are only clones left
+    #                 break
+    #
+    #     while len(winners) < num_selections:
+    #         winners.append(copy.deepcopy(individuals[0]))
+    #         locs.append(individual_locs[0])
+    #
+    #     return winners, locs
+
+    def epsilon_lexicase(self, F, num_selections=None, survival = False):
         """conducts lexicase selection for de-aggregated fitness vectors"""
         if num_selections is None:
-            num_selections = len(individuals)
+            num_selections = F.shape[0]
         winners = []
         locs = []
-        individual_locs = range(len(individuals))
+        individual_locs = np.arange(F.shape[0])
         # calculate epsilon thresholds based on median absolute deviation (MAD)
-        mad_for_case = np.empty([len(individuals[0].fitness_vec),1])
-        # global_best_val_for_case = np.empty([len(individuals[0].fitness_vec),1])
-        for i in np.arange(len(individuals[0].fitness_vec)):
-            mad_for_case[i] = self.mad(np.asarray(list(map(lambda x: x.fitness_vec[i], individuals))))
-            # global_best_val_for_case[i] = min(map(lambda x: x.fitness_vec[i], individuals))
-        # convert fitness values to pass/fail based on epsilon distance
-        # for I in individuals:
-        #     fail_condition = np.array(I.fitness_vec > global_best_val_for_case[:,0] + mad_for_case[:,0]) #[f > global_best_val_for_case+mad_for_case for f in I.fitness_vec]
-        #     I.fitness_bool = fail_condition.astype(int)
-
+        mad_for_case = np.array([self.mad(f) for f in F.transpose()])
         for i in np.arange(num_selections):
 
-            candidates = individuals
             can_locs = individual_locs
-            cases = list(np.arange(len(individuals[0].fitness_vec)))
+            cases = list(np.arange(F.shape[1]))
             np.random.shuffle(cases)
             # pdb.set_trace()
-            while len(cases) > 0 and len(candidates) > 1:
+            while len(cases) > 0 and len(can_locs) > 1:
                 # get best fitness for case among candidates
                 # print("candidates:",stacks_2_eqns(candidates),"locations:",can_locs)
                 # print("fitnesses for case "+str(cases[0])+":",[x.fitness_vec[cases[0]] for x in candidates])
-                best_val_for_case = min([x.fitness_vec[cases[0]] for x in candidates])
+                best_val_for_case = np.min(F[can_locs,cases[0]])
                 # print("best_val_for_case:",best_val_for_case)
                 # filter individuals without an elite fitness on this case
                 # tmp_c,tmp_l = zip(*((x,l) for x,l in zip(candidates,can_locs) if x.fitness_vec[cases[0]] == best_val_for_case))
-                candidates,can_locs = zip(*((x,l) for x,l in zip(candidates,can_locs) if x.fitness_vec[cases[0]] <= best_val_for_case + mad_for_case[cases[0]]))
+                can_locs = [l for l in can_locs if F[l,cases[0]] <= best_val_for_case + mad_for_case[cases[0]]]
                 cases.pop(0)
 
-            choice = np.random.randint(len(candidates))
-            winners.append(copy.deepcopy(candidates[choice]))
+            choice = np.random.randint(len(can_locs))
             locs.append(can_locs[choice])
             if survival: # filter out winners from remaining selection pool
-                # individuals = list(filter(lambda x: x.stack != candidates[choice].stack, individuals))
-                try:
-                    individuals, individual_locs = zip(*[(x,l) for x,l in zip(individuals,individual_locs) if x.stack != candidates[choice].stack])
-                except ValueError: # there are only clones left
-                    break
+                # try:
+                #
+                #     # individuals, individual_locs = zip(*[(x,l) for x,l in zip(individuals,individual_locs) if x.stack != candidates[choice].stack])
+                # except ValueError: # there are only clones left
+                #     break
+                individual_locs = [i for i in individual_locs if i != can_locs[choice]]
 
-        while len(winners) < num_selections:
-            winners.append(copy.deepcopy(individuals[0]))
+        while len(locs) < num_selections:
             locs.append(individual_locs[0])
 
-        return winners, locs
+        return locs
+
 
     def mad(self,x, axis=None):
         """median absolute deviation statistic"""

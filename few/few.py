@@ -253,27 +253,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
 
         # calculate fitness of individuals
         # fitnesses = list(map(lambda I: fitness(I,y_t,self.ml),pop.X))
-        fitnesses = self.calc_fitness(pop.X,y_t,self.fit_choice,self.sel)
-
-        # max_fit = self.max_fit
-        # while len([np.mean(f) for f in fitnesses if np.mean(f) < max_fit and np.mean(f)>=0])<self.population_size and max_count < 100:
-        #     pop = self.init_pop()
-        #     pop.X = self.transform(x_t,pop.individuals,y_t)
-        #     fitnesses = self.calc_fitness(pop.X,y_t,self.fit_choice,self.sel)
-        #
-        #     max_count+= 1
-        # print("fitnesses:",fitnesses)
-        # Assign fitnesses to inidividuals in population
-        for ind, fit in zip(pop.individuals, fitnesses):
-            if isinstance(fit,(list,np.ndarray)): # calc_fitness returned raw fitness values
-                fit[fit < 0] = self.max_fit
-                fit[np.isnan(fit)] = self.max_fit
-                fit[np.isinf(fit)] = self.max_fit
-                ind.fitness_vec = fit
-                ind.fitness = np.mean(ind.fitness_vec)
-            else:
-                ind.fitness = np.nanmin([fit,self.max_fit])
-
+        F = self.calc_fitness(pop.X,y_t,self.fit_choice,self.sel)
 
         #with Parallel(n_jobs=10) as parallel:
         ####################
@@ -290,9 +270,9 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
             if self.verbosity > 1: print(".",end='')
             if self.verbosity > 1: print(str(g)+".)",end='')
             # if self.verbosity > 1: print("population:",stacks_2_eqns(pop.individuals))
-            if self.verbosity > 2: print("pop fitnesses:", ["%0.2f" % x.fitness for x in pop.individuals])
-            if self.verbosity > 1: print("median fitness pop: %0.2f" % np.median([x.fitness for x in pop.individuals]))
-            if self.verbosity > 1: print("best fitness pop: %0.2f" % np.min([x.fitness for x in pop.individuals]))
+            if self.verbosity > 2: print("pop fitnesses:", ["%0.2f" % np.mean(f) for f in F])
+            if self.verbosity > 1: print("median fitness pop: %0.2f" % np.median([np.mean(f) for f in F]))
+            if self.verbosity > 1: print("best fitness pop: %0.2f" % np.min([np.mean(f) for f in F]))
             if self.verbosity > 1 and self.track_diversity: print("feature diversity: %0.2f" % self.diversity[-1])
             if self.verbosity > 1: print("ml fitting...")
             # fit ml model
@@ -350,25 +330,20 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
             if self.verbosity > 2: print("fitness...")
             F_offspring = self.calc_fitness(X_offspring,y_t,self.fit_choice,self.sel)
             # F_offspring = parallel(delayed(f[self.fit_choice])(y_t,yhat) for yhat in X_offspring)
-            # print("fitnesses:",fitnesses)
-            # Assign fitnesses to inidividuals in population
-            for ind, fit in zip(offspring, F_offspring):
-                if isinstance(fit,(list,np.ndarray)): # calc_fitness returned raw fitness values
-                    fit[fit < 0] = self.max_fit
-                    fit[np.isnan(fit)] = self.max_fit
-                    fit[np.isinf(fit)] = self.max_fit
-                    ind.fitness_vec = fit
-                    ind.fitness = np.mean(ind.fitness_vec)
-                else:
-                    ind.fitness = np.nanmin([fit,self.max_fit])
 
             # Survival
             if self.verbosity > 2: print("survival..")
-            survivors,survivor_index = self.survival(pop.individuals,offspring,elite,elite_index)
+            survivors,survivor_index = self.survival(pop.individuals,offspring,elite,elite_index,F,F_offspring)
+            # set survivors
             pop.individuals[:] = survivors
-            pop.X = np.vstack((pop.X, X_offspring))[survivor_index,:]
 
-            if self.verbosity > 2: print("median fitness survivors: %0.2f" % np.median([x.fitness for x in pop.individuals]))
+            pop.X = np.vstack((pop.X, X_offspring))[survivor_index]
+            if 'lexicase' in self.sel:
+                F = np.vstack((F, F_offspring))[survivor_index]
+            else:
+                F = np.hstack((F,F_offspring))[survivor_index]
+
+            if self.verbosity > 2: print("median fitness survivors: %0.2f" % np.median([np.mean(f) for f in F]))
             if self.verbosity>2: print("best features:",stacks_2_eqns(self._best_inds) if self._best_inds else 'original')
             pbar.set_description('Internal CV: {:1.3f}'.format(self._best_score))
             pbar.update(1)
