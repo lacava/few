@@ -44,7 +44,7 @@ fi
 
 source activate testenv
 # get eigen
-apt-get install libeigen3-dev
+sudo apt-get install libeigen3-dev
 
 pip install update_checker
 pip install tqdm
