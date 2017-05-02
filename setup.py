@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, Extension
+# from distutils.core import Extension
 
 def calculate_version():
     initpy = open('few/_version.py').read().split('\n')
@@ -9,6 +10,12 @@ def calculate_version():
 
 package_version = calculate_version()
 
+few_lib = Extension(name='few_lib',
+                    sources=['few/lib/epsilon_lexicase.cpp'],
+                    include_dirs = ['/usr/include/eigen3'],
+                    depends = ['Eigen/Dense.h'],
+                    extra_compile_args = ['-std=c++0x']
+                    )
 setup(
     name='FEW',
     version=package_version,
@@ -32,7 +39,9 @@ e-mail: lacava@upenn.edu
 This project is hosted at https://github.com/lacava/few
 ''',
     zip_safe=True,
-    install_requires=['numpy', 'scipy', 'pandas', 'scikit-learn', 'update_checker', 'tqdm', 'joblib','DistanceClassifier', 'scikit-mdr'],
+    install_requires=['numpy', 'scipy', 'pandas', 'scikit-learn',
+                      'update_checker', 'tqdm', 'joblib','DistanceClassifier',
+                      'scikit-mdr'],
     classifiers=[
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
@@ -43,4 +52,5 @@ This project is hosted at https://github.com/lacava/few
         'Topic :: Scientific/Engineering :: Artificial Intelligence'
     ],
     keywords=['data science', 'machine learning', 'classification'],
+    ext_modules=[few_lib]
 )

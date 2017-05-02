@@ -134,10 +134,6 @@ class Pop(object):
         """initializes population of inds of size pop_size"""
 
         self.individuals = []
-        # initialize empty output matrix
-        self.X = np.empty([n_samples,pop_size],dtype=float,order='F')
-        # initialize empty error matrix
-        self.E = np.empty(0) #np.empty([n_samples,pop_size],dtype=float)
         # initialize population programs
         for i in np.arange(pop_size):
             if fit is None:

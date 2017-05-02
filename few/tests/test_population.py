@@ -26,20 +26,12 @@ def test_pop_shape():
     # assert len(pop) == 0
     pop = Pop(10)
     assert len(pop.individuals) == 10
-    print("pop.X.shape",pop.X.shape)
-    assert pop.X.shape == (1,10)
-    assert pop.E.shape == (0,)
-
 
     pop = Pop(73)
     assert len(pop.individuals) == 73
-    assert pop.X.shape == (1,73)
-    assert pop.E.shape == (0,)
 
     pop = Pop(73,5)
     assert len(pop.individuals) == 73
-    assert pop.X.shape == (5,73)
-    assert pop.E.shape == (0,)
 
 # NOTE: popultation initialization is done in the ellyn class now. this test needs to be rewritten.
 def test_pop_init():

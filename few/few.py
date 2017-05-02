@@ -29,12 +29,16 @@ import warnings
 import copy
 import itertools as it
 import pdb
+
 # from update_checker import update_check
 # from joblib import Parallel, delayed
 #from sklearn.externals.joblib import Parallel, delayed
 from tqdm import tqdm
 import uuid
-#from profilehooks import profile
+import os
+import ctypes
+from numpy.ctypeslib import ndpointer
+from profilehooks import profile
 # import multiprocessing as mp
 # NUM_THREADS = mp.cpu_count()
 
@@ -52,7 +56,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
                  sel = 'epsilon_lexicase', tourn_size = 2, fit_choice = None, op_weight = False,
                  seed_with_ml = True, erc = False, random_state=np.random.randint(9999999), verbosity=0, scoring_function=None,
                  disable_update_check=False,elitism=True, boolean = False,classification=False,clean=False,
-                 track_diversity=False,mdr=False,otype='f'):
+                 track_diversity=False,mdr=False,otype='f',c=True):
                 # sets up GP.
 
         # Save params to be recalled later by get_params()
@@ -157,7 +161,19 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
         self.term_set = []
         # diversity
         self.diversity = []
-    #@profile
+        # library stuff
+        few_dir = os.path.split(os.path.abspath( __file__))[0]
+        self.lib = ctypes.cdll.LoadLibrary(
+            os.path.join(few_dir,'lib' + os.path.sep + 'few_lib.so'))
+        self.lib.epsilon_lexicase.restype = None
+        self.lib.epsilon_lexicase.argtypes = [
+            ndpointer(ctypes.c_double),
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_int,
+            ndpointer(ctypes.c_int)]
+        self.c = c
+    @profile
     def fit(self, features, labels):
         """Fit model to data"""
 
@@ -239,21 +255,22 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
         # are assumed to be float
         if self.otype=='b':
             self.seed_with_ml = False
-        pop = self.init_pop(self._training_features.shape[0])
+        self.pop = self.init_pop(self._training_features.shape[0])
         # check that uuids are unique in population
-        uuids = [p.id for p in pop.individuals]
+        uuids = [p.id for p in self.pop.individuals]
         if len(uuids) != len(set(uuids)):
             pdb.set_trace()
         # Evaluate the entire population
         # X represents a matrix of the population outputs (number os samples x population size)
         # single thread
-        pop.X = self.transform(x_t,pop.individuals,y_t).transpose()
+        self.X = self.transform(x_t,self.pop.individuals,y_t).transpose()
+        # pdb.set_trace()
         # parallel:
-        # pop.X = np.asarray(Parallel(n_jobs=-1)(delayed(out)(I,x_t,self.otype,y_t) for I in pop.individuals), order = 'F')
+        # X = np.asarray(Parallel(n_jobs=-1)(delayed(out)(I,x_t,self.otype,y_t) for I in self.pop.individuals), order = 'F')
 
         # calculate fitness of individuals
-        # fitnesses = list(map(lambda I: fitness(I,y_t,self.ml),pop.X))
-        F = self.calc_fitness(pop.X,y_t,self.fit_choice,self.sel)
+        # fitnesses = list(map(lambda I: fitness(I,y_t,self.ml),X))
+        self.F = self.calc_fitness(self.X,y_t,self.fit_choice,self.sel)
 
         #with Parallel(n_jobs=10) as parallel:
         ####################
@@ -265,32 +282,32 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
         for g in np.arange(self.generations):
 
             if self.track_diversity:
-                self.get_diversity(pop.X)
+                self.get_diversity(self.X)
 
             if self.verbosity > 1: print(".",end='')
             if self.verbosity > 1: print(str(g)+".)",end='')
-            # if self.verbosity > 1: print("population:",stacks_2_eqns(pop.individuals))
-            if self.verbosity > 2: print("pop fitnesses:", ["%0.2f" % np.mean(f) for f in F])
-            if self.verbosity > 1: print("median fitness pop: %0.2f" % np.median([np.mean(f) for f in F]))
-            if self.verbosity > 1: print("best fitness pop: %0.2f" % np.min([np.mean(f) for f in F]))
+            # if self.verbosity > 1: print("population:",stacks_2_eqns(self.pop.individuals))
+            if self.verbosity > 2: print("pop fitnesses:", ["%0.2f" % np.mean(f) for f in self.F])
+            if self.verbosity > 1: print("median fitness pop: %0.2f" % np.median([np.mean(f) for f in self.F]))
+            if self.verbosity > 1: print("best fitness pop: %0.2f" % np.min([np.mean(f) for f in self.F]))
             if self.verbosity > 1 and self.track_diversity: print("feature diversity: %0.2f" % self.diversity[-1])
             if self.verbosity > 1: print("ml fitting...")
             # fit ml model
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 try:
-                    # if len(self.valid_loc(pop.individuals)) > 0:
-                    if self.valid(pop.individuals):
-                        self.ml.fit(pop.X[self.valid_loc(pop.individuals),:].transpose(),y_t)
+                    # if len(self.valid_loc(self.F)) > 0:
+                    if self.valid_loc():
+                        self.ml.fit(self.X[self.valid_loc(),:].transpose(),y_t)
                     # else:
-                    #     self.ml.fit(pop.X.transpose(),y_t)
+                    #     self.ml.fit(X.transpose(),y_t)
 
                 except ValueError as detail:
                     # pdb.set_trace()
-                    print("warning: ValueError in ml fit. X.shape:",pop.X[:,self.valid_loc(pop.individuals)].transpose().shape,"y_t shape:",y_t.shape)
-                    print("First ten entries X:",pop.X[self.valid_loc(pop.individuals),:].transpose()[:10])
+                    print("warning: ValueError in ml fit. X.shape:",self.X[:,self.valid_loc()].transpose().shape,"y_t shape:",y_t.shape)
+                    print("First ten entries X:",self.X[self.valid_loc(),:].transpose()[:10])
                     print("First ten entries y_t:",y_t[:10])
-                    print("equations:",stacks_2_eqns(pop.individuals))
+                    print("equations:",stacks_2_eqns(self.pop.individuals))
                     print("FEW parameters:",self.get_params())
                     if self.verbosity > 1: print("---\ndetailed error message:",detail)
                     raise(ValueError)
@@ -299,28 +316,28 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
             # keep best model
             tmp_score = 0
             try:
-                # if len(self.valid_loc(pop.individuals)) > 0:
-                if self.valid(pop.individuals):
-                    tmp_score = self.ml.score(self.transform(x_v,pop.individuals)[:,self.valid_loc(pop.individuals)],y_v)
+                # if len(self.valid_loc(F)) > 0:
+                if self.valid_loc():
+                    tmp_score = self.ml.score(self.transform(x_v,self.pop.individuals)[:,self.valid_loc()],y_v)
                 # else:
                 #     tmp_score = 0
-                    # tmp = self.ml.score(self.transform(x_v,pop.individuals),y_v)
+                    # tmp = self.ml.score(self.transform(x_v,self.pop.individuals),y_v)
             except Exception as detail:
                 if self.verbosity > 1: print(detail)
 
             if self.verbosity > 1: print("current ml validation score:",tmp_score)
 
 
-            if self.valid(pop.individuals) and tmp_score > self._best_score:
+            if self.valid_loc() and tmp_score > self._best_score:
                 self._best_estimator = copy.deepcopy(self.ml)
                 self._best_score = tmp_score
-                self._best_inds = copy.deepcopy(self.valid(pop.individuals))
+                self._best_inds = copy.deepcopy(self.valid())
                 if self.verbosity > 1: print("updated best internal validation score:",self._best_score)
 
-
+            # pdb.set_trace()
             # Variation
             if self.verbosity > 2: print("variation...")
-            offspring,elite,elite_index = self.variation(pop.individuals)
+            offspring,elite,elite_index = self.variation(self.pop.individuals)
 
             # evaluate offspring
             if self.verbosity > 2: print("output...")
@@ -333,17 +350,16 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
 
             # Survival
             if self.verbosity > 2: print("survival..")
-            survivors,survivor_index = self.survival(pop.individuals,offspring,elite,elite_index,F,F_offspring)
+            survivors,survivor_index = self.survival(self.pop.individuals,offspring,elite,elite_index,F=self.F,F_offspring=F_offspring)
             # set survivors
-            pop.individuals[:] = survivors
-
-            pop.X = np.vstack((pop.X, X_offspring))[survivor_index]
+            self.pop.individuals[:] = survivors
+            self.X = np.vstack((self.X, X_offspring))[survivor_index]
             if 'lexicase' in self.sel:
-                F = np.vstack((F, F_offspring))[survivor_index]
+                self.F = np.vstack((self.F, F_offspring))[survivor_index]
             else:
-                F = np.hstack((F,F_offspring))[survivor_index]
+                self.F = np.hstack((self.F,F_offspring))[survivor_index]
 
-            if self.verbosity > 2: print("median fitness survivors: %0.2f" % np.median([np.mean(f) for f in F]))
+            if self.verbosity > 2: print("median fitness survivors: %0.2f" % np.median([np.mean(f) for f in self.F]))
             if self.verbosity>2: print("best features:",stacks_2_eqns(self._best_inds) if self._best_inds else 'original')
             pbar.set_description('Internal CV: {:1.3f}'.format(self._best_score))
             pbar.update(1)
@@ -459,12 +475,17 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
             # initial population is the components of the default ml model
             if type(self.ml) == type(LassoLarsCV()):
                 # add all model components with non-zero coefficients
-                for i,(c,p) in enumerate(it.zip_longest([c for c in self.ml.coef_ if c !=0],pop.individuals,fillvalue=None)):
+                for i,(c,p) in enumerate(it.zip_longest(
+                        [c for c in self.ml.coef_ if c !=0],pop.individuals,
+                        fillvalue=None)):
                     if c is not None and p is not None:
                         p.stack = [node('x',loc=i)]
                     elif p is not None:
                         # make program if pop is bigger than model componennts
-                        make_program(p.stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1),self.otype)
+                        make_program(p.stack,self.func_set,self.term_set,
+                                     np.random.randint(self.min_depth,
+                                                       self.max_depth+1),
+                                     self.otype)
                         p.stack = list(reversed(p.stack))
             else: # seed with raw features
                 # if list(self.ml.coef_):
@@ -483,7 +504,10 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
                             if i is not None:
                                 p.stack = [node('x',loc=i)]
                             else:
-                                make_program(p.stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1),self.otype)
+                                make_program(p.stack,self.func_set,self.term_set,
+                                             np.random.randint(self.min_depth,
+                                                               self.max_depth+1),
+                                             self.otype)
                                 p.stack = list(reversed(p.stack))
 
             # print initial population
@@ -551,15 +575,24 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
         """return stacks_2_eqns output"""
         return stacks_2_eqns(self._best_inds)
 
-    def valid_loc(self,individuals):
+    def valid_loc(self,F=None):
         """returns the indices of individuals with valid fitness."""
+        if F is not None:
+            return [i for i,f in enumerate(F) if np.all(f < self.max_fit) and np.all(f >= 0)]
+        else:
+            return [i for i,f in enumerate(self.F) if np.all(f < self.max_fit) and np.all(f >= 0)]
 
-        return [index for index,i in enumerate(individuals) if i.fitness < self.max_fit and i.fitness >= 0]
-
-    def valid(self,individuals):
+    def valid(self,individuals=None,F=None):
         """returns the sublist of individuals with valid fitness."""
+        if F:
+            valid_locs = self.valid_loc(F)
+        else:
+            valid_locs = self.valid_loc(self.F)
 
-        return [i for i in individuals if i.fitness < self.max_fit and i.fitness >= 0]
+        if individuals:
+            return [ind for i,ind in enumerate(individuals) if i in valid_locs]
+        else:
+            return [ind for i,ind in enumerate(self.pop.individuals) if i in valid_locs]
 
     def get_params(self, deep=None):
         """Get parameters for this estimator
@@ -730,6 +763,9 @@ def main():
     parser.add_argument('--clean', action='store_true', dest='CLEAN', default=False,
                     help='Flag to clean input data of missing values.')
 
+    parser.add_argument('--no_lib', action='store_false', dest='c', default=True,
+                    help='Don''t use optimized c libraries.')
+
     parser.add_argument('-s', action='store', dest='RANDOM_STATE', default=np.random.randint(4294967295),
                         type=int, help='Random number generator seed for reproducibility. Note that using multi-threading may '
                                        'make exacts results impossible to reproduce.')
@@ -784,7 +820,8 @@ def main():
                 erc = args.ERC, random_state=args.RANDOM_STATE, verbosity=args.VERBOSITY,
                 disable_update_check=args.DISABLE_UPDATE_CHECK,fit_choice = args.FIT_CHOICE,
                 boolean=args.BOOLEAN,classification=args.CLASSIFICATION,clean = args.CLEAN,
-                track_diversity=args.TRACK_DIVERSITY,mdr=args.MDR,otype=args.OTYPE)
+                track_diversity=args.TRACK_DIVERSITY,mdr=args.MDR,otype=args.OTYPE,
+                c=args.c)
 
     learner.fit(training_features, training_labels)
     # pdb.set_trace()

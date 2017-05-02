@@ -9,3 +9,5 @@ analysis/
 *.dropbox
 *.attr
 *.ipynb
+*.so
+*.o

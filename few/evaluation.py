@@ -140,6 +140,13 @@ class EvaluationMixin(object):
     # # 'relief':  1-ReliefF(n_jobs=-1,sample_scores=True).fit(yhat.reshape(-1,1),y).feature_importances_
     # }
 
+
+    def proper(self,x):
+        """cleans fitness vector"""
+        x[x < 0] = self.max_fit
+        x[np.isnan(x)] = self.max_fit
+        x[np.isinf(x)] = self.max_fit
+        return x
     def safe(self,x):
         """removes nans and infs from outputs."""
         x[np.isinf(x)] = 1
@@ -196,7 +203,7 @@ class EvaluationMixin(object):
 
         if 'lexicase' in sel:
             # return list(map(lambda yhat: self.f_vec[fit_choice](labels,yhat),X))
-            return np.array([self.f_vec[fit_choice](labels,yhat) for yhat in X])
+            return np.array([self.proper(self.f_vec[fit_choice](labels,yhat)) for yhat in X])
             # return list(Parallel(n_jobs=-1)(delayed(self.f_vec[fit_choice])(labels,yhat) for yhat in X))
         else:
             # return list(map(lambda yhat: self.f[fit_choice](labels,yhat),X))
