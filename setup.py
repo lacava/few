@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from setuptools import setup, find_packages, Extension
+from setuptools import setup, find_packages
+from setuptools.extension import Extension
 from Cython.Build import cythonize
 import eigency
 
