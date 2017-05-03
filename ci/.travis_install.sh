@@ -43,14 +43,13 @@ else
 fi
 
 source activate testenv
-# get eigen
-# sudo apt-get install libeigen3-dev
 
 pip install update_checker
 pip install tqdm
 pip install joblib
 pip install DistanceClassifier
 pip install scikit-mdr
+pip install eigency
 
 if [[ "$COVERAGE" == "true" ]]; then
     pip install coverage coveralls
