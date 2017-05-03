@@ -10,6 +10,7 @@ import copy
 import pdb
 from sklearn.metrics import r2_score
 from .population import stacks_2_eqns
+from few_lib import ep_lex
 # from profilehooks import profile
 
 class SurvivalMixin(object):
@@ -113,7 +114,8 @@ class SurvivalMixin(object):
         if self.c: # use c library
             # define c types
             locs = np.empty(num_selections,dtype='int32',order='F')
-            self.lib.epsilon_lexicase(F,F.shape[0],F.shape[1],num_selections,locs)
+            # self.lib.epsilon_lexicase(F,F.shape[0],F.shape[1],num_selections,locs)
+            ep_lex(F,F.shape[0],F.shape[1],num_selections,locs)
             return locs
         else: # use python version
             if num_selections is None:

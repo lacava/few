@@ -203,11 +203,14 @@ class EvaluationMixin(object):
 
         if 'lexicase' in sel:
             # return list(map(lambda yhat: self.f_vec[fit_choice](labels,yhat),X))
-            return np.array([self.proper(self.f_vec[fit_choice](labels,yhat)) for yhat in X])
+            return np.asarray(
+                    [self.proper(self.f_vec[fit_choice](labels,yhat)) for yhat in X],
+                    order='F')
             # return list(Parallel(n_jobs=-1)(delayed(self.f_vec[fit_choice])(labels,yhat) for yhat in X))
         else:
             # return list(map(lambda yhat: self.f[fit_choice](labels,yhat),X))
-            return np.array([self.f[fit_choice](labels,yhat) for yhat in X]).transpose()
+            return np.asarray([self.f[fit_choice](labels,yhat) for yhat in X],
+                            order='F').transpose()
 
             # return list(Parallel(n_jobs=-1)(delayed(self.f[fit_choice])(labels,yhat) for yhat in X))
 
