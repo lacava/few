@@ -38,7 +38,7 @@ import uuid
 import os
 import ctypes
 from numpy.ctypeslib import ndpointer
-from profilehooks import profile
+# from profilehooks import profile
 # import multiprocessing as mp
 # NUM_THREADS = mp.cpu_count()
 
@@ -173,7 +173,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
             ctypes.c_int,
             ndpointer(ctypes.c_int)]
         self.c = c
-    @profile
+    # @profile
     def fit(self, features, labels):
         """Fit model to data"""
 
