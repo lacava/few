@@ -35,10 +35,7 @@ import pdb
 #from sklearn.externals.joblib import Parallel, delayed
 from tqdm import tqdm
 import uuid
-import os
-import ctypes
-from numpy.ctypeslib import ndpointer
-# import few_lib
+
 # from profilehooks import profile
 # import multiprocessing as mp
 # NUM_THREADS = mp.cpu_count()
@@ -158,17 +155,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
         self.term_set = []
         # diversity
         self.diversity = []
-        # library stuff
-        # few_dir = os.path.split(os.path.abspath( __file__))[0]
-        # self.lib = ctypes.cdll.LoadLibrary(
-        #     os.path.join(few_dir,'lib' + os.path.sep + 'few_lib.so'))
-        # self.lib.epsilon_lexicase.restype = None
-        # self.lib.epsilon_lexicase.argtypes = [
-        #     ndpointer(ctypes.c_double),
-        #     ctypes.c_int,
-        #     ctypes.c_int,
-        #     ctypes.c_int,
-        #     ndpointer(ctypes.c_int)]
+        # use cython
         self.c = c
     # @profile
     def fit(self, features, labels):
