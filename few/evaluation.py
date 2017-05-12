@@ -121,7 +121,7 @@ class EvaluationMixin(object):
     'inertia': lambda y,yhat: inertia(yhat,y,samples=True),
     'separation': lambda y,yhat: 1 - separation(yhat,y,samples=True),
     'fisher': lambda y,yhat: 1 - fisher(yhat,y,samples=True),
-    'accuracy': lambda y,yhat: 1 - np.sum(yhat==y)/y.shape[0],
+    'accuracy': lambda y,yhat: 1 - np.sum(yhat==y)/y.shape[0], # this looks wrong, CHECK
     'random': lambda y,yhat: np.random.rand(len(y)),
     # 'relief': lambda y,yhat: 1-ReliefF(n_jobs=-1,sample_scores=True).fit(yhat.reshape(-1,1),y).feature_importances_
     }
@@ -159,11 +159,17 @@ class EvaluationMixin(object):
         np.seterr(all='ignore')
         if len(stack_float) >= n.arity['f'] and len(stack_bool) >= n.arity['b']:
             if n.out_type == 'f':
-                stack_float.append(self.safe(self.eval_dict[n.name](n,features,stack_float,stack_bool,labels)))
-                if np.isnan(stack_float[-1]).any() or np.isinf(stack_float[-1]).any():
+                stack_float.append(
+                    self.safe(self.eval_dict[n.name](n,features,stack_float,
+                                                     stack_bool,labels)))
+                if (np.isnan(stack_float[-1]).any() or
+                    np.isinf(stack_float[-1]).any()):
                     print("problem operator:",n)
             else:
-                stack_bool.append(self.safe(self.eval_dict[n.name](n,features,stack_float,stack_bool,labels)))
+                stack_bool.append(self.safe(self.eval_dict[n.name](n,features,
+                                                                   stack_float,
+                                                                   stack_bool,
+                                                                   labels)))
                 if np.isnan(stack_bool[-1]).any() or np.isinf(stack_bool[-1]).any():
                     print("problem operator:",n)
 
@@ -175,7 +181,8 @@ class EvaluationMixin(object):
         # false positives from overflow in sum method.
         # Note: this is basically here because sklearn tree.py uses float32 internally,
         # and float64's that are finite are not finite in float32.
-        if (X.dtype.char in np.typecodes['AllFloat'] and not np.isfinite(np.asarray(X,dtype='float32').sum())
+        if (X.dtype.char in np.typecodes['AllFloat']
+            and not np.isfinite(np.asarray(X,dtype='float32').sum())
             and not np.isfinite(np.asarray(X,dtype='float32')).all()):
             return False
         return True
@@ -191,9 +198,11 @@ class EvaluationMixin(object):
             self.evaluate(n,features,stack_float,stack_bool,labels)
             # print("stack_float:",stack_float)
         if otype=='f':
-            return stack_float[-1] if self.all_finite(stack_float[-1]) else np.zeros(len(features))
+            return (stack_float[-1] if self.all_finite(stack_float[-1])
+                    else np.zeros(len(features)))
         else:
-            return stack_bool[-1].astype(float) if self.all_finite(stack_bool[-1]) else np.zeros(len(features))
+            return (stack_bool[-1].astype(float) if self.all_finite(stack_bool[-1])
+                    else np.zeros(len(features)))
 
     def calc_fitness(self,X,labels,fit_choice,sel):
         """computes fitness of individual output yhat.
@@ -205,8 +214,9 @@ class EvaluationMixin(object):
         if 'lexicase' in sel:
             # return list(map(lambda yhat: self.f_vec[fit_choice](labels,yhat),X))
             return np.asarray(
-                    [self.proper(self.f_vec[fit_choice](labels,yhat)) for yhat in X],
-                    order='F')
+                              [self.proper(self.f_vec[fit_choice](labels,
+                                                        yhat)) for yhat in X],
+                                                        order='F')
             # return list(Parallel(n_jobs=-1)(delayed(self.f_vec[fit_choice])(labels,yhat) for yhat in X))
         else:
             # return list(map(lambda yhat: self.f[fit_choice](labels,yhat),X))
