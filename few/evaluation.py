@@ -14,6 +14,7 @@ import sys
 from sklearn.metrics.pairwise import pairwise_distances
 # from profilehooks import profile
 from sklearn.externals.joblib import Parallel, delayed
+import tensorflow as tf
 
 # safe division
 def divs(x,y):
@@ -94,21 +95,59 @@ class EvaluationMixin(object):
         # 'if': lambda n,features,stack_float,stack_bool,labels: stack_float.pop() if stack_bool.pop(),
         # 'ife': lambda n,features,stack_float,stack_bool,labels: stack_float.pop() if stack_bool.pop() else stack_float.pop(),
         }
+    #evaluation functions
+    tf_dict = {
+    # float operations
+        '+': lambda n,features,stack_float,stack_bool,labels: tf.add(stack_float.pop(), stack_float.pop()),
+        '-': lambda n,features,stack_float,stack_bool,labels: tf.subtract(stack_float.pop(),stack_float.pop()),
+        '*': lambda n,features,stack_float,stack_bool,labels: tf.multiply(stack_float.pop(),stack_float.pop()),
+        '/': lambda n,features,stack_float,stack_bool,labels: tf.divide(stack_float.pop(),stack_float.pop()),
+        'sin': lambda n,features,stack_float,stack_bool,labels: tf.sin(stack_float.pop()),
+        'cos': lambda n,features,stack_float,stack_bool,labels: tf.cos(stack_float.pop()),
+        'exp': lambda n,features,stack_float,stack_bool,labels: tf.exp(stack_float.pop()),
+        'log': lambda n,features,stack_float,stack_bool,labels: tf.log(stack_float.pop()),#np.log(np.abs(stack_float.pop())),
+        'x':  lambda n,features,stack_float,stack_bool,labels: features[:,n.loc],
+        'k': lambda n,features,stack_float,stack_bool,labels: np.ones(features.shape[0])*n.value,
+        '^2': lambda n,features,stack_float,stack_bool,labels: tf.square(stack_float.pop()),
+        '^3': lambda n,features,stack_float,stack_bool,labels: tf.pow(stack_float.pop()),
+        'sqrt': lambda n,features,stack_float,stack_bool,labels: tf.sqrt(np.abs(stack_float.pop())),
+        # 'rbf': lambda n,features,stack_float,stack_bool,labels: np.exp(-(np.norm(stack_float.pop()-stack_float.pop())**2)/2)
+    # bool operations
+        '!': lambda n,features,stack_float,stack_bool,labels: tf.logical_not(stack_bool.pop()),
+        '&': lambda n,features,stack_float,stack_bool,labels: tf.logical_and(stack_bool.pop(), stack_bool.pop()),
+        '|': lambda n,features,stack_float,stack_bool,labels: tf.logical_or(stack_bool.pop(), stack_bool.pop()),
+        '==': lambda n,features,stack_float,stack_bool,labels: tf.equal(stack_bool.pop(),stack_bool.pop()),
+        '>_f': lambda n,features,stack_float,stack_bool,labels: tf.greater(stack_float.pop(), stack_float.pop()),
+        '<_f': lambda n,features,stack_float,stack_bool,labels: tf.less(stack_float.pop(), stack_float.pop()),
+        '>=_f': lambda n,features,stack_float,stack_bool,labels: tf.greater_equal(stack_float.pop(),stack_float.pop()),
+        '<=_f': lambda n,features,stack_float,stack_bool,labels: tf.less_equal(stack_float.pop(), stack_float.pop()),
+        '>_b': lambda n,features,stack_float,stack_bool,labels: tf.greater(stack_bool.pop(),stack_bool.pop()),
+        '<_b': lambda n,features,stack_float,stack_bool,labels: tf.less(stack_bool.pop(),stack_bool.pop()),
+        '>=_b': lambda n,features,stack_float,stack_bool,labels: tf.greater_equal(stack_bool.pop(), stack_bool.pop()),
+        '<=_b': lambda n,features,stack_float,stack_bool,labels: tf.less_equal(stack_bool.pop(), stack_bool.pop()),
+        'xor_b': lambda n,features,stack_float,stack_bool,labels: tf.logical_xor(stack_bool.pop(),stack_bool.pop()),
+        'xor_f': lambda n,features,stack_float,stack_bool,labels: tf.logical_xor(stack_float.pop().astype(bool), stack_float.pop().astype(bool)),
+    # MDR
+        'mdr2': lambda n,features,stack_float,stack_bool,labels: n.evaluate(n,stack_float,labels),
+    # control flow:
+        # 'if': lambda n,features,stack_float,stack_bool,labels: stack_float.pop() if stack_bool.pop(),
+        # 'ife': lambda n,features,stack_float,stack_bool,labels: stack_float.pop() if stack_bool.pop() else stack_float.pop(),
+        }
 
     f = { # available fitness metrics
-    'mse': lambda y,yhat: mean_squared_error(y,yhat),
-    'mae': lambda y,yhat: mean_absolute_error(y,yhat),
-    'mdae': lambda y,yhat: median_absolute_error(y,yhat),
-    'r2':  lambda y,yhat: 1-r2_score(y,yhat),
-    'vaf': lambda y,yhat: 1-explained_variance_score(y,yhat),
-    'silhouette': lambda y,yhat: 1 - silhouette_score(yhat.reshape(-1,1),y),
-    'inertia': lambda y,yhat: inertia(yhat,y),
-    'separation': lambda y,yhat: 1 - separation(yhat,y),
-    'fisher': lambda y,yhat: 1 - fisher(yhat,y),
-    'accuracy': lambda y,yhat: 1 - accuracy_score(yhat,y),
-    'random': lambda y,yhat: np.random.rand(),
-    'roc_auc': lambda y,yhat: 1 - roc_auc_score(y,yhat)
-    # 'relief': lambda y,yhat: 1-ReliefF(n_jobs=-1).fit(yhat.reshape(-1,1),y).feature_importances_
+        'mse': lambda y,yhat: mean_squared_error(y,yhat),
+        'mae': lambda y,yhat: mean_absolute_error(y,yhat),
+        'mdae': lambda y,yhat: median_absolute_error(y,yhat),
+        'r2':  lambda y,yhat: 1-r2_score(y,yhat),
+        'vaf': lambda y,yhat: 1-explained_variance_score(y,yhat),
+        'silhouette': lambda y,yhat: 1 - silhouette_score(yhat.reshape(-1,1),y),
+        'inertia': lambda y,yhat: inertia(yhat,y),
+        'separation': lambda y,yhat: 1 - separation(yhat,y),
+        'fisher': lambda y,yhat: 1 - fisher(yhat,y),
+        'accuracy': lambda y,yhat: 1 - accuracy_score(yhat,y),
+        'random': lambda y,yhat: np.random.rand(),
+        'roc_auc': lambda y,yhat: 1 - roc_auc_score(y,yhat)
+        # 'relief': lambda y,yhat: 1-ReliefF(n_jobs=-1).fit(yhat.reshape(-1,1),y).feature_importances_
     }
     #
     f_vec = {# non-aggregated fitness calculations
