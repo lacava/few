@@ -16,7 +16,8 @@ from .selection import SurvivalMixin
 from sklearn.base import BaseEstimator
 from sklearn.linear_model import LassoLarsCV, LogisticRegression, SGDClassifier
 from sklearn.svm import SVR, LinearSVR, SVC, LinearSVC
-from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier,export_graphviz
+from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
+from sklearn.tree import export_graphviz
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.model_selection import train_test_split
@@ -318,7 +319,8 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
                                                  detail)
                     raise(ValueError)
 
-            # if self.verbosity > 1: print("number of non-zero regressors:",self.ml.coef_.shape[0])
+            # if self.verbosity > 1:
+            #   print("number of non-zero regressors:",self.ml.coef_.shape[0])
             # keep best model
             tmp_score = 0
             try:
@@ -329,7 +331,9 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
                                     y_v)
                 # else:
                 #     tmp_score = 0
-                    # tmp = self.ml.score(self.transform(x_v,self.pop.individuals),y_v)
+                #     tmp = self.ml.score(self.transform(x_v,
+                #                                         self.pop.individuals),
+                #                         y_v)
             except Exception as detail:
                 if self.verbosity > 1: print(detail)
 
