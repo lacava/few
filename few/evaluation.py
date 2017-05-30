@@ -14,9 +14,10 @@ import sys
 from sklearn.metrics.pairwise import pairwise_distances
 # from profilehooks import profile
 from sklearn.externals.joblib import Parallel, delayed
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL']='3'
 import tensorflow as tf
 
-# safe division
 def divs(x,y):
     """safe division"""
     tmp = np.ones(x.shape)
@@ -24,13 +25,23 @@ def divs(x,y):
     tmp[nonzero_y] = x[nonzero_y]/y[nonzero_y]
     return tmp
 
-    # safe log
 def logs(x):
     """safe log"""
     tmp = np.ones(x.shape)
     nonzero_x = x != 0
     tmp[nonzero_x] = np.log(np.abs(x[nonzero_x]))
     return tmp
+
+def divs_tf(x,y):
+    """safe division"""
+    return tf.where(tf.equal(y,tf.zeros(tf.shape(x),dtype=tf.float64)),
+                   tf.ones(tf.shape(x),dtype=tf.float64),
+                   tf.realdiv(x,y))
+def logs_tf(x):
+    """safe log"""
+    return tf.where(tf.equal(x,tf.zeros(tf.shape(x),dtype=tf.float64)),
+                   tf.ones(tf.shape(x),dtype=tf.float64),
+                   tf.log(tf.abs(x)))
 
 # vectorized r2 score
 def r2_score_vec(y_true,y_pred):
@@ -57,82 +68,145 @@ def r2_score_vec(y_true,y_pred):
 class EvaluationMixin(object):
     """methods for evaluation."""
 
+    def transform(self,x,inds=None,labels = None):
+        """return a transformation of x using population outputs"""
+
+        if inds:
+            if self.tf:
+                # compile list of graphs
+                programs = [build_tf_graph(I,x,labels) for I in inds]
+                # Initialize TensorFlow session
+                tf.reset_default_graph() # Reset TF internal state and cache
+                # tf.device('/gpu:0')
+                config = tf.ConfigProto(allow_soft_placement=True)
+                # config.gpu_options.allow_growth = True
+                # run graphs
+                with tf.Session(config=config) as sess:
+                    result = sess.run(programs)
+                    # tf.train.write_graph(sess.graph,'tmp','graph.txt',as_text=True)
+                pdb.set_trace()
+                return (result if self.all_finite(result)
+                         else np.zeros(len(features)))
+            else:
+                return np.asarray(
+                    [self.out(I,x,labels,self.otype) for I in inds]).transpose()
+        else:
+            # return np.asarray(Parallel(n_jobs=10)(delayed(self.out)(I,x,labels,self.otype) for I in self._best_inds)).transpose()
+            return np.asarray(
+                [self.out(I,x,labels,self.otype) for I in self._best_inds]).transpose()
+
+
     #evaluation functions
     eval_dict = {
     # float operations
-        '+': lambda n,features,stack_float,stack_bool,labels: stack_float.pop() + stack_float.pop(),
-        '-': lambda n,features,stack_float,stack_bool,labels: stack_float.pop() - stack_float.pop(),
-        '*': lambda n,features,stack_float,stack_bool,labels: stack_float.pop() * stack_float.pop(),
-        '/': lambda n,features,stack_float,stack_bool,labels: divs(stack_float.pop(),stack_float.pop()),
-        'sin': lambda n,features,stack_float,stack_bool,labels: np.sin(stack_float.pop()),
-        'cos': lambda n,features,stack_float,stack_bool,labels: np.cos(stack_float.pop()),
-        'exp': lambda n,features,stack_float,stack_bool,labels: np.exp(stack_float.pop()),
-        'log': lambda n,features,stack_float,stack_bool,labels: logs(stack_float.pop()),#np.log(np.abs(stack_float.pop())),
-        'x':  lambda n,features,stack_float,stack_bool,labels: features[:,n.loc],
-        'k': lambda n,features,stack_float,stack_bool,labels: np.ones(features.shape[0])*n.value,
-        '^2': lambda n,features,stack_float,stack_bool,labels: stack_float.pop()**2,
-        '^3': lambda n,features,stack_float,stack_bool,labels: stack_float.pop()**3,
-        'sqrt': lambda n,features,stack_float,stack_bool,labels: np.sqrt(np.abs(stack_float.pop())),
-        # 'rbf': lambda n,features,stack_float,stack_bool,labels: np.exp(-(np.norm(stack_float.pop()-stack_float.pop())**2)/2)
+        '+': lambda n,features,stack,labels: stack['f'].pop() + stack['f'].pop(),
+        '-': lambda n,features,stack,labels: stack['f'].pop() - stack['f'].pop(),
+        '*': lambda n,features,stack,labels: stack['f'].pop() * stack['f'].pop(),
+        '/': lambda n,features,stack,labels: divs(stack['f'].pop(),stack['f'].pop()),
+        'sin': lambda n,features,stack,labels: np.sin(stack['f'].pop()),
+        'cos': lambda n,features,stack,labels: np.cos(stack['f'].pop()),
+        'exp': lambda n,features,stack,labels: np.exp(stack['f'].pop()),
+        'log': lambda n,features,stack,labels: logs(stack['f'].pop()),#np.log(np.abs(stack['f'].pop())),
+        'x':  lambda n,features,stack,labels: features[:,n.loc],
+        'k': lambda n,features,stack,labels: np.ones(features.shape[0])*n.value,
+        '^2': lambda n,features,stack,labels: stack['f'].pop()**2,
+        '^3': lambda n,features,stack,labels: stack['f'].pop()**3,
+        'sqrt': lambda n,features,stack,labels: np.sqrt(np.abs(stack['f'].pop())),
+        # 'rbf': lambda n,features,stack,labels: np.exp(-(np.norm(stack['f'].pop()-stack['f'].pop())**2)/2)
     # bool operations
-        '!': lambda n,features,stack_float,stack_bool,labels: np.logical_not(stack_bool.pop()),
-        '&': lambda n,features,stack_float,stack_bool,labels: np.logical_and(stack_bool.pop(), stack_bool.pop()),
-        '|': lambda n,features,stack_float,stack_bool,labels: np.logical_or(stack_bool.pop(), stack_bool.pop()),
-        '==': lambda n,features,stack_float,stack_bool,labels: stack_bool.pop() == stack_bool.pop(),
-        '>_f': lambda n,features,stack_float,stack_bool,labels: stack_float.pop() > stack_float.pop(),
-        '<_f': lambda n,features,stack_float,stack_bool,labels: stack_float.pop() < stack_float.pop(),
-        '>=_f': lambda n,features,stack_float,stack_bool,labels: stack_float.pop() >= stack_float.pop(),
-        '<=_f': lambda n,features,stack_float,stack_bool,labels: stack_float.pop() <= stack_float.pop(),
-        '>_b': lambda n,features,stack_float,stack_bool,labels: stack_bool.pop() > stack_bool.pop(),
-        '<_b': lambda n,features,stack_float,stack_bool,labels: stack_bool.pop() < stack_bool.pop(),
-        '>=_b': lambda n,features,stack_float,stack_bool,labels: stack_bool.pop() >= stack_bool.pop(),
-        '<=_b': lambda n,features,stack_float,stack_bool,labels: stack_bool.pop() <= stack_bool.pop(),
-        'xor_b': lambda n,features,stack_float,stack_bool,labels: np.logical_xor(stack_bool.pop(),stack_bool.pop()),
-        'xor_f': lambda n,features,stack_float,stack_bool,labels: np.logical_xor(stack_float.pop().astype(bool), stack_float.pop().astype(bool)),
+        '!': lambda n,features,stack,labels: np.logical_not(stack['b'].pop()),
+        '&': lambda n,features,stack,labels: np.logical_and(stack['b'].pop(), stack['b'].pop()),
+        '|': lambda n,features,stack,labels: np.logical_or(stack['b'].pop(), stack['b'].pop()),
+        '==': lambda n,features,stack,labels: stack['b'].pop() == stack['b'].pop(),
+        '>_f': lambda n,features,stack,labels: stack['f'].pop() > stack['f'].pop(),
+        '<_f': lambda n,features,stack,labels: stack['f'].pop() < stack['f'].pop(),
+        '>=_f': lambda n,features,stack,labels: stack['f'].pop() >= stack['f'].pop(),
+        '<=_f': lambda n,features,stack,labels: stack['f'].pop() <= stack['f'].pop(),
+        '>_b': lambda n,features,stack,labels: stack['b'].pop() > stack['b'].pop(),
+        '<_b': lambda n,features,stack,labels: stack['b'].pop() < stack['b'].pop(),
+        '>=_b': lambda n,features,stack,labels: stack['b'].pop() >= stack['b'].pop(),
+        '<=_b': lambda n,features,stack,labels: stack['b'].pop() <= stack['b'].pop(),
+        'xor_b': lambda n,features,stack,labels: np.logical_xor(stack['b'].pop(),stack['b'].pop()),
+        'xor_f': lambda n,features,stack,labels: np.logical_xor(stack['f'].pop().astype(bool), stack['f'].pop().astype(bool)),
     # MDR
-        'mdr2': lambda n,features,stack_float,stack_bool,labels: n.evaluate(n,stack_float,labels),
+        'mdr2': lambda n,features,stack,labels: n.evaluate(n,stack['f'],labels),
     # control flow:
-        # 'if': lambda n,features,stack_float,stack_bool,labels: stack_float.pop() if stack_bool.pop(),
-        # 'ife': lambda n,features,stack_float,stack_bool,labels: stack_float.pop() if stack_bool.pop() else stack_float.pop(),
+        # 'if': lambda n,features,stack,labels: stack['f'].pop() if stack['b'].pop(),
+        # 'ife': lambda n,features,stack,labels: stack['f'].pop() if stack['b'].pop() else stack['f'].pop(),
         }
-    #evaluation functions
+    ##################################### evaluation functions using tensor flow
     tf_dict = {
     # float operations
-        '+': lambda n,features,stack_float,stack_bool,labels: tf.add(stack_float.pop(), stack_float.pop()),
-        '-': lambda n,features,stack_float,stack_bool,labels: tf.subtract(stack_float.pop(),stack_float.pop()),
-        '*': lambda n,features,stack_float,stack_bool,labels: tf.multiply(stack_float.pop(),stack_float.pop()),
-        '/': lambda n,features,stack_float,stack_bool,labels: tf.divide(stack_float.pop(),stack_float.pop()),
-        'sin': lambda n,features,stack_float,stack_bool,labels: tf.sin(stack_float.pop()),
-        'cos': lambda n,features,stack_float,stack_bool,labels: tf.cos(stack_float.pop()),
-        'exp': lambda n,features,stack_float,stack_bool,labels: tf.exp(stack_float.pop()),
-        'log': lambda n,features,stack_float,stack_bool,labels: tf.log(stack_float.pop()),#np.log(np.abs(stack_float.pop())),
-        'x':  lambda n,features,stack_float,stack_bool,labels: features[:,n.loc],
-        'k': lambda n,features,stack_float,stack_bool,labels: np.ones(features.shape[0])*n.value,
-        '^2': lambda n,features,stack_float,stack_bool,labels: tf.square(stack_float.pop()),
-        '^3': lambda n,features,stack_float,stack_bool,labels: tf.pow(stack_float.pop()),
-        'sqrt': lambda n,features,stack_float,stack_bool,labels: tf.sqrt(np.abs(stack_float.pop())),
-        # 'rbf': lambda n,features,stack_float,stack_bool,labels: np.exp(-(np.norm(stack_float.pop()-stack_float.pop())**2)/2)
+        '+': lambda n,features,stack,labels: tf.add(stack['f'].pop(), stack['f'].pop()),
+        '-': lambda n,features,stack,labels: tf.subtract(stack['f'].pop(),stack['f'].pop()),
+        '*': lambda n,features,stack,labels: tf.multiply(stack['f'].pop(),stack['f'].pop()),
+        '/': lambda n,features,stack,labels: divs_tf(stack['f'].pop(),stack['f'].pop()),
+        'sin': lambda n,features,stack,labels: tf.sin(stack['f'].pop()),
+        'cos': lambda n,features,stack,labels: tf.cos(stack['f'].pop()),
+        'exp': lambda n,features,stack,labels: tf.exp(stack['f'].pop()),
+        'log': lambda n,features,stack,labels: logs_tf(stack['f'].pop()),#np.log(np.abs(stack['f'].pop())),
+        'x':  lambda n,features,stack,labels: tf.constant(features[:,n.loc]),
+        'k': lambda n,features,stack,labels: tf.constant(n.value,dtype=tf.float64,shape=[features.shape[0],]),
+        '^2': lambda n,features,stack,labels: tf.square(stack['f'].pop()),
+        '^3': lambda n,features,stack,labels: tf.pow(stack['f'].pop(),3),
+        'sqrt': lambda n,features,stack,labels: tf.sqrt(np.abs(stack['f'].pop())),
+        # 'rbf': lambda n,features,stack,labels: np.exp(-(np.norm(stack['f'].pop()-stack['f'].pop())**2)/2)
     # bool operations
-        '!': lambda n,features,stack_float,stack_bool,labels: tf.logical_not(stack_bool.pop()),
-        '&': lambda n,features,stack_float,stack_bool,labels: tf.logical_and(stack_bool.pop(), stack_bool.pop()),
-        '|': lambda n,features,stack_float,stack_bool,labels: tf.logical_or(stack_bool.pop(), stack_bool.pop()),
-        '==': lambda n,features,stack_float,stack_bool,labels: tf.equal(stack_bool.pop(),stack_bool.pop()),
-        '>_f': lambda n,features,stack_float,stack_bool,labels: tf.greater(stack_float.pop(), stack_float.pop()),
-        '<_f': lambda n,features,stack_float,stack_bool,labels: tf.less(stack_float.pop(), stack_float.pop()),
-        '>=_f': lambda n,features,stack_float,stack_bool,labels: tf.greater_equal(stack_float.pop(),stack_float.pop()),
-        '<=_f': lambda n,features,stack_float,stack_bool,labels: tf.less_equal(stack_float.pop(), stack_float.pop()),
-        '>_b': lambda n,features,stack_float,stack_bool,labels: tf.greater(stack_bool.pop(),stack_bool.pop()),
-        '<_b': lambda n,features,stack_float,stack_bool,labels: tf.less(stack_bool.pop(),stack_bool.pop()),
-        '>=_b': lambda n,features,stack_float,stack_bool,labels: tf.greater_equal(stack_bool.pop(), stack_bool.pop()),
-        '<=_b': lambda n,features,stack_float,stack_bool,labels: tf.less_equal(stack_bool.pop(), stack_bool.pop()),
-        'xor_b': lambda n,features,stack_float,stack_bool,labels: tf.logical_xor(stack_bool.pop(),stack_bool.pop()),
-        'xor_f': lambda n,features,stack_float,stack_bool,labels: tf.logical_xor(stack_float.pop().astype(bool), stack_float.pop().astype(bool)),
-    # MDR
-        'mdr2': lambda n,features,stack_float,stack_bool,labels: n.evaluate(n,stack_float,labels),
-    # control flow:
-        # 'if': lambda n,features,stack_float,stack_bool,labels: stack_float.pop() if stack_bool.pop(),
-        # 'ife': lambda n,features,stack_float,stack_bool,labels: stack_float.pop() if stack_bool.pop() else stack_float.pop(),
+        '!': lambda n,features,stack,labels: tf.logical_not(stack['b'].pop()),
+        '&': lambda n,features,stack,labels: tf.logical_and(stack['b'].pop(), stack['b'].pop()),
+        '|': lambda n,features,stack,labels: tf.logical_or(stack['b'].pop(), stack['b'].pop()),
+        '==': lambda n,features,stack,labels: tf.equal(stack['b'].pop(),stack['b'].pop()),
+        '>_f': lambda n,features,stack,labels: tf.greater(stack['f'].pop(), stack['f'].pop()),
+        '<_f': lambda n,features,stack,labels: tf.less(stack['f'].pop(), stack['f'].pop()),
+        '>=_f': lambda n,features,stack,labels: tf.greater_equal(stack['f'].pop(),stack['f'].pop()),
+        '<=_f': lambda n,features,stack,labels: tf.less_equal(stack['f'].pop(), stack['f'].pop()),
+        '>_b': lambda n,features,stack,labels: tf.greater(stack['b'].pop(),stack['b'].pop()),
+        '<_b': lambda n,features,stack,labels: tf.less(stack['b'].pop(),stack['b'].pop()),
+        '>=_b': lambda n,features,stack,labels: tf.greater_equal(stack['b'].pop(), stack['b'].pop()),
+        '<=_b': lambda n,features,stack,labels: tf.less_equal(stack['b'].pop(), stack['b'].pop()),
+        'xor_b': lambda n,features,stack,labels: tf.logical_xor(stack['b'].pop(),stack['b'].pop()),
+        'xor_f': lambda n,features,stack,labels: tf.logical_xor(stack['f'].pop().astype(bool), stack['f'].pop().astype(bool)),
         }
+    ######################################################## tensor flow methods
+    def build_tf_graph(self, I, features, labels=None):
+        """evaluate node in program"""
+        np.seterr(all='ignore')
+        stack={'f':[],'b':[]}
+        for n in I.stack:
+            if (len(stack['f']) >= n.arity['f']
+                and len(stack['b']) >= n.arity['b']):
+                stack[n.out_type].append(
+                                self.tf_dict[n.name](n,features,stack,labels))
+
+        return stack[self.otype][-1]
+
+    # def out_tf(self,I,features,labels=None,otype='f'):
+    #     """computes the output for individual I"""
+    #     stack['f'] = []
+    #     stack['b'] = []
+    #     # Initialize TensorFlow session
+    #     tf.reset_default_graph() # Reset TF internal state and cache
+    #     config = tf.ConfigProto(allow_soft_placement=True)
+    #     config.gpu_options.allow_growth = True
+    #     # print("stack:",I.stack)
+    #     # evaulate stack over rows of features,labels
+    #     # pdb.set_trace()
+    #     for n in I.stack:
+    #         self.build_tf_graph(n,features,stack,labels)
+    #         # print("stack_float:",stack_float)
+    #
+    #     if otype=='f':
+    #         with tf.Session() as sess:
+    #             result = sess.run(stack_float[-1])
+    #             # tf.train.write_graph(sess.graph,'tmp','graph.txt',as_text=True)
+    #         # pdb.set_trace()
+    #         return (result if self.all_finite(result)
+    #                  else np.zeros(len(features)))
+    #     else:
+    #         with tf.Session(config=config) as sess:
+    #             result = sess.run(stack['b'][-1])
+    #         return (result.astype(float) if self.all_finite(result)
+    #                   else np.zeros(len(features)))
 
     f = { # available fitness metrics
         'mse': lambda y,yhat: mean_squared_error(y,yhat),
@@ -148,7 +222,7 @@ class EvaluationMixin(object):
         'random': lambda y,yhat: np.random.rand(),
         'roc_auc': lambda y,yhat: 1 - roc_auc_score(y,yhat)
         # 'relief': lambda y,yhat: 1-ReliefF(n_jobs=-1).fit(yhat.reshape(-1,1),y).feature_importances_
-    }
+        }
     #
     f_vec = {# non-aggregated fitness calculations
     'mse': lambda y,yhat: (y - yhat) ** 2, #mean_squared_error(y,yhat,multioutput = 'raw_values'),
@@ -165,22 +239,6 @@ class EvaluationMixin(object):
     # 'relief': lambda y,yhat: 1-ReliefF(n_jobs=-1,sample_scores=True).fit(yhat.reshape(-1,1),y).feature_importances_
     }
 
-    # f_vec = {# non-aggregated fitness calculations
-    # 'mse':  (y - yhat) ** 2, #mean_squared_error(y,yhat,multioutput = 'raw_values'),
-    # 'mae':  np.abs(y-yhat), #mean_absolute_error(y,yhat,multioutput = 'raw_values'),
-    # # 'mdae_vec':  median_absolute_error(y,yhat,multioutput = 'raw_values'),
-    # 'r2':   1-r2_score_vec(y,yhat),
-    # 'vaf':  1-explained_variance_score(y,yhat,multioutput = 'raw_values'),
-    # 'silhouette':  1 - silhouette_samples(yhat.reshape(-1,1),y),
-    # 'inertia':  inertia(yhat,y,samples=True),
-    # 'separation':  1 - separation(yhat,y,samples=True),
-    # 'fisher':  1 - fisher(yhat,y,samples=True),
-    # 'accuracy':  1 - np.sum(yhat==y)/y.shape[0],
-    # 'random':  np.random.rand(len(y)),
-    # # 'relief':  1-ReliefF(n_jobs=-1,sample_scores=True).fit(yhat.reshape(-1,1),y).feature_importances_
-    # }
-
-
     def proper(self,x):
         """cleans fitness vector"""
         x[x < 0] = self.max_fit
@@ -193,24 +251,17 @@ class EvaluationMixin(object):
         x[np.isnan(x)] = 1
         return x
 
-    def evaluate(self,n, features, stack_float, stack_bool,labels=None):
+    def evaluate(self,n, features, stack,labels=None):
         """evaluate node in program"""
         np.seterr(all='ignore')
-        if len(stack_float) >= n.arity['f'] and len(stack_bool) >= n.arity['b']:
-            if n.out_type == 'f':
-                stack_float.append(
-                    self.safe(self.eval_dict[n.name](n,features,stack_float,
-                                                     stack_bool,labels)))
-                if (np.isnan(stack_float[-1]).any() or
-                    np.isinf(stack_float[-1]).any()):
-                    print("problem operator:",n)
-            else:
-                stack_bool.append(self.safe(self.eval_dict[n.name](n,features,
-                                                                   stack_float,
-                                                                   stack_bool,
-                                                                   labels)))
-                if np.isnan(stack_bool[-1]).any() or np.isinf(stack_bool[-1]).any():
-                    print("problem operator:",n)
+        if len(stack['f']) >= n.arity['f'] and len(stack['b']) >= n.arity['b']:
+            stack[n.out_type].append(
+                    self.safe(self.eval_dict[n.name](n,features,stack,labels)))
+            if (np.isnan(stack[n.out_type][-1]).any() or
+                np.isinf(stack[n.out_type][-1]).any()):
+                print("problem operator:",n)
+
+
 
     def all_finite(self,X):
         """returns true if X is finite, false, otherwise"""
@@ -228,20 +279,15 @@ class EvaluationMixin(object):
 
     def out(self,I,features,labels=None,otype='f'):
         """computes the output for individual I"""
-        stack_float = []
-        stack_bool = []
-        # print("stack:",I.stack)
+        stack = {'f':[],'b':[]}
         # evaulate stack over rows of features,labels
-        # pdb.set_trace()
         for n in I.stack:
-            self.evaluate(n,features,stack_float,stack_bool,labels)
+            self.evaluate(n,features,stack,labels)
             # print("stack_float:",stack_float)
-        if otype=='f':
-            return (stack_float[-1] if self.all_finite(stack_float[-1])
-                    else np.zeros(len(features)))
-        else:
-            return (stack_bool[-1].astype(float) if self.all_finite(stack_bool[-1])
-                    else np.zeros(len(features)))
+
+        return (stack[self.otype][-1] if self.all_finite(stack[self.otype][-1])
+                else np.zeros(len(features)))
+
 
     def calc_fitness(self,X,labels,fit_choice,sel):
         """computes fitness of individual output yhat.

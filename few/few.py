@@ -57,7 +57,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
                  random_state=np.random.randint(9999999), verbosity=0,
                  scoring_function=None, disable_update_check=False,
                  elitism=True, boolean = False,classification=False,clean=False,
-                 track_diversity=False,mdr=False,otype='f',c=True):
+                 track_diversity=False,mdr=False,otype='f',c=True,tf=False):
                 # sets up GP.
 
         # Save params to be recalled later by get_params()
@@ -106,7 +106,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
         self.track_diversity = track_diversity
         self.mdr = mdr
         self.otype = otype
-
+        self.tf = tf # tensor flow
         # if otype is b, boolean functions must be turned on
         if self.otype=='b':
             self.boolean = True
@@ -860,6 +860,9 @@ def main():
                         default=False,
                         help='Clean input data of missing values.')
 
+    parser.add_argument('--tf', action='store_true', dest='TF',
+                        default=False,
+                        help='Use tensor flow.')
     parser.add_argument('--no_lib', action='store_false', dest='c',
                         default=True,
                         help='Don''t use optimized c libraries.')
@@ -934,7 +937,7 @@ def main():
                   fit_choice = args.FIT_CHOICE,boolean=args.BOOLEAN,
                   classification=args.CLASSIFICATION,clean = args.CLEAN,
                   track_diversity=args.TRACK_DIVERSITY,mdr=args.MDR,
-                  otype=args.OTYPE,c=args.c)
+                  otype=args.OTYPE,c=args.c,tf=args.TF)
 
     learner.fit(training_features, training_labels)
     # pdb.set_trace()
