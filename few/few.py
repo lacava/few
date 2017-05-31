@@ -162,7 +162,6 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
     # @profile
     def fit(self, features, labels):
         """Fit model to data"""
-
         np.random.seed(self.random_state)
         # setup data
         # imputation
@@ -400,18 +399,6 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
         if not self._best_estimator:
             self._best_estimator = initial_estimator
         return self
-
-    def transform(self,x,inds=None,labels = None):
-        """return a transformation of x using population outputs"""
-        if inds:
-            # return np.asarray(Parallel(n_jobs=10)(delayed(self.out)(I,x,labels,self.otype) for I in inds)).transpose()
-            return np.asarray(
-                [self.out(I,x,labels,self.otype) for I in inds]).transpose()
-        else:
-            # return np.asarray(Parallel(n_jobs=10)(delayed(self.out)(I,x,labels,self.otype) for I in self._best_inds)).transpose()
-            return np.asarray(
-                [self.out(I,x,labels,self.otype) for I in self._best_inds]).transpose()
-
 
     def impute_data(self,x):
         """Imputes data set containing Nan values"""

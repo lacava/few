@@ -15,8 +15,10 @@ from sklearn.metrics.pairwise import pairwise_distances
 # from profilehooks import profile
 from sklearn.externals.joblib import Parallel, delayed
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL']='3'
+os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 import tensorflow as tf
+
+import pdb
 
 def divs(x,y):
     """safe division"""
@@ -34,13 +36,13 @@ def logs(x):
 
 def divs_tf(x,y):
     """safe division"""
-    return tf.where(tf.equal(y,tf.zeros(tf.shape(x),dtype=tf.float64)),
-                   tf.ones(tf.shape(x),dtype=tf.float64),
+    return tf.where(tf.equal(y,tf.zeros(tf.shape(x),dtype=tf.float32)),
+                   tf.ones(tf.shape(x),dtype=tf.float32),
                    tf.realdiv(x,y))
 def logs_tf(x):
     """safe log"""
-    return tf.where(tf.equal(x,tf.zeros(tf.shape(x),dtype=tf.float64)),
-                   tf.ones(tf.shape(x),dtype=tf.float64),
+    return tf.where(tf.equal(x,tf.zeros(tf.shape(x),dtype=tf.float32)),
+                   tf.ones(tf.shape(x),dtype=tf.float32),
                    tf.log(tf.abs(x)))
 
 # vectorized r2 score
@@ -73,20 +75,33 @@ class EvaluationMixin(object):
 
         if inds:
             if self.tf:
-                # compile list of graphs
-                programs = [build_tf_graph(I,x,labels) for I in inds]
+                result = np.asarray(
+                    [self.out_tf(I,x,labels,self.otype) for I in inds]).transpose()
+
+                return result
+                #construct feed_dict
+                # feed_dict={}
+                # for i,_ in enumerate(x.transpose()):
+                    # pdb.set_trace()
+                    # feed_dict['x'+str(i)+':0'] = x[:,i]
                 # Initialize TensorFlow session
-                tf.reset_default_graph() # Reset TF internal state and cache
-                # tf.device('/gpu:0')
-                config = tf.ConfigProto(allow_soft_placement=True)
-                # config.gpu_options.allow_growth = True
-                # run graphs
-                with tf.Session(config=config) as sess:
-                    result = sess.run(programs)
-                    # tf.train.write_graph(sess.graph,'tmp','graph.txt',as_text=True)
-                pdb.set_trace()
-                return (result if self.all_finite(result)
-                         else np.zeros(len(features)))
+                # tf.reset_default_graph() # Reset TF internal state and cache
+                # # tf.device('/cpu:0')
+                # config = tf.ConfigProto(allow_soft_placement=False)
+                # config.gpu_options.allow_growth = False
+                # # pdb.set_trace()
+                # programs = [self.build_tf_graph(I,x,labels) for I in inds]
+                # # run graphs
+                # with tf.Session(config=config) as sess:
+                #     with tf.device('/gpu:1'):
+                #
+                #         # compile list of graphs
+                #         result = sess.run(programs)
+                #     # tf.train.write_graph(sess.graph,'tmp','graph.txt',as_text=True)
+                # # pdb.set_trace()
+                # return np.asarray(result).transpose()
+                # #  if self.all_finite(result)
+                #          else np.zeros(len(features)))
             else:
                 return np.asarray(
                     [self.out(I,x,labels,self.otype) for I in inds]).transpose()
@@ -145,8 +160,8 @@ class EvaluationMixin(object):
         'cos': lambda n,features,stack,labels: tf.cos(stack['f'].pop()),
         'exp': lambda n,features,stack,labels: tf.exp(stack['f'].pop()),
         'log': lambda n,features,stack,labels: logs_tf(stack['f'].pop()),#np.log(np.abs(stack['f'].pop())),
-        'x':  lambda n,features,stack,labels: tf.constant(features[:,n.loc]),
-        'k': lambda n,features,stack,labels: tf.constant(n.value,dtype=tf.float64,shape=[features.shape[0],]),
+        'x':  lambda n,features,stack,labels: tf.placeholder(tf.float32,(None,),name='x'+str(n.loc)),#tf.constant(features[:,n.loc],name='x'+str(n.loc)),
+        'k': lambda n,features,stack,labels: tf.constant(n.value,dtype=tf.float32),#tf.constant(n.value,dtype=tf.float32,shape=[features.shape[0],],name=str(n.value)),
         '^2': lambda n,features,stack,labels: tf.square(stack['f'].pop()),
         '^3': lambda n,features,stack,labels: tf.pow(stack['f'].pop(),3),
         'sqrt': lambda n,features,stack,labels: tf.sqrt(np.abs(stack['f'].pop())),
@@ -172,41 +187,39 @@ class EvaluationMixin(object):
         """evaluate node in program"""
         np.seterr(all='ignore')
         stack={'f':[],'b':[]}
+        feed_dict={}
         for n in I.stack:
             if (len(stack['f']) >= n.arity['f']
                 and len(stack['b']) >= n.arity['b']):
                 stack[n.out_type].append(
                                 self.tf_dict[n.name](n,features,stack,labels))
+            if n.name=='x':#add x to feed_dict
+                if stack[n.out_type][-1] not in feed_dict.keys():
+                    feed_dict[stack[n.out_type][-1]] = features[:,n.loc]
 
-        return stack[self.otype][-1]
+        return stack[self.otype][-1],feed_dict
 
-    # def out_tf(self,I,features,labels=None,otype='f'):
-    #     """computes the output for individual I"""
-    #     stack['f'] = []
-    #     stack['b'] = []
-    #     # Initialize TensorFlow session
-    #     tf.reset_default_graph() # Reset TF internal state and cache
-    #     config = tf.ConfigProto(allow_soft_placement=True)
-    #     config.gpu_options.allow_growth = True
-    #     # print("stack:",I.stack)
-    #     # evaulate stack over rows of features,labels
-    #     # pdb.set_trace()
-    #     for n in I.stack:
-    #         self.build_tf_graph(n,features,stack,labels)
-    #         # print("stack_float:",stack_float)
-    #
-    #     if otype=='f':
-    #         with tf.Session() as sess:
-    #             result = sess.run(stack_float[-1])
-    #             # tf.train.write_graph(sess.graph,'tmp','graph.txt',as_text=True)
-    #         # pdb.set_trace()
-    #         return (result if self.all_finite(result)
-    #                  else np.zeros(len(features)))
-    #     else:
-    #         with tf.Session(config=config) as sess:
-    #             result = sess.run(stack['b'][-1])
-    #         return (result.astype(float) if self.all_finite(result)
-    #                   else np.zeros(len(features)))
+    def out_tf(self,I,features,labels=None,otype='f'):
+        """computes the output for individual I"""
+
+        # Initialize TensorFlow session
+        tf.reset_default_graph() # Reset TF internal state and cache
+        config = tf.ConfigProto(log_device_placement=False,
+                                allow_soft_placement=True)
+        config.gpu_options.allow_growth = False
+        # print("stack:",I.stack)
+        # evaulate stack over rows of features,labels
+        # pdb.set_trace()
+        program,feed_dict = self.build_tf_graph(I,features,labels)
+
+        with tf.Session(config=config) as sess:
+            with sess.graph.device('/gpu:0'):
+                result = np.array(sess.run(program,feed_dict=feed_dict))
+            # tf.train.write_graph(sess.graph,'tmp','graph.txt',as_text=True)
+        # pdb.set_trace()
+        return (result if self.all_finite(result)
+                 else np.zeros(len(features)))
+
 
     f = { # available fitness metrics
         'mse': lambda y,yhat: mean_squared_error(y,yhat),
