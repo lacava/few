@@ -44,6 +44,7 @@ This project is hosted at https://github.com/lacava/few
     install_requires=['numpy', 'scipy', 'pandas', 'scikit-learn',
                       'update_checker', 'tqdm', 'joblib','DistanceClassifier',
                       'scikit-mdr','Cython', 'eigency'],
+    setup_requires=['eigency'],
     classifiers=[
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
@@ -59,5 +60,5 @@ This project is hosted at https://github.com/lacava/few
                                     include_dirs=[".", "./few/lib"] +
                                     eigency.get_includes(),
                                     extra_compile_args = ['-std=c++0x'])],
-                          language="c++")
+                                    language="c++")
 )
