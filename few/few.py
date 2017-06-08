@@ -274,7 +274,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
                     desc='Internal CV: {:1.3f}'.format(self._best_score))
         # for each generation g
         for g in np.arange(self.generations):
-            if stall_count == max_stall
+            if stall_count == max_stall:
                 break;
 
             if self.track_diversity:
