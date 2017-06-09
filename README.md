@@ -22,6 +22,12 @@ Then you can use pip to install FEW from [PyPi](https://pypi.python.org/pypi/FEW
 
 or you can clone the git repo and add it to your Python path. 
 
+**Mac users**: some Mac users have reported issues when installing with old version of gcc (like gcc-4.2) because the random.h library is not included (basically [this issue](https://stackoverflow.com/questions/5967065/python-distutils-not-using-correct-version-of-gcc)). I recommend installing gcc-4.8 for use with Few. After updating the compiler, you can reinstall with 
+
+```python
+CC=gcc-4.8 python setupy.py install
+```
+
 ## Usage
 
 Few uses the same nomenclature as [sklearn](http://scikit-learn.org/) supervised learning modules. Here is a simple example script:
