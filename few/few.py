@@ -90,6 +90,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
         self.tourn_size = tourn_size
         self.fit_choice = fit_choice
         self.op_weight = op_weight
+        self.max_stall = max_stall
         self.seed_with_ml = seed_with_ml
         self.erc = erc
         self.random_state = random_state
@@ -272,9 +273,10 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
         # progress bar
         pbar = tqdm(total=self.generations,disable = self.verbosity==0,
                     desc='Internal CV: {:1.3f}'.format(self._best_score))
+        stall_count = 0
         # for each generation g
         for g in np.arange(self.generations):
-            if stall_count == max_stall:
+            if stall_count == self.max_stall:
                 break;
 
             if self.track_diversity:
@@ -937,7 +939,7 @@ def main():
                   min_depth = args.MIN_DEPTH,max_depth = args.MAX_DEPTH,
                   sel = args.SEL, tourn_size = args.TOURN_SIZE,
                   seed_with_ml = args.SEED_WITH_ML, op_weight = args.OP_WEIGHT,
-                  stall_count = args.MAX_STALL,
+                  max_stall = args.MAX_STALL,
                   erc = args.ERC, random_state=args.RANDOM_STATE,
                   verbosity=args.VERBOSITY,
                   disable_update_check=args.DISABLE_UPDATE_CHECK,
