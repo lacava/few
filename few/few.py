@@ -277,7 +277,8 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
         # for each generation g
         for g in np.arange(self.generations):
             if stall_count == self.max_stall:
-                break;
+                if self.verbosity > 0: print('max stall count reached.')
+                break
 
             if self.track_diversity:
                 self.get_diversity(self.X)
@@ -816,8 +817,8 @@ def main():
                         ' features based on ML scores. Default: off')
 
     parser.add_argument('-ms', action='store', dest='MAX_STALL',default=10,
-                         help='The number of iterations to do when the best'
-                         ' score is not improving before taking the best score value')
+                        type=positive_integer, help='If model CV does not '
+                        'improve for this many generations, end optimization.')
 
     parser.add_argument('-sel', action='store', dest='SEL',
                         default='epsilon_lexicase',
