@@ -3,6 +3,7 @@
 from setuptools import setup, find_packages
 from setuptools.extension import Extension
 from Cython.Build import cythonize
+import eigency
 
 def calculate_version():
     initpy = open('few/_version.py').read().split('\n')
