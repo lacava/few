@@ -3,7 +3,18 @@
 from setuptools import setup, find_packages
 from setuptools.extension import Extension
 from Cython.Build import cythonize
-import eigency
+
+# the setup file relies on eigency to import its include paths for the
+# extension modules. however eigency isn't known as a dependency until after
+# setup is parsed; so we need to check for and install eigency before setup.
+import importlib
+try:
+    importlib.import_module('eigency')
+except ImportError:
+    import pip
+    pip.main(['install', 'eigency'])
+finally:
+    globals()['eigency'] = importlib.import_module('eigency')
 
 def calculate_version():
     initpy = open('few/_version.py').read().split('\n')
