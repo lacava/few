@@ -44,11 +44,11 @@ fi
 
 source activate testenv
 
-pip install update_checker
-pip install tqdm
-pip install joblib
-pip install DistanceClassifier
-pip install scikit-mdr
+# pip install update_checker
+# pip install tqdm
+# pip install joblib
+# pip install DistanceClassifier
+# pip install scikit-mdr
 # pip install eigency
 
 if [[ "$COVERAGE" == "true" ]]; then
