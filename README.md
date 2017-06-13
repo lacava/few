@@ -12,17 +12,17 @@ Few uses genetic programming to generate, search and update engineered features.
 
 ## Install
 
-Version 0.0.30 introduced c++ optimizations that depend on [eigency](https://github.com/wouterbroomsma/eigency). Install eigency as:
-
-```pip install eigency```
-
-Then you can use pip to install FEW from [PyPi](https://pypi.python.org/pypi/FEW) as: 
+You can use pip to install FEW from [PyPi](https://pypi.python.org/pypi/FEW) as: 
 
 ```pip install few```
 
-or you can clone the git repo and add it to your Python path. 
+or you can clone the git repo and add it to your Python path. Then from the repo, run
 
-**Mac users**: some Mac users have reported issues when installing with old version of gcc (like gcc-4.2) because the random.h library is not included (basically [this issue](https://stackoverflow.com/questions/5967065/python-distutils-not-using-correct-version-of-gcc)). I recommend installing gcc-4.8 for use with Few. After updating the compiler, you can reinstall with 
+```python setup.py install``` 
+
+###Mac users 
+
+Some Mac users have reported issues when installing with old versions of gcc (like gcc-4.2) because the random.h library is not included (basically [this issue](https://stackoverflow.com/questions/5967065/python-distutils-not-using-correct-version-of-gcc)). I recommend installing gcc-4.8 or greater for use with Few. After updating the compiler, you can reinstall with 
 
 ```python
 CC=gcc-4.8 python setupy.py install
