@@ -57,10 +57,10 @@ fi
 
 # build output in the travis output when it succeeds.
 python --version
-python -c "import numpy; print('numpy %s' % numpy.__version__)"
-python -c "import scipy; print('scipy %s' % scipy.__version__)"
-python -c "import sklearn; print('sklearn %s' % sklearn.__version__)"
-python -c "import pandas; print('pandas %s' % pandas.__version__)"
+# python -c "import numpy; print('numpy %s' % numpy.__version__)"
+# python -c "import scipy; print('scipy %s' % scipy.__version__)"
+# python -c "import sklearn; print('sklearn %s' % sklearn.__version__)"
+# python -c "import pandas; print('pandas %s' % pandas.__version__)"
 # python -c "import update_checker; print('update_checker %s' % update_checker.__version__)"
 # python -c "import tqdm; print('tqdm %s' % tqdm.__version__)"
 # python -c "import joblib; print('joblib %s' % joblib.__version__)"
