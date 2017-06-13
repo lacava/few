@@ -55,7 +55,9 @@ This project is hosted at https://github.com/lacava/few
     install_requires=['numpy', 'scipy', 'pandas', 'scikit-learn',
                       'update_checker', 'tqdm', 'joblib','DistanceClassifier',
                       'scikit-mdr','Cython', 'eigency'],
-    setup_requires=['eigency'],
+    setup_requires=['numpy', 'scipy', 'pandas', 'scikit-learn',
+                      'update_checker', 'tqdm', 'joblib','DistanceClassifier',
+                      'scikit-mdr','Cython', 'eigency'],
     classifiers=[
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
