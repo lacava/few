@@ -49,7 +49,7 @@ pip install tqdm
 pip install joblib
 pip install DistanceClassifier
 pip install scikit-mdr
-pip install eigency
+# pip install eigency
 
 if [[ "$COVERAGE" == "true" ]]; then
     pip install coverage coveralls
