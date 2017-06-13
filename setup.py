@@ -11,8 +11,12 @@ import importlib
 try:
     importlib.import_module('eigency')
 except ImportError:
-    import pip
-    pip.main(['install', 'eigency'])
+    try:
+        import pip
+        pip.main(['install', 'eigency'])
+    except ImportError:
+        raise ImportError('The eigency library must be installed before FEW. '
+                          'Automatic install with pip failed.')
 finally:
     globals()['eigency'] = importlib.import_module('eigency')
 
