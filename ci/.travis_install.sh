@@ -64,4 +64,5 @@ python --version
 # python -c "import update_checker; print('update_checker %s' % update_checker.__version__)"
 # python -c "import tqdm; print('tqdm %s' % tqdm.__version__)"
 # python -c "import joblib; print('joblib %s' % joblib.__version__)"
-python setup.py build_ext --inplace
+# python setup.py build_ext --inplace
+python setupy.py install
