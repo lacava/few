@@ -2,7 +2,7 @@ from few import FEW
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-dataset = 'd_enc.txt'
+dataset = 'data/d_enc.txt'
 
 input_data = pd.read_csv(dataset,sep=None,engine='python')
 
