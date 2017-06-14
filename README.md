@@ -20,7 +20,7 @@ or you can clone the git repo and add it to your Python path. Then from the repo
 
 ```python setup.py install``` 
 
-###Mac users 
+### Mac users 
 
 Some Mac users have reported issues when installing with old versions of gcc (like gcc-4.2) because the random.h library is not included (basically [this issue](https://stackoverflow.com/questions/5967065/python-distutils-not-using-correct-version-of-gcc)). I recommend installing gcc-4.8 or greater for use with Few. After updating the compiler, you can reinstall with 
 
