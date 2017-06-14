@@ -46,6 +46,36 @@ def test_few_fit_shapes():
     "test r2:",r2_score(boston.target[300:],yhat_test))
     assert yhat_test.shape == boston.target[300:].shape
 
+def test_few_with_parents_weight():
+    """test_few.py: few performs without error with parent pressure for selection"""
+    np.random.seed(1006987)
+    boston = load_boston()
+    d = np.column_stack((boston.data,boston.target))
+    np.random.shuffle(d)
+    features = d[:,0:-1]
+    target = d[:,-1]
+
+    print("feature shape:",boston.data.shape)
+
+    learner = FEW(generations=1, population_size=5,
+                mutation_rate=1, crossover_rate=1,
+                ml = LassoLarsCV(), min_depth = 1, max_depth = 3,
+                sel = 'tournament', fit_choice = 'r2',tourn_size = 2, random_state=0, verbosity=0,
+                disable_update_check=False, weight_parents=True)
+
+    learner.fit(features[:300], target[:300])
+    few_score = learner.score(features[:300], target[:300])
+    test_score = learner.score(features[300:],target[300:])
+
+    lasso = LassoLarsCV()
+    lasso.fit(learner._training_features,learner._training_labels)
+    lasso_score = lasso.score(features[:300], target[:300])
+    print("few score:",few_score,"lasso score:",lasso_score)
+    print("few test score:",test_score,"lasso test score:",lasso.score(features[300:],target[300:]))
+    assert few_score >= lasso_score
+
+    print("lasso coefficients:",lasso.coef_)
+
 
 def test_few_at_least_as_good_as_default():
     """test_few.py: few performs at least as well as the default ML """

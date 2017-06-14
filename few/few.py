@@ -57,7 +57,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
                  random_state=np.random.randint(9999999), verbosity=0,
                  scoring_function=None, disable_update_check=False,
                  elitism=True, boolean = False,classification=False,clean=False,
-                 track_diversity=False,mdr=False,otype='f',c=True):
+                 track_diversity=False,mdr=False,otype='f',c=True, weight_parents=False):
                 # sets up GP.
 
         # Save params to be recalled later by get_params()
@@ -91,6 +91,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
         self.fit_choice = fit_choice
         self.op_weight = op_weight
         self.max_stall = max_stall
+        self.weight_parents = weight_parents
         self.seed_with_ml = seed_with_ml
         self.erc = erc
         self.random_state = random_state
@@ -820,6 +821,9 @@ def main():
                         type=positive_integer, help='If model CV does not '
                         'improve for this many generations, end optimization.')
 
+    parser.add_argument('--weight_parents', action='store_true',dest='WEIGHT_PARENTS',default=False,
+                        help='Feature importance determines parent pressure for selection.')
+
     parser.add_argument('-sel', action='store', dest='SEL',
                         default='epsilon_lexicase',
                         choices = ['tournament','lexicase','epsilon_lexicase',
@@ -947,7 +951,7 @@ def main():
                   fit_choice = args.FIT_CHOICE,boolean=args.BOOLEAN,
                   classification=args.CLASSIFICATION,clean = args.CLEAN,
                   track_diversity=args.TRACK_DIVERSITY,mdr=args.MDR,
-                  otype=args.OTYPE,c=args.c)
+                  otype=args.OTYPE,c=args.c, weight_parents = args.WEIGHT_PARENTS)
 
     learner.fit(training_features, training_labels)
     # pdb.set_trace()
