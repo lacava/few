@@ -31,7 +31,7 @@ class VariationMixin(object):
             elif hasattr(self.ml,'feature_importances_'):
                 # for tree methods, filter our individuals with 0 feature importance
                 if self.weight_parents:
-                    weights = abs(self.ml.feature_importances_)
+                    weights = self.ml.feature_importances_
                     weights = weights/sum(weights)
                     offspring = copy.deepcopy(list(np.random.choice(self.valid(parents), self.population_size, p=weights)))
                 else:
