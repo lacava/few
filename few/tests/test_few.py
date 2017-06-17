@@ -67,6 +67,9 @@ def test_few_with_parents_weight():
     few_score = learner.score(features[:300], target[:300])
     test_score = learner.score(features[300:],target[300:])
 
+    print("few score:",few_score)
+    print("few test score:",test_score)
+
 
 def test_few_at_least_as_good_as_default():
     """test_few.py: few performs at least as well as the default ML """
