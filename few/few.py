@@ -23,6 +23,7 @@ from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, accuracy_score
 from sklearn.preprocessing import Imputer
+from sklearn.utils import check_random_state
 from DistanceClassifier import DistanceClassifier
 import numpy as np
 import pandas as pd
@@ -54,7 +55,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
                  ml = None, min_depth = 1, max_depth = 2, max_depth_init = 2,
                  sel = 'epsilon_lexicase', tourn_size = 2, fit_choice = None,
                  op_weight = False, max_stall=10, seed_with_ml = True, erc = False,
-                 random_state=np.random.randint(9999999), verbosity=0,
+                 random_state=None, verbosity=0,
                  scoring_function=None, disable_update_check=False,
                  elitism=True, boolean = False,classification=False,clean=False,
                  track_diversity=False,mdr=False,otype='f',c=True):
@@ -93,7 +94,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
         self.max_stall = max_stall
         self.seed_with_ml = seed_with_ml
         self.erc = erc
-        self.random_state = random_state
+        self.random_state = check_random_state(random_state)
         self.verbosity = verbosity
         self.scoring_function = scoring_function
         self.gp_generation = 0
@@ -164,7 +165,6 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
     def fit(self, features, labels):
         """Fit model to data"""
 
-        np.random.seed(self.random_state)
         # setup data
         # imputation
         if self.clean:
@@ -228,7 +228,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
             self.term_set.append(node('x',loc=i)) # features
             # add ephemeral random constants if flag
             if self.erc: # ephemeral random constants
-                self.term_set.append(node('k',value=np.random.rand()))
+                self.term_set.append(node('k',value=self.random_state.rand()))
 
         # edit function set if boolean
         if self.boolean or self.otype=='b': # include boolean functions
@@ -528,7 +528,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
                     elif p is not None:
                         # make program if pop is bigger than model componennts
                         make_program(p.stack,self.func_set,self.term_set,
-                                     np.random.randint(self.min_depth,
+                                     self.random_state.randint(self.min_depth,
                                                        self.max_depth+1),
                                      self.otype)
                         p.stack = list(reversed(p.stack))
@@ -552,7 +552,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
                                 p.stack = [node('x',loc=i)]
                             else:
                                 make_program(p.stack,self.func_set,self.term_set,
-                                             np.random.randint(self.min_depth,
+                                             self.random_state.randint(self.min_depth,
                                                                self.max_depth+1),
                                              self.otype)
                                 p.stack = list(reversed(p.stack))
@@ -565,7 +565,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
 
         else:
             for I in pop.individuals:
-                depth = np.random.randint(self.min_depth,self.max_depth+1)
+                depth = self.random_state.randint(self.min_depth,self.max_depth+1)
                 # print("hex(id(I)):",hex(id(I)))
                 # depth = 2;
                 # print("initial I.stack:",I.stack)
