@@ -6,13 +6,13 @@ license: GNU/GPLv3
 
 """
 import numpy as np
-from .population import make_program
+from .population import make_program, Ind
 from itertools import accumulate
 import pdb
 import copy
 import itertools as it
 import uuid
-from .population import Ind
+
 # from few.tests.test_population import is_valid_program
 class VariationMixin(object):
     """ Defines crossover and mutation operator methods."""
