@@ -22,10 +22,20 @@ class VariationMixin(object):
         if type(self.ml).__name__ != 'SVC' and type(self.ml).__name__ != 'SVR': # this is needed because svm has a bug that throws valueerror on attribute check
             if hasattr(self.ml,'coef_'):
                 # for l1 regularization, filter individuals with 0 coefficients
-                offspring = copy.deepcopy(list(x for i,x in zip(self.ml.coef_, self.valid(parents)) if  (i != 0).any()))
+                if self.weight_parents:
+                    weights = abs(self.ml.coef_)
+                    weights = weights/sum(weights)
+                    offspring = copy.deepcopy(list(np.random.choice(self.valid(parents), self.population_size, p=weights)))
+                else:
+                    offspring = copy.deepcopy(list(x for i,x in zip(self.ml.coef_, self.valid(parents)) if  (i != 0).any()))
             elif hasattr(self.ml,'feature_importances_'):
                 # for tree methods, filter our individuals with 0 feature importance
-                offspring = copy.deepcopy(list(x for i,x in zip(self.ml.feature_importances_, self.valid(parents)) if  i != 0))
+                if self.weight_parents:
+                    weights = self.ml.feature_importances_
+                    weights = weights/sum(weights)
+                    offspring = copy.deepcopy(list(np.random.choice(self.valid(parents), self.population_size, p=weights)))
+                else:
+                    offspring = copy.deepcopy(list(x for i,x in zip(self.ml.feature_importances_, self.valid(parents)) if  i != 0))
             else:
                 offspring = copy.deepcopy(self.valid(parents))
         else:
