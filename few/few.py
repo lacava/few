@@ -9,7 +9,7 @@ license: GNU/GPLv3
 import argparse
 from ._version import __version__
 from .evaluation import EvaluationMixin
-from .population import *
+from .population import PopMixin, node
 from .variation import VariationMixin
 from .selection import SurvivalMixin
 
@@ -44,7 +44,8 @@ import uuid
 
 
 
-class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
+class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
+          BaseEstimator):
     """FEW uses GP to find a set of transformations from the original feature
     space that produces the best performance for a given machine learner.
     """
@@ -318,7 +319,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
                     print("First ten entries X:",
                           self.X[self.valid_loc(),:].transpose()[:10])
                     print("First ten entries y_t:",y_t[:10])
-                    print("equations:",stacks_2_eqns(self.pop.individuals))
+                    print("equations:",self.stacks_2_eqns(self.pop.individuals))
                     print("FEW parameters:",self.get_params())
                     if self.verbosity > 1: print("---\ndetailed error message:",
                                                  detail)
@@ -396,7 +397,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
                         [np.mean(f) for f in self.F]))
             if self.verbosity>2:
                 print("best features:",
-                      stacks_2_eqns(self._best_inds) if self._best_inds
+                      self.stacks_2_eqns(self._best_inds) if self._best_inds
                       else 'original')
             pbar.set_description('Internal CV: {:1.3f}'.format(self._best_score))
             pbar.update(1)
@@ -450,7 +451,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
                 pdb.set_trace()
                 print('shape of X:',testing_features.shape)
                 print('shape of X_transform:',X_transform.transpose().shape)
-                print('best inds:',stacks_2_eqns(self._best_inds))
+                print('best inds:',self.stacks_2_eqns(self._best_inds))
                 print('valid locs:',self.valid_loc(self._best_inds))
                 raise ValueError(detail)
         else:
@@ -507,77 +508,10 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
         if 'DecisionTree' in type(self.ml).__name__:
             export_graphviz(self._best_estimator,
                             out_file=output_file_name+'.dot',
-                            feature_names = stacks_2_eqns(self._best_inds)
+                            feature_names = self.stacks_2_eqns(self._best_inds)
                             if self._best_inds else None,
                             class_names=['True','False'],
                             filled=False,impurity = True,rotate=True)
-
-    def init_pop(self,num_features=1):
-        """initializes population of features as GP stacks."""
-        pop = Pop(self.population_size,num_features)
-        # make programs
-        if self.seed_with_ml:
-            # initial population is the components of the default ml model
-            if type(self.ml) == type(LassoLarsCV()):
-                # add all model components with non-zero coefficients
-                for i,(c,p) in enumerate(it.zip_longest(
-                        [c for c in self.ml.coef_ if c !=0],pop.individuals,
-                        fillvalue=None)):
-                    if c is not None and p is not None:
-                        p.stack = [node('x',loc=i)]
-                    elif p is not None:
-                        # make program if pop is bigger than model componennts
-                        make_program(p.stack,self.func_set,self.term_set,
-                                     self.random_state.randint(self.min_depth,
-                                                       self.max_depth+1),
-                                     self.otype)
-                        p.stack = list(reversed(p.stack))
-            else: # seed with raw features
-                # if list(self.ml.coef_):
-                #pdb.set_trace()
-                try:
-                    if self.population_size < self.ml.coef_.shape[0]:
-                        # seed pop with highest coefficients
-                        coef_order = np.argsort(self.ml.coef_[::-1])
-                        for i,(c,p) in enumerate(zip(coef_order,pop.individuals)):
-                            p.stack = [node('x',loc=i)]
-                    else:
-                        raise(AttributeError)
-                except Exception: # seed pop with raw features
-                     for i,p in it.zip_longest(
-                         range(self._training_features.shape[1]),
-                         pop.individuals,fillvalue=None):
-                        if p is not None:
-                            if i is not None:
-                                p.stack = [node('x',loc=i)]
-                            else:
-                                make_program(p.stack,self.func_set,self.term_set,
-                                             self.random_state.randint(self.min_depth,
-                                                               self.max_depth+1),
-                                             self.otype)
-                                p.stack = list(reversed(p.stack))
-
-            # print initial population
-            if self.verbosity > 2:
-                print("seeded initial population:",
-                      stacks_2_eqns(pop.individuals))
-
-
-        else:
-            for I in pop.individuals:
-                depth = self.random_state.randint(self.min_depth,self.max_depth+1)
-                # print("hex(id(I)):",hex(id(I)))
-                # depth = 2;
-                # print("initial I.stack:",I.stack)
-
-                make_program(I.stack,self.func_set,self.term_set,depth,
-                             self.otype)
-                # print(I.stack)
-                I.stack = list(reversed(I.stack))
-
-            # print(I.stack)
-
-        return pop
 
     def print_model(self,sep='\n'):
         """prints model contained in best inds, if ml has a coefficient property.
@@ -606,7 +540,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
                             scoef = ml.coef_[s]
                         bi = [self._best_inds[k] for k in s]
                         model = (' +' + sep).join(
-                            [str(round(c,3))+'*'+stack_2_eqn(f)
+                            [str(round(c,3))+'*'+self.stack_2_eqn(f)
                              for i,(f,c) in enumerate(zip(bi,scoef))
                              if round(scoef[i],3) != 0])
                     else:
@@ -616,7 +550,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
                             scoef = coef[s]
                             bi =[self._best_inds[k] for k in s]
                             model += sep + 'class'+str(j)+' :'+' + '.join(
-                                [str(round(c,3))+'*'+stack_2_eqn(f)
+                                [str(round(c,3))+'*'+self.stack_2_eqn(f)
                                  for i,(f,c) in enumerate(zip(bi,coef))
                                  if coef[i] != 0])
                 elif hasattr(ml,'feature_importances_'):
@@ -626,13 +560,13 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
                     # model = 'importance:feature'+sep
 
                     model += sep.join(
-                        [str(round(c,3))+':'+stack_2_eqn(f)
+                        [str(round(c,3))+':'+self.stack_2_eqn(f)
                          for i,(f,c) in enumerate(zip(bi,sfi))
                          if round(sfi[i],3) != 0])
                 else:
-                    return sep.join(stacks_2_eqns(self._best_inds))
+                    return sep.join(self.stacks_2_eqns(self._best_inds))
             else:
-                return sep.join(stacks_2_eqns(self._best_inds))
+                return sep.join(self.stacks_2_eqns(self._best_inds))
         else:
             return 'original features'
 
@@ -640,7 +574,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
 
     def representation(self):
         """return stacks_2_eqns output"""
-        return stacks_2_eqns(self._best_inds)
+        return self.stacks_2_eqns(self._best_inds)
 
     def valid_loc(self,F=None):
         """returns the indices of individuals with valid fitness."""
@@ -877,7 +811,7 @@ def main():
                         help='Don''t use optimized c libraries.')
 
     parser.add_argument('-s', action='store', dest='RANDOM_STATE',
-                        default=np.random.randint(4294967295),
+                        default=None,
                         type=int,
                         help='Random number generator seed for reproducibility.'
                         'Note that using multi-threading may make exact results'
@@ -917,7 +851,7 @@ def main():
     input_data.rename(columns={'Label': 'label','Class':'label','class':'label',
                                'target':'label'}, inplace=True)
 
-    RANDOM_STATE = args.RANDOM_STATE if args.RANDOM_STATE > 0 else None
+    RANDOM_STATE = args.RANDOM_STATE 
 
     train_i, test_i = train_test_split(input_data.index,
                                        stratify = None,

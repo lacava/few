@@ -11,6 +11,7 @@ import pdb
 import uuid
 from mdr import MDR
 from collections import defaultdict
+import itertools as it
 
 eqn_dict = {
     '+': lambda n,stack_eqn: '(' + stack_eqn.pop() + '+' + stack_eqn.pop() + ')',
@@ -141,46 +142,120 @@ class Pop(object):
             else:
                 self.individuals.append(Ind(fitness = fit))
 
-def stacks_2_eqns(stacks):
-    """returns equation strings from stacks"""
-    if stacks:
-        return list(map(lambda p: stack_2_eqn(p), stacks))
-    else:
+class PopMixin(object):
+    """methods for constructing features."""
+    ####################################################### printing equations
+    def eval_eqn(self,n,stack_eqn):
+        if len(stack_eqn) >= n.arity['f']+n.arity['b']:
+            stack_eqn.append(eqn_dict[n.name](n,stack_eqn))
+
+    def stack_2_eqn(self,p):
+        """returns equation string for program stack"""
+        stack_eqn = []
+        if p: # if stack is not empty
+            for n in p.stack:
+                self.eval_eqn(n,stack_eqn)
+            return stack_eqn[-1]
         return []
 
-def stack_2_eqn(p):
-    """returns equation string for program stack"""
-    stack_eqn = []
-    if p: # if stack is not empty
-        for n in p.stack:
-            eval_eqn(n,stack_eqn)
-        return stack_eqn[-1]
-    return []
+    def stacks_2_eqns(self,stacks):
+        """returns equation strings from stacks"""
+        if stacks:
+            return list(map(lambda p: self.stack_2_eqn(p), stacks))
+        else:
+            return []
 
-def eval_eqn(n,stack_eqn):
-    if len(stack_eqn) >= n.arity['f']+n.arity['b']:
-        stack_eqn.append(eqn_dict[n.name](n,stack_eqn))
-        # if any(np.isnan(stack_eqn[-1])) or any(np.isinf(stack_eqn[-1])):
-        #     print("problem operator:",n)
+    ######################################################### making programs
+    def make_program(self,stack,func_set,term_set,max_d,ntype):
+        """makes a program stack"""
+        # print("stack:",stack,"max d:",max_d)
+        if max_d == 0: #or np.random.rand() < float(len(term_set))/(len(term_set)+len(func_set)):
+            ts = [t for t in term_set if t.out_type==ntype]
 
-def make_program(stack,func_set,term_set,max_d,ntype):
-    """makes a program stack"""
-    # print("stack:",stack,"max d:",max_d)
-    if max_d == 0: #or np.random.rand() < float(len(term_set))/(len(term_set)+len(func_set)):
-        ts = [t for t in term_set if t.out_type==ntype]
+            if not ts:
+                raise ValueError('no ts. ntype:'+ntype+'. term_set out_types:'+
+                                 ','.join([t.out_type for t in term_set]))
 
-        if not ts:
-            raise ValueError('no ts. ntype:'+ntype+'. term_set out_types:'+','.join([t.out_type for t in term_set]))
+            stack.append(ts[np.random.choice(len(ts))])
+        else:
+            fs = [f for f in func_set if (f.out_type==ntype
+                                          and (f.in_type=='f' or max_d>1))]
+            if len(fs)==0:
+                print('ntype:',ntype,'\nfunc_set:',[f.name for f in func_set])
+            stack.append(fs[np.random.choice(len(fs))])
+            tmp = copy.copy(stack[-1])
 
-        stack.append(ts[np.random.choice(len(ts))])
-    else:
-        fs = [f for f in func_set if (f.out_type==ntype and (f.in_type=='f' or max_d>1))]
-        if len(fs)==0:
-            print('ntype:',ntype,'\nfunc_set:',[f.name for f in func_set])
-        stack.append(fs[np.random.choice(len(fs))])
-        tmp = copy.copy(stack[-1])
+            for i in np.arange(tmp.arity['f']):
+                self.make_program(stack,func_set,term_set,max_d-1,'f')
+            for i in np.arange(tmp.arity['b']):
+                self.make_program(stack,func_set,term_set,max_d-1,'b')
 
-        for i in np.arange(tmp.arity['f']):
-            make_program(stack,func_set,term_set,max_d-1,'f')
-        for i in np.arange(tmp.arity['b']):
-            make_program(stack,func_set,term_set,max_d-1,'b')
+    def init_pop(self,num_features=1):
+        """initializes population of features as GP stacks."""
+        pop = Pop(self.population_size,num_features)
+        seed_with_raw_features = False
+        # make programs
+        if self.seed_with_ml:
+            # initial population is the components of the default ml model
+            if (type(self.ml).__name__ == 'SVC'
+                or type(self.ml).__name__ == 'SVR'):
+                # this is needed because svm has a bug that throws valueerror
+                #on attribute check
+                seed_with_raw_features=True
+            elif hasattr(self.ml,'coef_'):
+                # add all model components with non-zero coefficients
+                for i,(c,p) in enumerate(it.zip_longest(
+                                    [c for c in self.ml.coef_ if (c !=0).any()],
+                                    pop.individuals,fillvalue=None)):
+                    if c is not None and p is not None:
+                        p.stack = [node('x',loc=i)]
+                    elif p is not None:
+                        # make program if pop is bigger than model componennts
+                        self.make_program(p.stack,self.func_set,self.term_set,
+                                     self.random_state.randint(self.min_depth,
+                                                       self.max_depth+1),
+                                     self.otype)
+                        p.stack = list(reversed(p.stack))
+            else:
+                seed_with_raw_features = True
+                
+            if seed_with_raw_features: # seed with raw features
+                # if list(self.ml.coef_):
+                #pdb.set_trace()
+                try:
+                    if self.population_size < self.ml.coef_.shape[0]:
+                        # seed pop with highest coefficients
+                        coef_order = np.argsort(self.ml.coef_[::-1])
+                        for i,(c,p) in enumerate(zip(coef_order,pop.individuals)):
+                            p.stack = [node('x',loc=i)]
+                    else:
+                        raise(AttributeError)
+                except Exception: # seed pop with raw features
+                     for i,p in it.zip_longest(
+                         range(self._training_features.shape[1]),
+                         pop.individuals,fillvalue=None):
+                        if p is not None:
+                            if i is not None:
+                                p.stack = [node('x',loc=i)]
+                            else:
+                                self.make_program(p.stack,self.func_set,self.term_set,
+                                             self.random_state.randint(self.min_depth,
+                                                               self.max_depth+1),
+                                             self.otype)
+                                p.stack = list(reversed(p.stack))
+
+            # print initial population
+            if self.verbosity > 2:
+                print("seeded initial population:",
+                      stacks_2_eqns(pop.individuals))
+
+        else: # don't seed with ML
+            for I in pop.individuals:
+                depth = self.random_state.randint(self.min_depth,
+                                                  self.max_depth+1)
+                self.make_program(I.stack,self.func_set,self.term_set,depth,
+                             self.otype)
+                # print(I.stack)
+                I.stack = list(reversed(I.stack))
+
+        return pop

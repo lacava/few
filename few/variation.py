@@ -6,7 +6,7 @@ license: GNU/GPLv3
 
 """
 import numpy as np
-from .population import make_program, Ind
+from .population import Ind
 from itertools import accumulate
 import pdb
 import copy
@@ -37,9 +37,10 @@ class VariationMixin(object):
 
         # Apply crossover and mutation on the offspring
         if self.verbosity > 2: print("variation...")
-        for child1, child2 in it.zip_longest(offspring[::2], offspring[1::2],fillvalue=None):
+        for child1, child2 in it.zip_longest(offspring[::2], offspring[1::2],
+                                             fillvalue=None):
 
-            if np.random.rand() < self.crossover_rate and child2 != None:
+            if self.random_state.rand() < self.crossover_rate and child2 != None:
             # crossover
                 self.cross(child1.stack, child2.stack, self.max_depth)
                 # update ids
@@ -74,7 +75,10 @@ class VariationMixin(object):
         while len(offspring) < self.population_size:
             #make new offspring to replace the invalid ones
             offspring.append(Ind())
-            make_program(offspring[-1].stack,self.func_set,self.term_set,np.random.randint(self.min_depth,self.max_depth+1),self.otype)
+            self.make_program(offspring[-1].stack,self.func_set,self.term_set,
+                              self.random_state.randint(self.min_depth,
+                                                        self.max_depth+1),
+                              self.otype)
             offspring[-1].stack = list(reversed(offspring[-1].stack))
 
         return offspring,elite,elite_index
@@ -90,7 +94,7 @@ class VariationMixin(object):
 
         # grab subtree of p_i
         p_i_sub = [i for i,n in enumerate(p_i) if n.out_type in types]
-        x_i_end = np.random.choice(p_i_sub)
+        x_i_end = self.random_state.choice(p_i_sub)
         x_i_begin = x_i_end
         arity_sum = p_i[x_i_end].arity[p_i[x_i_end].in_type]
         # print("x_i_end:",x_i_end)
@@ -107,7 +111,7 @@ class VariationMixin(object):
 
         # grab subtree of p_j with matching out_type to p_i[x_i_end]
         p_j_sub = [i for i,n in enumerate(p_j) if n.out_type == p_i[x_i_end].out_type]
-        x_j_end = np.random.choice(p_j_sub)
+        x_j_end = self.random_state.choice(p_j_sub)
         x_j_begin = x_j_end
         arity_sum = p_j[x_j_end].arity[p_j[x_j_end].in_type]
         # i = 0
@@ -148,14 +152,14 @@ class VariationMixin(object):
     def point_mutate(self,p_i,func_set,term_set):
         """point mutation on individual p_i"""
         # point mutation
-        x = np.random.randint(len(p_i))
+        x = self.random_state.randint(len(p_i))
         arity = p_i[x].arity[p_i[x].in_type]
         # find eligible replacements based on arity and type
         reps = [n for n in func_set+term_set
                 if n.arity[n.in_type]==arity and n.out_type==p_i[x].out_type
                 and n.in_type==p_i[x].in_type]
 
-        tmp = reps[np.random.randint(len(reps))]
+        tmp = reps[self.random_state.randint(len(reps))]
         tmp_p = p_i[:]
         p_i[x] = tmp
         if not self.is_valid_program(p_i):

@@ -106,7 +106,7 @@ class EvaluationMixin(object):
     'separation': lambda y,yhat: 1 - separation(yhat,y),
     'fisher': lambda y,yhat: 1 - fisher(yhat,y),
     'accuracy': lambda y,yhat: 1 - accuracy_score(yhat,y),
-    'random': lambda y,yhat: np.random.rand(),
+    'random': lambda y,yhat: self.random_state.rand(),
     'roc_auc': lambda y,yhat: 1 - roc_auc_score(y,yhat)
     # 'relief': lambda y,yhat: 1-ReliefF(n_jobs=-1).fit(yhat.reshape(-1,1),y).feature_importances_
     }
@@ -122,7 +122,7 @@ class EvaluationMixin(object):
     'separation': lambda y,yhat: 1 - separation(yhat,y,samples=True),
     'fisher': lambda y,yhat: 1 - fisher(yhat,y,samples=True),
     'accuracy': lambda y,yhat: 1 - np.sum(yhat==y)/y.shape[0], # this looks wrong, CHECK
-    'random': lambda y,yhat: np.random.rand(len(y)),
+    'random': lambda y,yhat: self.random_state.rand(len(y)),
     # 'relief': lambda y,yhat: 1-ReliefF(n_jobs=-1,sample_scores=True).fit(yhat.reshape(-1,1),y).feature_importances_
     }
 
@@ -137,7 +137,7 @@ class EvaluationMixin(object):
     # 'separation':  1 - separation(yhat,y,samples=True),
     # 'fisher':  1 - fisher(yhat,y,samples=True),
     # 'accuracy':  1 - np.sum(yhat==y)/y.shape[0],
-    # 'random':  np.random.rand(len(y)),
+    # 'random':  self.random_state.rand(len(y)),
     # # 'relief':  1-ReliefF(n_jobs=-1,sample_scores=True).fit(yhat.reshape(-1,1),y).feature_importances_
     # }
 

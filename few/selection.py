@@ -9,7 +9,6 @@ import numpy as np
 import copy
 import pdb
 from sklearn.metrics import r2_score
-from .population import stacks_2_eqns
 from few_lib import ep_lex
 # from profilehooks import profile
 
@@ -31,7 +30,7 @@ class SurvivalMixin(object):
             survivors, survivor_index = self.deterministic_crowding(parents,offspring,X,X_offspring)
         elif self.sel == 'random':
             # pdb.set_trace()
-            survivor_index = np.random.permutation(np.arange(2*len(parents)))[:len(parents)]
+            survivor_index = self.random_state.permutation(np.arange(2*len(parents)))[:len(parents)]
             survivors = [(parents + offspring)[s] for s in survivor_index]
         # elitism
         if self.elitism:
@@ -53,7 +52,7 @@ class SurvivalMixin(object):
 
         for i in np.arange(num_selections):
             # sample pool with replacement
-            pool_i = np.random.choice(len(individuals),size=tourn_size)
+            pool_i = self.random_state.choice(len(individuals),size=tourn_size)
             pool = []
             for i in pool_i:
                 pool.append(np.mean(individuals[i].fitness))
@@ -87,7 +86,7 @@ class SurvivalMixin(object):
             candidates = individuals
             can_locs = range(len(individuals))
             cases = list(np.arange(len(individuals[0].fitness_vec)))
-            np.random.shuffle(cases)
+            self.random_state.shuffle(cases)
             # pdb.set_trace()
             while len(cases) > 0 and len(candidates) > 1:
                 # get best fitness for case among candidates
@@ -100,7 +99,7 @@ class SurvivalMixin(object):
                 candidates,can_locs = zip(*((x,l) for x,l in zip(candidates,can_locs) if x.fitness_vec[cases[0]] == best_val_for_case))
                 cases.pop(0)
 
-            choice = np.random.randint(len(candidates))
+            choice = self.random_state.randint(len(candidates))
             winners.append(copy.deepcopy(candidates[choice]))
             locs.append(can_locs[choice])
             if survival: # filter out winners from remaining selection pool
@@ -129,7 +128,7 @@ class SurvivalMixin(object):
 
                 can_locs = individual_locs
                 cases = list(np.arange(F.shape[1]))
-                np.random.shuffle(cases)
+                self.random_state.shuffle(cases)
                 # pdb.set_trace()
                 while len(cases) > 0 and len(can_locs) > 1:
                     # get best fitness for case among candidates
@@ -138,7 +137,7 @@ class SurvivalMixin(object):
                     can_locs = [l for l in can_locs if F[l,cases[0]] <= best_val_for_case + mad_for_case[cases[0]]]
                     cases.pop(0)
 
-                choice = np.random.randint(len(can_locs))
+                choice = self.random_state.randint(len(can_locs))
                 locs.append(can_locs[choice])
                 if survival: # filter out winners from remaining selection pool
                     individual_locs = [i for i in individual_locs if i != can_locs[choice]]
