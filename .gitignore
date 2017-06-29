@@ -11,3 +11,4 @@ analysis/
 *.ipynb
 *.so
 *.o
+*.cpp
