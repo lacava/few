@@ -44,24 +44,11 @@ fi
 
 source activate testenv
 
-pip install update_checker
-pip install tqdm
-pip install joblib
-pip install DistanceClassifier
-pip install scikit-mdr
-pip install eigency
-
 if [[ "$COVERAGE" == "true" ]]; then
     pip install coverage coveralls
 fi
 
 # build output in the travis output when it succeeds.
 python --version
-python -c "import numpy; print('numpy %s' % numpy.__version__)"
-python -c "import scipy; print('scipy %s' % scipy.__version__)"
-python -c "import sklearn; print('sklearn %s' % sklearn.__version__)"
-python -c "import pandas; print('pandas %s' % pandas.__version__)"
-python -c "import update_checker; print('update_checker %s' % update_checker.__version__)"
-python -c "import tqdm; print('tqdm %s' % tqdm.__version__)"
-python -c "import joblib; print('joblib %s' % joblib.__version__)"
-python setup.py build_ext --inplace
+
+python setup.py install

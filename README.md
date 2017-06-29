@@ -5,7 +5,7 @@
 
 # Few
 
-**Few** is a **Feature Engineering Wrapper** for sci-kitlearn. Few looks for a set of feature transformations that work best with a specified machine learning algorithm in order to improve model estimation and prediction. In doing so, FEW is able to provide the user with a set of concise, engineered features that describe their data.
+**Few** is a **Feature Engineering Wrapper** for sci-kitlearn. Few looks for a set of feature transformations that work best with a specified machine learning algorithm in order to improve model estimation and prediction. In doing so, Few is able to provide the user with a set of concise, engineered features that describe their data.
 
 Few uses genetic programming to generate, search and update engineered features. It incorporates feedback from the ML process to select important features, while also scoring them internally. 
 
@@ -16,7 +16,17 @@ You can use pip to install FEW from [PyPi](https://pypi.python.org/pypi/FEW) as:
 
 ```pip install few```
 
-or you can clone the git repo and add it to your Python path. 
+or you can clone the git repo and add it to your Python path. Then from the repo, run
+
+```python setup.py install``` 
+
+### Mac users 
+
+Some Mac users have reported issues when installing with old versions of gcc (like gcc-4.2) because the random.h library is not included (basically [this issue](https://stackoverflow.com/questions/5967065/python-distutils-not-using-correct-version-of-gcc)). I recommend installing gcc-4.8 or greater for use with Few. After updating the compiler, you can reinstall with 
+
+```python
+CC=gcc-4.8 python setupy.py install
+```
 
 ## Usage
 
