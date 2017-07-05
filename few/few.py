@@ -107,7 +107,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         self.classification = classification
         self.clean = clean
         self.ml = Pipeline([('standardScaler',StandardScaler()), ('ml', ml)])
-        self.ml_type = type(self.ml.steps[1][1]).__name__
+        self.ml_type = type(self.ml.named_steps['ml']).__name__
         self.track_diversity = track_diversity
         self.mdr = mdr
         self.otype = otype
@@ -117,13 +117,13 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
             self.boolean = True
 
         # instantiate sklearn estimator according to specified machine learner
-        if self.ml.steps[1][1] is None:
+        if self.ml.named_steps['ml'] is None:
             if self.classification:
                 self.ml = Pipeline([('standardScaler',StandardScaler()), ('ml', LogisticRegression(solver='sag'))])
-                self.ml_type = type(self.ml.steps[1][1]).__name__
+                self.ml_type = type(self.ml.named_steps['ml']).__name__
             else:
                 self.ml = Pipeline([('standardScaler',StandardScaler()), ('ml', LassoLarsCV())])
-                self.ml_type = type(self.ml.steps[1][1]).__name__
+                self.ml_type = type(self.ml.named_steps['ml']).__name__
         if not self.scoring_function:
             if self.classification:
                 self.scoring_function = accuracy_score
@@ -149,7 +149,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                             type(DecisionTreeClassifier()): 'r2',
                             type(DistanceClassifier()): 'silhouette',
                             type(KNeighborsClassifier()): 'r2',
-            }[type(self.ml.steps[1][1])]
+            }[type(self.ml.named_steps['ml'])]
 
 
         # Columns to always ignore when in an operator
