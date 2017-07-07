@@ -20,10 +20,9 @@ from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 from sklearn.tree import export_graphviz
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
-from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, accuracy_score
-from sklearn.preprocessing import Imputer, StandardScaler
+from sklearn.preprocessing import Imputer
 from sklearn.utils import check_random_state
 from DistanceClassifier import DistanceClassifier
 import numpy as np
@@ -106,8 +105,8 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         self.boolean = boolean
         self.classification = classification
         self.clean = clean
-        self.ml = Pipeline([('standardScaler',StandardScaler()), ('ml', ml)])
-        self.ml_type = type(self.ml.named_steps['ml']).__name__
+        self.ml = ml
+        self.ml_type = type(self.ml).__name__
         self.track_diversity = track_diversity
         self.mdr = mdr
         self.otype = otype
@@ -117,13 +116,11 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
             self.boolean = True
 
         # instantiate sklearn estimator according to specified machine learner
-        if self.ml.named_steps['ml'] is None:
+        if self.ml is None:
             if self.classification:
-                self.ml = Pipeline([('standardScaler',StandardScaler()), ('ml', LogisticRegression(solver='sag'))])
-                self.ml_type = type(self.ml.named_steps['ml']).__name__
+                self.ml = LogisticRegression(solver='sag')
             else:
-                self.ml = Pipeline([('standardScaler',StandardScaler()), ('ml', LassoLarsCV())])
-                self.ml_type = type(self.ml.named_steps['ml']).__name__
+                self.ml = LassoLarsCV()
         if not self.scoring_function:
             if self.classification:
                 self.scoring_function = accuracy_score
@@ -143,8 +140,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                             #classification
                             type(DistanceClassifier()): 'silhouette',
             })
-            self.fit_choice = tmp_dict[type(self.ml.named_steps['ml'])]
-
+            self.fit_choice = tmp_dict[type(self.ml)]
 
         # Columns to always ignore when in an operator
         self.non_feature_columns = ['label', 'group', 'guess']
@@ -502,7 +498,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         with open(output_file_name, 'w') as output_file:
             output_file.write(self.print_model())
         # if decision tree, print tree into dot file
-        if 'DecisionTree' in self.ml_type:
+        if 'DecisionTree' in type(self.ml).__name__:
             export_graphviz(self._best_estimator,
                             out_file=output_file_name+'.dot',
                             feature_names = self.stacks_2_eqns(self._best_inds)
