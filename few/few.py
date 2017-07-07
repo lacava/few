@@ -60,7 +60,8 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                  random_state=None, verbosity=0,
                  scoring_function=None, disable_update_check=False,
                  elitism=True, boolean = False,classification=False,clean=False,
-                 track_diversity=False,mdr=False,otype='f',c=True, weight_parents=False):
+                 track_diversity=False,mdr=False,otype='f',c=True,
+                 weight_parents=True):
                 # sets up GP.
 
         # Save params to be recalled later by get_params()
