@@ -32,7 +32,7 @@ import warnings
 import copy
 import itertools as it
 import pdb
-
+from collections import defaultdict
 # from update_checker import update_check
 # from joblib import Parallel, delayed
 #from sklearn.externals.joblib import Parallel, delayed
@@ -132,7 +132,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
 
         # set default fitness metrics for various learners
         if not self.fit_choice:
-            self.fit_choice =  {
+            tmp_dict =  defaultdict(lambda: 'r2', {
                             #regression
                             type(LassoLarsCV()): 'mse',
                             type(SVR()): 'mae',
@@ -141,15 +141,9 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                             type(DecisionTreeRegressor()): 'mse',
                             type(RandomForestRegressor()): 'mse',
                             #classification
-                            type(SGDClassifier()): 'r2',
-                            type(LogisticRegression()): 'r2',
-                            type(SVC()): 'r2',
-                            type(LinearSVC()): 'r2',
-                            type(RandomForestClassifier()): 'r2',
-                            type(DecisionTreeClassifier()): 'r2',
                             type(DistanceClassifier()): 'silhouette',
-                            type(KNeighborsClassifier()): 'r2',
-            }[type(self.ml.named_steps['ml'])]
+            })
+            self.fit_choice = tmp_dict[type(self.ml.named_steps['ml'])]
 
 
         # Columns to always ignore when in an operator
@@ -316,7 +310,6 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                     #     self.ml.fit(X.transpose(),y_t)
 
                 except ValueError as detail:
-                    # pdb.set_trace()
                     print("warning: ValueError in ml fit. X.shape:",
                           self.X[:,self.valid_loc()].transpose().shape,
                           "y_t shape:",y_t.shape)
@@ -858,7 +851,7 @@ def main():
     input_data.rename(columns={'Label': 'label','Class':'label','class':'label',
                                'target':'label'}, inplace=True)
 
-    RANDOM_STATE = args.RANDOM_STATE 
+    RANDOM_STATE = args.RANDOM_STATE
 
     train_i, test_i = train_test_split(input_data.index,
                                        stratify = None,
