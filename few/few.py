@@ -21,7 +21,7 @@ from sklearn.tree import export_graphviz
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import r2_score, accuracy_score
 from sklearn.preprocessing import Imputer, StandardScaler
 from sklearn.utils import check_random_state
@@ -179,17 +179,19 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                 new_col_names[column] = str(column).zfill(10)
         train_val_data.rename(columns=new_col_names, inplace=True)
         # internal training/validation split
-        train_i, val_i = train_test_split(train_val_data.index,
-                                          stratify=None,
-                                          train_size=0.75,
-                                          test_size=0.25)
+        #train_i, val_i = train_test_split(train_val_data.index,
+        #                                 stratify=None,
+        #                                train_size=0.75,
+        #                                  test_size=0.25)
 
-        x_t = train_val_data.loc[train_i].drop('labels',axis=1).values
-        x_v = train_val_data.loc[val_i].drop('labels',axis=1).values
-        y_t = train_val_data.loc[train_i, 'labels'].values
-        y_v = train_val_data.loc[val_i, 'labels'].values
+        #x_t = train_val_data.loc[train_i].drop('labels',axis=1).values
+        #x_v = train_val_data.loc[val_i].drop('labels',axis=1).values
+        #y_t = train_val_data.loc[train_i, 'labels'].values
+        #y_v = train_val_data.loc[val_i, 'labels'].values
 
         # Store the training features and classes for later use
+        x_t = train_val_data.drop('labels',axis=1).values
+        y_t = train_val_data['labels'].values
         self._training_features = x_t
         self._training_labels = y_t
         ####
@@ -213,7 +215,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         initial_estimator = copy.deepcopy(self.ml.fit(x_t,y_t))
         # self._best_estimator = copy.deepcopy(self.ml.fit(x_t,y_t))
 
-        self._best_score = self.ml.score(x_v,y_v)
+        self._best_score = np.amax(cross_val_score(self.ml,x_t,y_t,cv=3))
         initial_score = self._best_score
         if self.verbosity > 2:
             print("initial estimator size:",self.ml.coef_.shape)
@@ -245,7 +247,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         # types are assumed to be float
         if self.otype=='b':
             self.seed_with_ml = False
-        self.pop = self.init_pop(self._training_features.shape[0])
+        self.pop = self.init_pop(x_t.shape[0])
         # check that uuids are unique in population
         uuids = [p.id for p in self.pop.individuals]
         if len(uuids) != len(set(uuids)):
@@ -329,9 +331,10 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
             try:
                 # if len(self.valid_loc(F)) > 0:
                 if self.valid_loc():
-                    tmp_score = self.ml.score(self.transform(
-                                    x_v,self.pop.individuals)[:,self.valid_loc()],
-                                    y_v)
+                    #tmp_score = self.ml.score(self.transform(
+                    #                x_v,self.pop.individuals)[:,self.valid_loc()],
+                    #                y_v)
+                    tmp_score = np.amax(cross_val_score(self.ml,x_t,y_t,cv=3))
                 # else:
                 #     tmp_score = 0
                 #     tmp = self.ml.score(self.transform(x_v,
