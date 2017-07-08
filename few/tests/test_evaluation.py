@@ -42,7 +42,8 @@ def test_out_shapes():
     pop_size = 5;
     few = FEW(population_size=pop_size,seed_with_ml=False)
     few.term_set = term_set
-    pop = few.init_pop(n_features)
+    few.n_features = n_features
+    pop = few.init_pop()
 
     pop.X = np.asarray(list(map(lambda I: few.out(I,boston.data), pop.individuals)))
 
@@ -113,7 +114,8 @@ def test_calc_fitness_shape():
     pop_size = 5;
     few = FEW(population_size=pop_size,seed_with_ml=False)
     few.term_set = term_set
-    pop = few.init_pop(n_features)
+    few.n_features = n_features
+    pop = few.init_pop()
 
     pop.X = np.asarray(list(map(lambda I: few.out(I,boston.data), pop.individuals)))
 
