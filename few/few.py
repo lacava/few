@@ -215,7 +215,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         initial_estimator = copy.deepcopy(self.ml.fit(x_t,y_t))
         # self._best_estimator = copy.deepcopy(self.ml.fit(x_t,y_t))
 
-        self._best_score = np.amax(cross_val_score(self.ml,x_t,y_t,cv=3))
+        self._best_score = np.mean(cross_val_score(self.ml,x_t,y_t))
         initial_score = self._best_score
         if self.verbosity > 2:
             print("initial estimator size:",self.ml.coef_.shape)
@@ -334,7 +334,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                     #tmp_score = self.ml.score(self.transform(
                     #                x_v,self.pop.individuals)[:,self.valid_loc()],
                     #                y_v)
-                    tmp_score = np.amax(cross_val_score(self.ml,x_t,y_t,cv=3))
+                    tmp_score = np.mean(cross_val_score(self.ml,x_t,y_t))
                 # else:
                 #     tmp_score = 0
                 #     tmp = self.ml.score(self.transform(x_v,
