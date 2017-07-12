@@ -169,7 +169,7 @@ class PopMixin(object):
     def make_program(self,stack,func_set,term_set,max_d,ntype):
         """makes a program stack"""
         # print("stack:",stack,"max d:",max_d)
-        if max_d == 0: #or np.random.rand() < float(len(term_set))/(len(term_set)+len(func_set)):
+        if max_d == 0:
             ts = [t for t in term_set if t.out_type==ntype]
 
             if not ts:
@@ -197,20 +197,32 @@ class PopMixin(object):
         # make programs
         if self.seed_with_ml:
             # initial population is the components of the default ml model
-            if (type(self.ml).__name__ == 'SVC'
-                or type(self.ml).__name__ == 'SVR'):
+            if (self.ml_type == 'SVC' or self.ml_type == 'SVR'):
                 # this is needed because svm has a bug that throws valueerror
                 #on attribute check
                 seed_with_raw_features=True
-            elif hasattr(self.ml,'coef_'):
-                # add all model components with non-zero coefficients
-                for i,(c,p) in enumerate(it.zip_longest(
-                                    [c for c in self.ml.coef_ if (c !=0).any()],
-                                    pop.individuals,fillvalue=None)):
-                    if c is not None and p is not None:
-                        p.stack = [node('x',loc=i)]
-                    elif p is not None:
-                        # make program if pop is bigger than model componennts
+            elif (hasattr(self.ml.named_steps['ml'],'coef_') or
+                  hasattr(self.ml.named_steps['ml'],'feature_importances_')):
+                # add model components with non-zero coefficients to initial
+                # population, in order of coefficient size
+                coef = (self.ml.named_steps['ml'].coef_ if
+                        hasattr(self.ml.named_steps['ml'],'coef_') else
+                        self.ml.named_steps['ml'].feature_importances_)
+                # compress multiple coefficients for each feature into single
+                # numbers (occurs with multiclass classification)
+                if len(coef.shape)>1:
+                    coef = [np.mean(abs(c)) for c in coef.transpose()]
+
+                # remove zeros
+                coef = [c for c in coef if c!=0]
+                # sort feature locations based on importance/coefficient
+                locs = np.arange(len(coef))
+                locs = locs[np.argsort(np.abs(coef))[::-1]]
+                for i,p in enumerate(pop.individuals):
+                    if i < len(locs):
+                        p.stack = [node('x',loc=locs[i])]
+                    else:
+                        # make program if pop is bigger than n_features
                         self.make_program(p.stack,self.func_set,self.term_set,
                                      self.random_state.randint(self.min_depth,
                                                        self.max_depth+1),
@@ -218,36 +230,24 @@ class PopMixin(object):
                         p.stack = list(reversed(p.stack))
             else:
                 seed_with_raw_features = True
-
-            if seed_with_raw_features: # seed with raw features
-                # if list(self.ml.coef_):
-                #pdb.set_trace()
-                try:
-                    if self.population_size < self.ml.coef_.shape[0]:
-                        # seed pop with highest coefficients
-                        coef_order = np.argsort(self.ml.coef_[::-1])
-                        for i,(c,p) in enumerate(zip(coef_order,pop.individuals)):
-                            p.stack = [node('x',loc=i)]
+            # seed with random features if no importance info available
+            if seed_with_raw_features:
+                for i,p in enumerate(pop.individuals):
+                    if i < self.n_features:
+                        p.stack = [node('x',
+                                        loc=np.random.randint(self.n_features))]
                     else:
-                        raise(AttributeError)
-                except Exception: # seed pop with raw features
-                     for i,p in it.zip_longest(
-                         range(self.n_features),
-                         pop.individuals,fillvalue=None):
-                        if p is not None:
-                            if i is not None:
-                                p.stack = [node('x',loc=i)]
-                            else:
-                                self.make_program(p.stack,self.func_set,self.term_set,
-                                             self.random_state.randint(self.min_depth,
-                                                               self.max_depth+1),
-                                             self.otype)
-                                p.stack = list(reversed(p.stack))
+                        # make program if pop is bigger than n_features
+                        self.make_program(p.stack,self.func_set,self.term_set,
+                                     self.random_state.randint(self.min_depth,
+                                                       self.max_depth+1),
+                                     self.otype)
+                        p.stack = list(reversed(p.stack))
 
             # print initial population
             if self.verbosity > 2:
                 print("seeded initial population:",
-                      stacks_2_eqns(pop.individuals))
+                      self.stacks_2_eqns(pop.individuals))
 
         else: # don't seed with ML
             for I in pop.individuals:

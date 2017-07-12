@@ -192,8 +192,6 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                                    score(features[test],labels[test])
                                    for train, test in KFold().split(features,
                                                                      labels)])
-        # best estimator is initial model
-        self._best_estimator = copy.deepcopy(self.ml)
 
         initial_score = self._best_score
         if self.verbosity > 0:
@@ -219,7 +217,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         if self.mdr:
             self.func_set += [node('mdr2')]
 
-        # Create initial population
+        ############################################# Create initial population
         # for now, force seed_with_ml to be off if otype is 'b', since data
         # types are assumed to be float
         if self.otype=='b':
@@ -246,13 +244,13 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
 
         #with Parallel(n_jobs=10) as parallel:
         ####################
-        ### Main GP loop
+
         self.diversity=[]
         # progress bar
         pbar = tqdm(total=self.generations,disable = self.verbosity==0,
                     desc='Internal CV: {:1.3f}'.format(self._best_score))
         stall_count = 0
-        # for each generation g
+        ########################################################### main GP loop
         for g in np.arange(self.generations):
             if stall_count == self.max_stall:
                 if self.verbosity > 0: print('max stall count reached.')
@@ -278,7 +276,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
             if self.verbosity > 1 and self.track_diversity:
                 print("feature diversity: %0.2f" % self.diversity[-1])
             if self.verbosity > 1: print("ml fitting...")
-            # fit ml model
+            ####################################################### fit ml model
             tmp_score=0
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
@@ -309,7 +307,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
             if self.verbosity > 1:
                 print("current ml validation score:",tmp_score)
 
-            # save best model
+            #################################################### save best model
             if self.valid_loc() and tmp_score > self._best_score:
                 self._best_estimator = copy.deepcopy(self.ml)
                 self._best_score = tmp_score
@@ -320,24 +318,22 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
             else:
                 stall_count = stall_count + 1
 
-            # Variation
+            ########################################################## variation
             if self.verbosity > 2:
                 print("variation...")
             offspring,elite,elite_index = self.variation(self.pop.individuals)
 
-            # evaluate offspring
+            ################################################# evaluate offspring
             if self.verbosity > 2:
                 print("output...")
             X_offspring = self.transform(features,offspring).transpose()
-            #parallel:
-            # X_offspring = np.asarray(Parallel(n_jobs=-1)(delayed(out)(O,features,labels,self.otype) for O in offspring), order = 'F')
+
             if self.verbosity > 2:
                 print("fitness...")
             F_offspring = self.calc_fitness(X_offspring,
                                             labels,self.fit_choice,self.sel)
-            # F_offspring = parallel(delayed(f[self.fit_choice])(labels,yhat) for yhat in X_offspring)
 
-            # Survival
+            ########################################################### survival
             if self.verbosity > 2: print("survival..")
             survivors,survivor_index = self.survival(self.pop.individuals,
                                                      offspring,elite,
@@ -369,8 +365,14 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         if self.verbosity > 0: print('finished. best internal val score:'
                                      ' {:1.3f}'.format(self._best_score))
         if self.verbosity > 0: print("final model:\n",self.print_model())
+
         if not self._best_estimator:
-            self._best_estimator = initial_estimator
+            # if no better model found, just return underlying method fit to the
+            # training data
+            self._best_estimator = self.ml.fit(features,labels)
+        else:
+            # fit final estimator to all the training data
+            self._best_estimator.fit(self.transform(features),labels)
         return self
 
     def transform(self,x,inds=None,labels = None):
@@ -411,7 +413,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
             try:
                 return self._best_estimator.predict(self.transform(testing_features))
             except ValueError as detail:
-                pdb.set_trace()
+                # pdb.set_trace()
                 print('shape of X:',testing_features.shape)
                 print('shape of X_transform:',X_transform.transpose().shape)
                 print('best inds:',self.stacks_2_eqns(self._best_inds))
@@ -717,8 +719,9 @@ def main():
                         type=positive_integer, help='If model CV does not '
                         'improve for this many generations, end optimization.')
 
-    parser.add_argument('--weight_parents', action='store_true',dest='WEIGHT_PARENTS',default=False,
-                        help='Feature importance determines parent pressure for selection.')
+    parser.add_argument('--weight_parents', action='store_true',
+                        dest='WEIGHT_PARENTS',default=True,
+                        help='Feature importance weights parent selection.')
 
     parser.add_argument('-sel', action='store', dest='SEL',
                         default='epsilon_lexicase',

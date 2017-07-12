@@ -20,10 +20,12 @@ class VariationMixin(object):
         """performs variation operators on parents."""
         # downselect to features that are important
         if type(self.ml).__name__ != 'SVC' and type(self.ml).__name__ != 'SVR': # this is needed because svm has a bug that throws valueerror on attribute check
-            if hasattr(self.ml,'coef_'):
+            if hasattr(self.ml.named_steps['ml'],'coef_'):
                 # for l1 regularization, filter individuals with 0 coefficients
                 if self.weight_parents:
                     weights = abs(self.ml.named_steps['ml'].coef_)
+                    if len(weights.shape)>1: # handle multi-coefficient models
+                        weights = [np.mean(abs(c)) for c in weights.transpose()]
                     weights = weights/sum(weights)
                     offspring = copy.deepcopy(
                         list(np.random.choice(self.valid(parents),
@@ -32,7 +34,7 @@ class VariationMixin(object):
                     offspring = copy.deepcopy(list(
                         x for i,x in zip(self.ml.named_steps['ml'].coef_,
                                          self.valid(parents)) if  (i != 0).any()))
-            elif hasattr(self.ml,'feature_importances_'):
+            elif hasattr(self.ml.named_steps['ml'],'feature_importances_'):
                 # for tree methods, filter our individuals with 0 feature importance
                 if self.weight_parents:
                     weights = self.ml.named_steps['ml'].feature_importances_
