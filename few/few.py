@@ -21,7 +21,7 @@ from sklearn.tree import export_graphviz
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_score, train_test_split, KFold
 from sklearn.metrics import r2_score, accuracy_score
 from sklearn.preprocessing import Imputer, StandardScaler
 from sklearn.utils import check_random_state
@@ -34,8 +34,7 @@ import itertools as it
 import pdb
 from collections import defaultdict
 # from update_checker import update_check
-# from joblib import Parallel, delayed
-#from sklearn.externals.joblib import Parallel, delayed
+from sklearn.externals.joblib import Parallel, delayed
 from tqdm import tqdm
 import uuid
 
@@ -189,17 +188,15 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         # initial model
         # initial_estimator = copy.deepcopy(self.ml.fit(features,labels))
         # self._best_estimator = copy.deepcopy(self.ml.fit(features,labels))
-        self._best_score = np.mean(Parallel(n_jobs=-1)(
-                                delayed(self.scoring_function(
-                                    self.ml.fit(features[train], labels[train]),
-                                    features[test], labels[test]))
+        self._best_score = [self.ml.fit(features[train],
+                                        labels[train]).score(features[test],
+                                                             labels[test])
                                     for train, test in KFold().split(features,
-                                                                     labels)))
+                                                                     labels)]
+        pdb.set_trace()
         self._best_estimator = copy.deepcopy(self.ml)
 
         initial_score = self._best_score
-        if self.verbosity > 2:
-            print("initial estimator size:",self.ml.coef_.shape)
         if self.verbosity > 0:
             print("initial ML CV: {:1.3f}".format(self._best_score))
 
@@ -312,10 +309,9 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
             try:
                 # if len(self.valid_loc(F)) > 0:
                 if self.valid_loc():
-                    tmp_score = np.mean(Parallel(n_jobs=-1)(
-                                delayed(self.scoring_function(
-                                    self.ml.fit(features[train], labels[train]),
-                                    features[test], labels[test]))
+                    tmp_score =  np.mean(Parallel(n_jobs=-1)(delayed(
+                                    self.ml.fit(features[train],labels[train])
+                                        .score(features[test],labels[test]))
                                     for train, test in KFold().split(features,
                                                                      labels)))
 
@@ -502,9 +498,9 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         if self._best_inds:
 
             if self.ml_type == 'GridSearchCV':
-                ml = self._best_estimator.best_estimator_
+                ml = self._best_estimator.named_steps['ml'].best_estimator_
             else:
-                ml = self._best_estimator
+                ml = self._best_estimator.named_steps['ml']
 
             if self.ml_type != 'SVC' and self.ml_type != 'SVR':
             # this is need because svm has a bug that throws valueerror on attribute check:
