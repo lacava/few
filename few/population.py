@@ -131,7 +131,7 @@ class Ind(object):
 
 class Pop(object):
     """class representing population"""
-    def __init__(self,pop_size=100,n_samples=1, fit = None):
+    def __init__(self,pop_size=100, fit = None):
         """initializes population of inds of size pop_size"""
 
         self.individuals = []
@@ -190,9 +190,9 @@ class PopMixin(object):
             for i in np.arange(tmp.arity['b']):
                 self.make_program(stack,func_set,term_set,max_d-1,'b')
 
-    def init_pop(self,num_features=1):
+    def init_pop(self):
         """initializes population of features as GP stacks."""
-        pop = Pop(self.population_size,num_features)
+        pop = Pop(self.population_size)
         seed_with_raw_features = False
         # make programs
         if self.seed_with_ml:
@@ -218,7 +218,7 @@ class PopMixin(object):
                         p.stack = list(reversed(p.stack))
             else:
                 seed_with_raw_features = True
-                
+
             if seed_with_raw_features: # seed with raw features
                 # if list(self.ml.coef_):
                 #pdb.set_trace()
@@ -232,7 +232,7 @@ class PopMixin(object):
                         raise(AttributeError)
                 except Exception: # seed pop with raw features
                      for i,p in it.zip_longest(
-                         range(self._training_features.shape[1]),
+                         range(self.n_features),
                          pop.individuals,fillvalue=None):
                         if p is not None:
                             if i is not None:

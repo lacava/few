@@ -47,8 +47,8 @@ def test_pop_init():
         # term_set.append(('erc',0,np.random.rand())) # ephemeral random constants
     few = FEW(seed_with_ml=False)
     few.term_set = term_set
-
-    pop = few.init_pop(n_features)
+    few.n_features=n_features
+    pop = few.init_pop()
 
     for I in pop.individuals:
         assert is_valid_program(I.stack)

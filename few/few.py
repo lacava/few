@@ -20,9 +20,10 @@ from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 from sklearn.tree import export_graphviz
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
-from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import cross_val_score
 from sklearn.metrics import r2_score, accuracy_score
-from sklearn.preprocessing import Imputer
+from sklearn.preprocessing import Imputer, StandardScaler
 from sklearn.utils import check_random_state
 from DistanceClassifier import DistanceClassifier
 import numpy as np
@@ -31,7 +32,7 @@ import warnings
 import copy
 import itertools as it
 import pdb
-
+from collections import defaultdict
 # from update_checker import update_check
 # from joblib import Parallel, delayed
 #from sklearn.externals.joblib import Parallel, delayed
@@ -55,11 +56,12 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                  mutation_rate=0.5, crossover_rate=0.5,
                  ml = None, min_depth = 1, max_depth = 2, max_depth_init = 2,
                  sel = 'epsilon_lexicase', tourn_size = 2, fit_choice = None,
-                 op_weight = False, max_stall=10, seed_with_ml = True, erc = False,
+                 op_weight = False, max_stall=100, seed_with_ml = True, erc = False,
                  random_state=None, verbosity=0,
                  scoring_function=None, disable_update_check=False,
                  elitism=True, boolean = False,classification=False,clean=False,
-                 track_diversity=False,mdr=False,otype='f',c=True, weight_parents=False):
+                 track_diversity=False,mdr=False,otype='f',c=True,
+                 weight_parents=True):
                 # sets up GP.
 
         # Save params to be recalled later by get_params()
@@ -105,8 +107,8 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         self.boolean = boolean
         self.classification = classification
         self.clean = clean
-        self.ml = ml
-        self.ml_type = type(self.ml).__name__
+        self.ml = Pipeline([('standardScaler',StandardScaler()), ('ml', ml)])
+        self.ml_type = type(self.ml.named_steps['ml']).__name__
         self.track_diversity = track_diversity
         self.mdr = mdr
         self.otype = otype
@@ -116,11 +118,13 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
             self.boolean = True
 
         # instantiate sklearn estimator according to specified machine learner
-        if self.ml is None:
+        if self.ml.named_steps['ml'] is None:
             if self.classification:
-                self.ml = LogisticRegression(solver='sag')
+                self.ml = Pipeline([('standardScaler',StandardScaler()),
+                                    ('ml',LogisticRegression(solver='sag'))])
             else:
-                self.ml = LassoLarsCV()
+                self.ml = Pipeline([('standardScaler',StandardScaler()),
+                                    ('ml',LassoLarsCV())])
         if not self.scoring_function:
             if self.classification:
                 self.scoring_function = accuracy_score
@@ -129,7 +133,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
 
         # set default fitness metrics for various learners
         if not self.fit_choice:
-            self.fit_choice =  {
+            tmp_dict =  defaultdict(lambda: 'r2', {
                             #regression
                             type(LassoLarsCV()): 'mse',
                             type(SVR()): 'mae',
@@ -138,16 +142,9 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                             type(DecisionTreeRegressor()): 'mse',
                             type(RandomForestRegressor()): 'mse',
                             #classification
-                            type(SGDClassifier()): 'r2',
-                            type(LogisticRegression()): 'r2',
-                            type(SVC()): 'r2',
-                            type(LinearSVC()): 'r2',
-                            type(RandomForestClassifier()): 'r2',
-                            type(DecisionTreeClassifier()): 'r2',
                             type(DistanceClassifier()): 'silhouette',
-                            type(KNeighborsClassifier()): 'r2',
-            }[type(self.ml)]
-
+            })
+            self.fit_choice = tmp_dict[type(self.ml.named_steps['ml'])]
 
         # Columns to always ignore when in an operator
         self.non_feature_columns = ['label', 'group', 'guess']
@@ -171,32 +168,9 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         # imputation
         if self.clean:
             features = self.impute_data(features)
-        # Train-test split routine for internal validation
-        ####
-        train_val_data = pd.DataFrame(data=features)
-        train_val_data['labels'] = labels
-        # print("train val data:",train_val_data[::10])
-        new_col_names = {}
-        for column in train_val_data.columns.values:
-            if type(column) != str:
-                new_col_names[column] = str(column).zfill(10)
-        train_val_data.rename(columns=new_col_names, inplace=True)
-        # internal training/validation split
-        train_i, val_i = train_test_split(train_val_data.index,
-                                          stratify=None,
-                                          train_size=0.75,
-                                          test_size=0.25)
-
-        x_t = train_val_data.loc[train_i].drop('labels',axis=1).values
-        x_v = train_val_data.loc[val_i].drop('labels',axis=1).values
-        y_t = train_val_data.loc[train_i, 'labels'].values
-        y_v = train_val_data.loc[val_i, 'labels'].values
-
-        # Store the training features and classes for later use
-        self._training_features = x_t
-        self._training_labels = y_t
-        ####
-
+        # save the number of features
+        self.n_features = features.shape[1]
+        self.n_samples = features.shape[0]
         # set population size
         if type(self.population_size) is str:
             if 'x' in self.population_size: # set pop size prop to features
@@ -213,10 +187,10 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
             print('')
 
         # initial model
-        initial_estimator = copy.deepcopy(self.ml.fit(x_t,y_t))
-        # self._best_estimator = copy.deepcopy(self.ml.fit(x_t,y_t))
+        initial_estimator = copy.deepcopy(self.ml.fit(features,labels))
+        # self._best_estimator = copy.deepcopy(self.ml.fit(features,labels))
 
-        self._best_score = self.ml.score(x_v,y_v)
+        self._best_score = np.mean(cross_val_score(self.ml,features,labels))
         initial_score = self._best_score
         if self.verbosity > 2:
             print("initial estimator size:",self.ml.coef_.shape)
@@ -224,7 +198,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
             print("initial ML CV: {:1.3f}".format(self._best_score))
 
         # create terminal set
-        for i in np.arange(x_t.shape[1]):
+        for i in np.arange(self.n_features):
             # dictionary of node name, arity, feature column index, output type
             # and input type
             self.term_set.append(node('x',loc=i)) # features
@@ -248,7 +222,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         # types are assumed to be float
         if self.otype=='b':
             self.seed_with_ml = False
-        self.pop = self.init_pop(self._training_features.shape[0])
+        self.pop = self.init_pop()
         # check that uuids are unique in population
         uuids = [p.id for p in self.pop.individuals]
         if len(uuids) != len(set(uuids)):
@@ -257,16 +231,16 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         # X represents a matrix of the population outputs (number of samples x
         # population size)
         # single thread
-        self.X = self.transform(x_t,self.pop.individuals,y_t).transpose()
+        self.X = self.transform(features,self.pop.individuals,labels).transpose()
         # pdb.set_trace()
         # parallel:
         # X = np.asarray(Parallel(n_jobs=-1)(
-        # delayed(out)(I,x_t,self.otype,y_t) for I in self.pop.individuals),
+        # delayed(out)(I,features,self.otype,labels) for I in self.pop.individuals),
         # order = 'F')
 
         # calculate fitness of individuals
-        # fitnesses = list(map(lambda I: fitness(I,y_t,self.ml),X))
-        self.F = self.calc_fitness(self.X,y_t,self.fit_choice,self.sel)
+        # fitnesses = list(map(lambda I: fitness(I,labels,self.ml),X))
+        self.F = self.calc_fitness(self.X,labels,self.fit_choice,self.sel)
 
         #with Parallel(n_jobs=10) as parallel:
         ####################
@@ -308,18 +282,17 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                 try:
                     # if len(self.valid_loc(self.F)) > 0:
                     if self.valid_loc():
-                        self.ml.fit(self.X[self.valid_loc(),:].transpose(),y_t)
+                        self.ml.fit(self.X[self.valid_loc(),:].transpose(),labels)
                     # else:
-                    #     self.ml.fit(X.transpose(),y_t)
+                    #     self.ml.fit(X.transpose(),labels)
 
                 except ValueError as detail:
-                    # pdb.set_trace()
                     print("warning: ValueError in ml fit. X.shape:",
                           self.X[:,self.valid_loc()].transpose().shape,
-                          "y_t shape:",y_t.shape)
+                          "labels shape:",labels.shape)
                     print("First ten entries X:",
                           self.X[self.valid_loc(),:].transpose()[:10])
-                    print("First ten entries y_t:",y_t[:10])
+                    print("First ten entries labels:",labels[:10])
                     print("equations:",self.stacks_2_eqns(self.pop.individuals))
                     print("FEW parameters:",self.get_params())
                     if self.verbosity > 1: print("---\ndetailed error message:",
@@ -333,9 +306,10 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
             try:
                 # if len(self.valid_loc(F)) > 0:
                 if self.valid_loc():
-                    tmp_score = self.ml.score(self.transform(
-                                    x_v,self.pop.individuals)[:,self.valid_loc()],
-                                    y_v)
+                    #tmp_score = self.ml.score(self.transform(
+                    #                x_v,self.pop.individuals)[:,self.valid_loc()],
+                    #                y_v)
+                    tmp_score = np.mean(cross_val_score(self.ml,features,labels))
                 # else:
                 #     tmp_score = 0
                 #     tmp = self.ml.score(self.transform(x_v,
@@ -366,14 +340,14 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
             # evaluate offspring
             if self.verbosity > 2:
                 print("output...")
-            X_offspring = self.transform(x_t,offspring).transpose()
+            X_offspring = self.transform(features,offspring).transpose()
             #parallel:
-            # X_offspring = np.asarray(Parallel(n_jobs=-1)(delayed(out)(O,x_t,y_t,self.otype) for O in offspring), order = 'F')
+            # X_offspring = np.asarray(Parallel(n_jobs=-1)(delayed(out)(O,features,labels,self.otype) for O in offspring), order = 'F')
             if self.verbosity > 2:
                 print("fitness...")
             F_offspring = self.calc_fitness(X_offspring,
-                                            y_t,self.fit_choice,self.sel)
-            # F_offspring = parallel(delayed(f[self.fit_choice])(y_t,yhat) for yhat in X_offspring)
+                                            labels,self.fit_choice,self.sel)
+            # F_offspring = parallel(delayed(f[self.fit_choice])(labels,yhat) for yhat in X_offspring)
 
             # Survival
             if self.verbosity > 2: print("survival..")
@@ -506,7 +480,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         with open(output_file_name, 'w') as output_file:
             output_file.write(self.print_model())
         # if decision tree, print tree into dot file
-        if 'DecisionTree' in type(self.ml).__name__:
+        if 'DecisionTree' in self.ml_type:
             export_graphviz(self._best_estimator,
                             out_file=output_file_name+'.dot',
                             feature_names = self.stacks_2_eqns(self._best_inds)
@@ -518,7 +492,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         """prints model contained in best inds, if ml has a coefficient property.
         otherwise, prints the features generated by FEW."""
         model = ''
-        # print('ml type:',type(self.ml).__name__)
+        # print('ml type:',self.ml_type)
         # print('ml:',self._best_estimator)
 
         if self._best_inds:
@@ -855,7 +829,7 @@ def main():
     input_data.rename(columns={'Label': 'label','Class':'label','class':'label',
                                'target':'label'}, inplace=True)
 
-    RANDOM_STATE = args.RANDOM_STATE 
+    RANDOM_STATE = args.RANDOM_STATE
 
     train_i, test_i = train_test_split(input_data.index,
                                        stratify = None,
