@@ -285,10 +285,13 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                 try:
                     if self.valid_loc():
                         tmp_score =  np.mean(
-                            [self.ml.fit(features[train],labels[train]).
-                             score(features[test],labels[test])
-                                        for train, test in KFold().split(features,
-                                                                         labels)])
+                            [self.ml.fit(
+                            self.X[self.valid_loc(),:].transpose()[train],
+                            labels[train]).
+                            score(self.X[self.valid_loc(),:].transpose()[test],
+                                  labels[test])
+                                    for train, test in KFold().split(features,
+                                                                     labels)])
 
                 except ValueError as detail:
                     print("warning: ValueError in ml fit. X.shape:",
