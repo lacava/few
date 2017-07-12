@@ -185,15 +185,14 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                 print('{}\t=\t{}'.format(arg, self.get_params()[arg]))
             print('')
 
-        # initial model
-        # initial_estimator = copy.deepcopy(self.ml.fit(features,labels))
-        # self._best_estimator = copy.deepcopy(self.ml.fit(features,labels))
-        self._best_score = [self.ml.fit(features[train],
-                                        labels[train]).score(features[test],
-                                                             labels[test])
-                                    for train, test in KFold().split(features,
-                                                                     labels)]
-        pdb.set_trace()
+        ######################################################### initial model
+        # fit to original data
+        self._best_score = np.mean(
+                                   [self.ml.fit(features[train],labels[train]).
+                                   score(features[test],labels[test])
+                                   for train, test in KFold().split(features,
+                                                                     labels)])
+        # best estimator is initial model
         self._best_estimator = copy.deepcopy(self.ml)
 
         initial_score = self._best_score
@@ -280,14 +279,16 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                 print("feature diversity: %0.2f" % self.diversity[-1])
             if self.verbosity > 1: print("ml fitting...")
             # fit ml model
+            tmp_score=0
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 try:
-                    # if len(self.valid_loc(self.F)) > 0:
                     if self.valid_loc():
-                        self.ml.fit(self.X[self.valid_loc(),:].transpose(),labels)
-                    # else:
-                    #     self.ml.fit(X.transpose(),labels)
+                        tmp_score =  np.mean(
+                            [self.ml.fit(features[train],labels[train]).
+                             score(features[test],labels[test])
+                                        for train, test in KFold().split(features,
+                                                                         labels)])
 
                 except ValueError as detail:
                     print("warning: ValueError in ml fit. X.shape:",
@@ -302,26 +303,10 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                                                  detail)
                     raise(ValueError)
 
-            # if self.verbosity > 1:
-            #   print("number of non-zero regressors:",self.ml.coef_.shape[0])
-            # keep best model
-            tmp_score = 0
-            try:
-                # if len(self.valid_loc(F)) > 0:
-                if self.valid_loc():
-                    tmp_score =  np.mean(Parallel(n_jobs=-1)(delayed(
-                                    self.ml.fit(features[train],labels[train])
-                                        .score(features[test],labels[test]))
-                                    for train, test in KFold().split(features,
-                                                                     labels)))
-
-            except Exception as detail:
-                if self.verbosity > 1: print(detail)
-
             if self.verbosity > 1:
                 print("current ml validation score:",tmp_score)
 
-
+            # save best model
             if self.valid_loc() and tmp_score > self._best_score:
                 self._best_estimator = copy.deepcopy(self.ml)
                 self._best_score = tmp_score

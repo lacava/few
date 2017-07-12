@@ -25,7 +25,9 @@ class VariationMixin(object):
                 if self.weight_parents:
                     weights = abs(self.ml.named_steps['ml'].coef_)
                     weights = weights/sum(weights)
-                    offspring = copy.deepcopy(list(np.random.choice(self.valid(parents), self.population_size, p=weights)))
+                    offspring = copy.deepcopy(
+                        list(np.random.choice(self.valid(parents),
+                                              self.population_size, p=weights)))
                 else:
                     offspring = copy.deepcopy(list(
                         x for i,x in zip(self.ml.named_steps['ml'].coef_,
