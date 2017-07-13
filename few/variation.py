@@ -20,7 +20,7 @@ class VariationMixin(object):
         """performs variation operators on parents."""
         # downselect to features that are important
         if (self.valid(parents) and
-            type(self.ml).__name__ != 'SVC' and type(self.ml).__name__ != 'SVR'):
+            self.ml_type != 'SVC' and self.ml_type != 'SVR'):
             # this is needed because svm has a bug that throws valueerror on
             # attribute check
             if hasattr(self.ml.named_steps['ml'],'coef_'):
@@ -151,7 +151,8 @@ class VariationMixin(object):
         #swap subtrees
         tmpi = p_i[:]
         tmpj = p_j[:]
-        tmpi[x_i_begin:x_i_end+1:],tmpj[x_j_begin:x_j_end+1:] = tmpj[x_j_begin:x_j_end+1:],tmpi[x_i_begin:x_i_end+1:]
+        tmpi[x_i_begin:x_i_end+1:],tmpj[x_j_begin:x_j_end+1:] = \
+                        tmpj[x_j_begin:x_j_end+1:],tmpi[x_i_begin:x_i_end+1:]
 
         if not self.is_valid_program(p_i) or not self.is_valid_program(p_j):
             # pdb.set_trace()
