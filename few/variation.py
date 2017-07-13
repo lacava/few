@@ -19,7 +19,10 @@ class VariationMixin(object):
     def variation(self,parents):
         """performs variation operators on parents."""
         # downselect to features that are important
-        if type(self.ml).__name__ != 'SVC' and type(self.ml).__name__ != 'SVR': # this is needed because svm has a bug that throws valueerror on attribute check
+        if (self.valid(parents) and
+            type(self.ml).__name__ != 'SVC' and type(self.ml).__name__ != 'SVR'):
+            # this is needed because svm has a bug that throws valueerror on
+            # attribute check
             if hasattr(self.ml.named_steps['ml'],'coef_'):
                 # for l1 regularization, filter individuals with 0 coefficients
                 if self.weight_parents:

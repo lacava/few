@@ -1,4 +1,4 @@
-# distutils: language = c++
+# distutils: language=c++
 from eigency.core cimport *
 cimport numpy as np
 from libcpp.vector cimport vector

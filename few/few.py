@@ -493,16 +493,13 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                 ml = self._best_estimator.named_steps['ml']
 
             if self.ml_type != 'SVC' and self.ml_type != 'SVR':
-            # this is need because svm has a bug that throws valueerror on attribute check:
+            # this is need because svm has a bug that throws valueerror on
+            # attribute check
 
                 if hasattr(ml,'coef_'):
-                    if ml.coef_.shape[0]==1 or len(ml.coef_.shape)==1:
-                        if ml.coef_.shape[0]==1:
-                            s = np.argsort(np.abs(ml.coef_[0]))[::-1]
-                            scoef = ml.coef_[0][s]
-                        else:
-                            s = np.argsort(np.abs(ml.coef_))[::-1]
-                            scoef = ml.coef_[s]
+                    if len(ml.coef_.shape)==1:
+                        s = np.argsort(np.abs(ml.coef_))[::-1]
+                        scoef = ml.coef_[s]
                         bi = [self._best_inds[k] for k in s]
                         model = (' +' + sep).join(
                             [str(round(c,3))+'*'+self.stack_2_eqn(f)
