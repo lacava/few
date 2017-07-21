@@ -96,22 +96,52 @@ void epsilon_lexicase(const ExtMat & F, int n, int d,
   for (int i = 0; i<epsilon.size(); ++i)
     epsilon(i) = mad(F.col(i));
 
-  vector<int> ind_locs;
-  if(lex_size){
+  /*vector<int> ind_locs;
+ if(lex_size){
     //randomly select a size from sizes
     int max_index = sizes.size();
     int random_index = rand() % max_index;
 
 
     // individual locations
-    ind_locs.reserve(sizes[random_index]);
+    vector<int> ind_locs_temp(sizes[random_index]);
+    ind_locs = ind_locs_temp;
+    //ind_locs.reserve(sizes[random_index]);
   }
   else{
     // individual locations
-    ind_locs.reserve(sizes[n]);
+    vector<int> ind_locs_temp(n);
+    ind_locs = ind_locs_temp;
+    //ind_locs.reserve(n);
+  }*/
+
+  vector<int> ind_locs;
+ if(lex_size){
+    char message[200];
+    PyOS_snprintf(message, sizeof(message),"lex_size");
+    //randomly select a size from sizes
+    int max_index = sizes.size();
+    int random_index = rand() % max_index;
+    vector<int> ind_locs_temp(n);
+
+    // individual locations
+    int j=0;
+    for(int i=0;i<max_index;i++){
+      if(sizes[i]==random_index)
+        ind_locs_temp[j++] = i;
+    }
+    ind_locs.reserve(j);
+    for(int k=0;k<j;k++){
+        ind_locs[k] = ind_locs_temp[k];
+    }
+    
+  }
+  else{
+    // individual locations
+    ind_locs.reserve(n);
+    iota(ind_locs.begin(),ind_locs.end(),0);
   }
 
-  iota(ind_locs.begin(),ind_locs.end(),0);
 
   // temporary winner pool
   vector<int> winner;

@@ -10,7 +10,7 @@ cdef extern from "epsilon_lexicase.h":
                                                     Map[ArrayXi] & locs, bool lex_size, Map[ArrayXi] &sizes)
 
 # This will be exposed to Python
-def ep_lex(np.ndarray F, int n, int d, int num_selections, np.ndarray locs, np.bool lex_size, np.ndarray sizes):
+def ep_lex(np.ndarray F, int n, int d, int num_selections, np.ndarray locs, bool lex_size, np.ndarray sizes):
     return _epsilon_lexicase(Map[ArrayXXd](F), n, d, num_selections,
                                Map[ArrayXi](locs), lex_size, Map[ArrayXi](sizes))
 # WIP

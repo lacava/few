@@ -26,11 +26,16 @@ class SurvivalMixin(object):
         elif self.sel == 'epsilon_lexicase':
             # survivors, survivor_index = self.epsilon_lexicase(parents + offspring, num_selections = len(parents), survival = True)
             if self.lex_size:
+                print(parents + offspring)
                 sizes = [len(i.stack) for i in (parents + offspring)]
+                print(sizes)
+                print("--")
                 survivor_index = self.epsilon_lexicase(np.vstack((F,F_offspring)), sizes, num_selections = F.shape[0], survival = True)
+                print(survivor_index)
                 survivors = [(parents+ offspring)[s] for s in survivor_index]
             else:
                 survivor_index = self.epsilon_lexicase(np.vstack((F,F_offspring)), [], num_selections = F.shape[0], survival = True)
+                print(survivor_index)
                 survivors = [(parents+ offspring)[s] for s in survivor_index]
         elif self.sel == 'deterministic_crowding':
             survivors, survivor_index = self.deterministic_crowding(parents,offspring,X,X_offspring)
@@ -121,9 +126,9 @@ class SurvivalMixin(object):
             locs = np.empty(num_selections,dtype='int32',order='F')
             # self.lib.epsilon_lexicase(F,F.shape[0],F.shape[1],num_selections,locs)
             if self.lex_size:
-                ep_lex(F,F.shape[0],F.shape[1],num_selections,locs,self.lex_size,sizes)
+                ep_lex(F,F.shape[0],F.shape[1],num_selections,locs,self.lex_size,np.array(sizes))
             else:
-                ep_lex(F,F.shape[0],F.shape[1],num_selections,locs,self.lex_size,[])
+                ep_lex(F,F.shape[0],F.shape[1],num_selections,locs,self.lex_size,np.array([]))
             return locs
         else: # use python version
             if num_selections is None:
