@@ -60,7 +60,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                  scoring_function=None, disable_update_check=False,
                  elitism=True, boolean = False,classification=False,clean=False,
                  track_diversity=False,mdr=False,otype='f',c=True,
-                 weight_parents=True):
+                 weight_parents=True,operators=None):
                 # sets up GP.
 
         # Save params to be recalled later by get_params()
@@ -149,10 +149,12 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         self.non_feature_columns = ['label', 'group', 'guess']
 
         # function set
-        self.func_set = [node('+'), node('-'), node('*'), node('/'),
+        if operators is None:
+            self.func_set = [node('+'), node('-'), node('*'), node('/'),
                          node('sin'), node('cos'), node('exp'), node('log'),
                          node('^2'), node('^3'), node('sqrt')]
-
+        else:
+            self.func_set = [node(s) for s in operators.split(',')]
         # terminal set
         self.term_set = []
         # diversity
@@ -199,8 +201,6 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
 
         # create terminal set
         for i in np.arange(self.n_features):
-            # dictionary of node name, arity, feature column index, output type
-            # and input type
             self.term_set.append(node('x',loc=i)) # features
             # add ephemeral random constants if flag
             if self.erc: # ephemeral random constants
@@ -757,6 +757,10 @@ def main():
                         type=str,
                         help='Feature output type. f: float, b: boolean.')
 
+    parser.add_argument('-ops', action='store', dest='OPS', default=None,
+                        type=str,
+                        help='Specify operators separated by commas')
+
     parser.add_argument('--class', action='store_true', dest='CLASSIFICATION',
                         default=False,
                         help='Conduct classification rather than regression.')
@@ -847,7 +851,8 @@ def main():
                   fit_choice = args.FIT_CHOICE,boolean=args.BOOLEAN,
                   classification=args.CLASSIFICATION,clean = args.CLEAN,
                   track_diversity=args.TRACK_DIVERSITY,mdr=args.MDR,
-                  otype=args.OTYPE,c=args.c, weight_parents = args.WEIGHT_PARENTS)
+                  otype=args.OTYPE,c=args.c,
+                  weight_parents = args.WEIGHT_PARENTS,operators=args.OPS)
 
     learner.fit(training_features, training_labels)
     # pdb.set_trace()
