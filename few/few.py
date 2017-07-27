@@ -189,7 +189,9 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
 
         ######################################################### initial model
         # fit to original data
-        self._best_score = np.mean(
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self._best_score = np.mean(
                                    [self.ml.fit(features[train],labels[train]).
                                    score(features[test],labels[test])
                                    for train, test in KFold().split(features,
@@ -369,10 +371,14 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         if not self._best_estimator:
             # if no better model found, just return underlying method fit to the
             # training data
-            self._best_estimator = self.ml.fit(features,labels)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                self._best_estimator = self.ml.fit(features,labels)
         else:
             # fit final estimator to all the training data
-            self._best_estimator.fit(self.transform(features),labels)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                self._best_estimator.fit(self.transform(features),labels)
         return self
 
     def transform(self,x,inds=None,labels = None):

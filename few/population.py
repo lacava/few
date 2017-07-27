@@ -144,7 +144,7 @@ class Pop(object):
 
 class PopMixin(object):
     """methods for constructing features."""
-    ####################################################### printing equations
+    ######################################################## printing equations
     def eval_eqn(self,n,stack_eqn):
         if len(stack_eqn) >= n.arity['f']+n.arity['b']:
             stack_eqn.append(eqn_dict[n.name](n,stack_eqn))
@@ -165,7 +165,7 @@ class PopMixin(object):
         else:
             return []
 
-    ######################################################### making programs
+    ########################################################### making programs
     def make_program(self,stack,func_set,term_set,max_d,ntype):
         """makes a program stack"""
         # print("stack:",stack,"max d:",max_d)
