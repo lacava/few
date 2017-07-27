@@ -26,10 +26,11 @@ class VariationMixin(object):
             if hasattr(self.ml.named_steps['ml'],'coef_'):
                 # for l1 regularization, filter individuals with 0 coefficients
                 if self.weight_parents:
-                    weights = abs(self.ml.named_steps['ml'].coef_)
+                    weights = self.ml.named_steps['ml'].coef_
                     if len(weights.shape)>1: # handle multi-coefficient models
                         weights = [np.mean(abs(c)) for c in weights.transpose()]
-                    weights = weights/sum(weights)
+                    # softmax transformation of the weights
+                    weights = np.exp(weights)/np.sum(np.exp(weights))
                     offspring = copy.deepcopy(
                         list(np.random.choice(self.valid(parents),
                                               self.population_size, p=weights)))
@@ -41,7 +42,8 @@ class VariationMixin(object):
                 # for tree methods, filter our individuals with 0 feature importance
                 if self.weight_parents:
                     weights = self.ml.named_steps['ml'].feature_importances_
-                    weights = weights/sum(weights)
+                    # softmax transformation of the weights
+                    weights = np.exp(weights)/np.sum(np.exp(weights))
                     offspring = copy.deepcopy(list(
                         np.random.choice(self.valid(parents),
                                          self.population_size, p=weights)))
