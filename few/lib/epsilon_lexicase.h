@@ -96,7 +96,7 @@ void epsilon_lexicase(const ExtMat & F, int n, int d,
   for (int i = 0; i<epsilon.size(); ++i)
     epsilon(i) = mad(F.col(i));
 
-  vector<int> ind_locs(n);
+  vector<int> ind_locs;
   if(lex_size){
     //randomly select a size from sizes
     int max_index = sizes.size();
@@ -112,6 +112,7 @@ void epsilon_lexicase(const ExtMat & F, int n, int d,
   }
   else{
     // individual locations
+    ind_locs.resize(n);
     iota(ind_locs.begin(),ind_locs.end(),0);
   }
 
