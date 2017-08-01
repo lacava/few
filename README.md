@@ -5,7 +5,7 @@
 
 # Few
 
-**Few** is a **Feature Engineering Wrapper** for sci-kitlearn. Few looks for a set of feature transformations that work best with a specified machine learning algorithm in order to improve model estimation and prediction. In doing so, Few is able to provide the user with a set of concise, engineered features that describe their data.
+**Few** is a **Feature Engineering Wrapper** for scikit-learn. Few looks for a set of feature transformations that work best with a specified machine learning algorithm in order to improve model estimation and prediction. In doing so, Few is able to provide the user with a set of concise, engineered features that describe their data.
 
 Few uses genetic programming to generate, search and update engineered features. It incorporates feedback from the ML process to select important features, while also scoring them internally. 
 

@@ -9,7 +9,7 @@ license: GNU/GPLv3
 import argparse
 from ._version import __version__
 from .evaluation import EvaluationMixin
-from .population import *
+from .population import PopMixin, node
 from .variation import VariationMixin
 from .selection import SurvivalMixin
 
@@ -20,9 +20,11 @@ from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 from sklearn.tree import export_graphviz
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
-from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import cross_val_score, train_test_split, KFold
 from sklearn.metrics import r2_score, accuracy_score
-from sklearn.preprocessing import Imputer
+from sklearn.preprocessing import Imputer, StandardScaler
+from sklearn.utils import check_random_state
 from DistanceClassifier import DistanceClassifier
 import numpy as np
 import pandas as pd
@@ -30,10 +32,9 @@ import warnings
 import copy
 import itertools as it
 import pdb
-
+from collections import defaultdict
 # from update_checker import update_check
-# from joblib import Parallel, delayed
-#from sklearn.externals.joblib import Parallel, delayed
+from sklearn.externals.joblib import Parallel, delayed
 from tqdm import tqdm
 import uuid
 
@@ -43,7 +44,8 @@ import uuid
 
 
 
-class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
+class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
+          BaseEstimator):
     """FEW uses GP to find a set of transformations from the original feature
     space that produces the best performance for a given machine learner.
     """
@@ -53,11 +55,12 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
                  mutation_rate=0.5, crossover_rate=0.5,
                  ml = None, min_depth = 1, max_depth = 2, max_depth_init = 2,
                  sel = 'epsilon_lexicase', tourn_size = 2, fit_choice = None,
-                 op_weight = False, max_stall=10, seed_with_ml = True, erc = False,
-                 random_state=np.random.randint(9999999), verbosity=0,
+                 op_weight = False, max_stall=100, seed_with_ml = True, erc = False,
+                 random_state=None, verbosity=0,
                  scoring_function=None, disable_update_check=False,
                  elitism=True, boolean = False,classification=False,clean=False,
-                 track_diversity=False,mdr=False,otype='f',c=True, weight_parents=False, lex_size=False):
+                 track_diversity=False,mdr=False,otype='f',c=True,
+                 weight_parents=True,operators=None, lex_size=False):
                 # sets up GP.
 
         # Save params to be recalled later by get_params()
@@ -95,7 +98,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
         self.lex_size = lex_size
         self.seed_with_ml = seed_with_ml
         self.erc = erc
-        self.random_state = random_state
+        self.random_state = check_random_state(random_state)
         self.verbosity = verbosity
         self.scoring_function = scoring_function
         self.gp_generation = 0
@@ -104,8 +107,8 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
         self.boolean = boolean
         self.classification = classification
         self.clean = clean
-        self.ml = ml
-        self.ml_type = type(self.ml).__name__
+        self.ml = Pipeline([('standardScaler',StandardScaler()), ('ml', ml)])
+        self.ml_type = type(self.ml.named_steps['ml']).__name__
         self.track_diversity = track_diversity
         self.mdr = mdr
         self.otype = otype
@@ -115,11 +118,13 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
             self.boolean = True
 
         # instantiate sklearn estimator according to specified machine learner
-        if self.ml is None:
+        if self.ml.named_steps['ml'] is None:
             if self.classification:
-                self.ml = LogisticRegression(solver='sag')
+                self.ml = Pipeline([('standardScaler',StandardScaler()),
+                                    ('ml',LogisticRegression(solver='sag'))])
             else:
-                self.ml = LassoLarsCV()
+                self.ml = Pipeline([('standardScaler',StandardScaler()),
+                                    ('ml',LassoLarsCV())])
         if not self.scoring_function:
             if self.classification:
                 self.scoring_function = accuracy_score
@@ -128,7 +133,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
 
         # set default fitness metrics for various learners
         if not self.fit_choice:
-            self.fit_choice =  {
+            tmp_dict =  defaultdict(lambda: 'r2', {
                             #regression
                             type(LassoLarsCV()): 'mse',
                             type(SVR()): 'mae',
@@ -137,25 +142,20 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
                             type(DecisionTreeRegressor()): 'mse',
                             type(RandomForestRegressor()): 'mse',
                             #classification
-                            type(SGDClassifier()): 'r2',
-                            type(LogisticRegression()): 'r2',
-                            type(SVC()): 'r2',
-                            type(LinearSVC()): 'r2',
-                            type(RandomForestClassifier()): 'r2',
-                            type(DecisionTreeClassifier()): 'r2',
                             type(DistanceClassifier()): 'silhouette',
-                            type(KNeighborsClassifier()): 'r2',
-            }[type(self.ml)]
-
+            })
+            self.fit_choice = tmp_dict[type(self.ml.named_steps['ml'])]
 
         # Columns to always ignore when in an operator
         self.non_feature_columns = ['label', 'group', 'guess']
 
         # function set
-        self.func_set = [node('+'), node('-'), node('*'), node('/'),
+        if operators is None:
+            self.func_set = [node('+'), node('-'), node('*'), node('/'),
                          node('sin'), node('cos'), node('exp'), node('log'),
                          node('^2'), node('^3'), node('sqrt')]
-
+        else:
+            self.func_set = [node(s) for s in operators.split(',')]
         # terminal set
         self.term_set = []
         # diversity
@@ -166,37 +166,13 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
     def fit(self, features, labels):
         """Fit model to data"""
 
-        np.random.seed(self.random_state)
         # setup data
         # imputation
         if self.clean:
             features = self.impute_data(features)
-        # Train-test split routine for internal validation
-        ####
-        train_val_data = pd.DataFrame(data=features)
-        train_val_data['labels'] = labels
-        # print("train val data:",train_val_data[::10])
-        new_col_names = {}
-        for column in train_val_data.columns.values:
-            if type(column) != str:
-                new_col_names[column] = str(column).zfill(10)
-        train_val_data.rename(columns=new_col_names, inplace=True)
-        # internal training/validation split
-        train_i, val_i = train_test_split(train_val_data.index,
-                                          stratify=None,
-                                          train_size=0.75,
-                                          test_size=0.25)
-
-        x_t = train_val_data.loc[train_i].drop('labels',axis=1).values
-        x_v = train_val_data.loc[val_i].drop('labels',axis=1).values
-        y_t = train_val_data.loc[train_i, 'labels'].values
-        y_v = train_val_data.loc[val_i, 'labels'].values
-
-        # Store the training features and classes for later use
-        self._training_features = x_t
-        self._training_labels = y_t
-        ####
-
+        # save the number of features
+        self.n_features = features.shape[1]
+        self.n_samples = features.shape[0]
         # set population size
         if type(self.population_size) is str:
             if 'x' in self.population_size: # set pop size prop to features
@@ -212,25 +188,26 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
                 print('{}\t=\t{}'.format(arg, self.get_params()[arg]))
             print('')
 
-        # initial model
-        initial_estimator = copy.deepcopy(self.ml.fit(x_t,y_t))
-        # self._best_estimator = copy.deepcopy(self.ml.fit(x_t,y_t))
+        ######################################################### initial model
+        # fit to original data
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self._best_score = np.mean(
+                                   [self.ml.fit(features[train],labels[train]).
+                                   score(features[test],labels[test])
+                                   for train, test in KFold().split(features,
+                                                                     labels)])
 
-        self._best_score = self.ml.score(x_v,y_v)
         initial_score = self._best_score
-        if self.verbosity > 2:
-            print("initial estimator size:",self.ml.coef_.shape)
         if self.verbosity > 0:
             print("initial ML CV: {:1.3f}".format(self._best_score))
 
         # create terminal set
-        for i in np.arange(x_t.shape[1]):
-            # dictionary of node name, arity, feature column index, output type
-            # and input type
+        for i in np.arange(self.n_features):
             self.term_set.append(node('x',loc=i)) # features
             # add ephemeral random constants if flag
             if self.erc: # ephemeral random constants
-                self.term_set.append(node('k',value=np.random.rand()))
+                self.term_set.append(node('k',value=self.random_state.rand()))
 
         # edit function set if boolean
         if self.boolean or self.otype=='b': # include boolean functions
@@ -243,12 +220,12 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
         if self.mdr:
             self.func_set += [node('mdr2')]
 
-        # Create initial population
+        ############################################# Create initial population
         # for now, force seed_with_ml to be off if otype is 'b', since data
         # types are assumed to be float
         if self.otype=='b':
             self.seed_with_ml = False
-        self.pop = self.init_pop(self._training_features.shape[0])
+        self.pop = self.init_pop()
         # check that uuids are unique in population
         uuids = [p.id for p in self.pop.individuals]
         if len(uuids) != len(set(uuids)):
@@ -257,26 +234,26 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
         # X represents a matrix of the population outputs (number of samples x
         # population size)
         # single thread
-        self.X = self.transform(x_t,self.pop.individuals,y_t).transpose()
+        self.X = self.transform(features,self.pop.individuals,labels).transpose()
         # pdb.set_trace()
         # parallel:
         # X = np.asarray(Parallel(n_jobs=-1)(
-        # delayed(out)(I,x_t,self.otype,y_t) for I in self.pop.individuals),
+        # delayed(out)(I,features,self.otype,labels) for I in self.pop.individuals),
         # order = 'F')
 
         # calculate fitness of individuals
-        # fitnesses = list(map(lambda I: fitness(I,y_t,self.ml),X))
-        self.F = self.calc_fitness(self.X,y_t,self.fit_choice,self.sel)
+        # fitnesses = list(map(lambda I: fitness(I,labels,self.ml),X))
+        self.F = self.calc_fitness(self.X,labels,self.fit_choice,self.sel)
 
         #with Parallel(n_jobs=10) as parallel:
         ####################
-        ### Main GP loop
+
         self.diversity=[]
         # progress bar
         pbar = tqdm(total=self.generations,disable = self.verbosity==0,
                     desc='Internal CV: {:1.3f}'.format(self._best_score))
         stall_count = 0
-        # for each generation g
+        ########################################################### main GP loop
         for g in np.arange(self.generations):
             if stall_count == self.max_stall:
                 if self.verbosity > 0: print('max stall count reached.')
@@ -302,52 +279,38 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
             if self.verbosity > 1 and self.track_diversity:
                 print("feature diversity: %0.2f" % self.diversity[-1])
             if self.verbosity > 1: print("ml fitting...")
-            # fit ml model
+            ####################################################### fit ml model
+            tmp_score=0
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 try:
-                    # if len(self.valid_loc(self.F)) > 0:
                     if self.valid_loc():
-                        self.ml.fit(self.X[self.valid_loc(),:].transpose(),y_t)
-                    # else:
-                    #     self.ml.fit(X.transpose(),y_t)
+                        tmp_score =  np.mean(
+                            [self.ml.fit(
+                            self.X[self.valid_loc(),:].transpose()[train],
+                            labels[train]).
+                            score(self.X[self.valid_loc(),:].transpose()[test],
+                                  labels[test])
+                                    for train, test in KFold().split(features,
+                                                                     labels)])
 
                 except ValueError as detail:
-                    # pdb.set_trace()
                     print("warning: ValueError in ml fit. X.shape:",
                           self.X[:,self.valid_loc()].transpose().shape,
-                          "y_t shape:",y_t.shape)
+                          "labels shape:",labels.shape)
                     print("First ten entries X:",
                           self.X[self.valid_loc(),:].transpose()[:10])
-                    print("First ten entries y_t:",y_t[:10])
-                    print("equations:",stacks_2_eqns(self.pop.individuals))
+                    print("First ten entries labels:",labels[:10])
+                    print("equations:",self.stacks_2_eqns(self.pop.individuals))
                     print("FEW parameters:",self.get_params())
                     if self.verbosity > 1: print("---\ndetailed error message:",
                                                  detail)
                     raise(ValueError)
 
-            # if self.verbosity > 1:
-            #   print("number of non-zero regressors:",self.ml.coef_.shape[0])
-            # keep best model
-            tmp_score = 0
-            try:
-                # if len(self.valid_loc(F)) > 0:
-                if self.valid_loc():
-                    tmp_score = self.ml.score(self.transform(
-                                    x_v,self.pop.individuals)[:,self.valid_loc()],
-                                    y_v)
-                # else:
-                #     tmp_score = 0
-                #     tmp = self.ml.score(self.transform(x_v,
-                #                                         self.pop.individuals),
-                #                         y_v)
-            except Exception as detail:
-                if self.verbosity > 1: print(detail)
-
             if self.verbosity > 1:
                 print("current ml validation score:",tmp_score)
 
-
+            #################################################### save best model
             if self.valid_loc() and tmp_score > self._best_score:
                 self._best_estimator = copy.deepcopy(self.ml)
                 self._best_score = tmp_score
@@ -358,24 +321,22 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
             else:
                 stall_count = stall_count + 1
 
-            # Variation
+            ########################################################## variation
             if self.verbosity > 2:
                 print("variation...")
             offspring,elite,elite_index = self.variation(self.pop.individuals)
 
-            # evaluate offspring
+            ################################################# evaluate offspring
             if self.verbosity > 2:
                 print("output...")
-            X_offspring = self.transform(x_t,offspring).transpose()
-            #parallel:
-            # X_offspring = np.asarray(Parallel(n_jobs=-1)(delayed(out)(O,x_t,y_t,self.otype) for O in offspring), order = 'F')
+            X_offspring = self.transform(features,offspring).transpose()
+
             if self.verbosity > 2:
                 print("fitness...")
             F_offspring = self.calc_fitness(X_offspring,
-                                            y_t,self.fit_choice,self.sel)
-            # F_offspring = parallel(delayed(f[self.fit_choice])(y_t,yhat) for yhat in X_offspring)
+                                            labels,self.fit_choice,self.sel)
 
-            # Survival
+            ########################################################### survival
             if self.verbosity > 2: print("survival..")
             survivors,survivor_index = self.survival(self.pop.individuals,
                                                      offspring,elite,
@@ -398,7 +359,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
                         [np.mean(f) for f in self.F]))
             if self.verbosity>2:
                 print("best features:",
-                      stacks_2_eqns(self._best_inds) if self._best_inds
+                      self.stacks_2_eqns(self._best_inds) if self._best_inds
                       else 'original')
             pbar.set_description('Internal CV: {:1.3f}'.format(self._best_score))
             pbar.update(1)
@@ -407,8 +368,18 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
         if self.verbosity > 0: print('finished. best internal val score:'
                                      ' {:1.3f}'.format(self._best_score))
         if self.verbosity > 0: print("final model:\n",self.print_model())
+
         if not self._best_estimator:
-            self._best_estimator = initial_estimator
+            # if no better model found, just return underlying method fit to the
+            # training data
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                self._best_estimator = self.ml.fit(features,labels)
+        else:
+            # fit final estimator to all the training data
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                self._best_estimator.fit(self.transform(features),labels)
         return self
 
     def transform(self,x,inds=None,labels = None):
@@ -449,10 +420,10 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
             try:
                 return self._best_estimator.predict(self.transform(testing_features))
             except ValueError as detail:
-                pdb.set_trace()
+                # pdb.set_trace()
                 print('shape of X:',testing_features.shape)
                 print('shape of X_transform:',X_transform.transpose().shape)
-                print('best inds:',stacks_2_eqns(self._best_inds))
+                print('best inds:',self.stacks_2_eqns(self._best_inds))
                 print('valid locs:',self.valid_loc(self._best_inds))
                 raise ValueError(detail)
         else:
@@ -506,109 +477,39 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
         with open(output_file_name, 'w') as output_file:
             output_file.write(self.print_model())
         # if decision tree, print tree into dot file
-        if 'DecisionTree' in type(self.ml).__name__:
+        if 'DecisionTree' in self.ml_type:
             export_graphviz(self._best_estimator,
                             out_file=output_file_name+'.dot',
-                            feature_names = stacks_2_eqns(self._best_inds)
+                            feature_names = self.stacks_2_eqns(self._best_inds)
                             if self._best_inds else None,
                             class_names=['True','False'],
                             filled=False,impurity = True,rotate=True)
-
-    def init_pop(self,num_features=1):
-        """initializes population of features as GP stacks."""
-        pop = Pop(self.population_size,num_features)
-        # make programs
-        if self.seed_with_ml:
-            # initial population is the components of the default ml model
-            if type(self.ml) == type(LassoLarsCV()):
-                # add all model components with non-zero coefficients
-                for i,(c,p) in enumerate(it.zip_longest(
-                        [c for c in self.ml.coef_ if c !=0],pop.individuals,
-                        fillvalue=None)):
-                    if c is not None and p is not None:
-                        p.stack = [node('x',loc=i)]
-                    elif p is not None:
-                        # make program if pop is bigger than model componennts
-                        make_program(p.stack,self.func_set,self.term_set,
-                                     np.random.randint(self.min_depth,
-                                                       self.max_depth+1),
-                                     self.otype)
-                        p.stack = list(reversed(p.stack))
-            else: # seed with raw features
-                # if list(self.ml.coef_):
-                #pdb.set_trace()
-                try:
-                    if self.population_size < self.ml.coef_.shape[0]:
-                        # seed pop with highest coefficients
-                        coef_order = np.argsort(self.ml.coef_[::-1])
-                        for i,(c,p) in enumerate(zip(coef_order,pop.individuals)):
-                            p.stack = [node('x',loc=i)]
-                    else:
-                        raise(AttributeError)
-                except Exception: # seed pop with raw features
-                     for i,p in it.zip_longest(
-                         range(self._training_features.shape[1]),
-                         pop.individuals,fillvalue=None):
-                        if p is not None:
-                            if i is not None:
-                                p.stack = [node('x',loc=i)]
-                            else:
-                                make_program(p.stack,self.func_set,self.term_set,
-                                             np.random.randint(self.min_depth,
-                                                               self.max_depth+1),
-                                             self.otype)
-                                p.stack = list(reversed(p.stack))
-
-            # print initial population
-            if self.verbosity > 2:
-                print("seeded initial population:",
-                      stacks_2_eqns(pop.individuals))
-
-
-        else:
-            for I in pop.individuals:
-                depth = np.random.randint(self.min_depth,self.max_depth+1)
-                # print("hex(id(I)):",hex(id(I)))
-                # depth = 2;
-                # print("initial I.stack:",I.stack)
-
-                make_program(I.stack,self.func_set,self.term_set,depth,
-                             self.otype)
-                # print(I.stack)
-                I.stack = list(reversed(I.stack))
-
-            # print(I.stack)
-
-        return pop
 
     def print_model(self,sep='\n'):
         """prints model contained in best inds, if ml has a coefficient property.
         otherwise, prints the features generated by FEW."""
         model = ''
-        # print('ml type:',type(self.ml).__name__)
+        # print('ml type:',self.ml_type)
         # print('ml:',self._best_estimator)
 
         if self._best_inds:
 
             if self.ml_type == 'GridSearchCV':
-                ml = self._best_estimator.best_estimator_
+                ml = self._best_estimator.named_steps['ml'].best_estimator_
             else:
-                ml = self._best_estimator
+                ml = self._best_estimator.named_steps['ml']
 
             if self.ml_type != 'SVC' and self.ml_type != 'SVR':
-            # this is need because svm has a bug that throws valueerror on attribute check:
+            # this is need because svm has a bug that throws valueerror on
+            # attribute check
 
                 if hasattr(ml,'coef_'):
-                    if ml.coef_.shape[0]==1 or len(ml.coef_.shape)==1:
-                        if ml.coef_.shape[0]==1:
-                            s = np.argsort(np.abs(ml.coef_[0]))[::-1]
-                            scoef = ml.coef_[0][s]
-                        else:
-                            s = np.argsort(np.abs(ml.coef_))[::-1]
-                            scoef = ml.coef_[s]
+                    if len(ml.coef_.shape)==1:
+                        s = np.argsort(np.abs(ml.coef_))[::-1]
+                        scoef = ml.coef_[s]
                         bi = [self._best_inds[k] for k in s]
                         model = (' +' + sep).join(
-                            [str(round(c,3))+'*'+stack_2_eqn(f)
+                            [str(round(c,3))+'*'+self.stack_2_eqn(f)
                              for i,(f,c) in enumerate(zip(bi,scoef))
                              if round(scoef[i],3) != 0])
                     else:
@@ -618,7 +519,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
                             scoef = coef[s]
                             bi =[self._best_inds[k] for k in s]
                             model += sep + 'class'+str(j)+' :'+' + '.join(
-                                [str(round(c,3))+'*'+stack_2_eqn(f)
+                                [str(round(c,3))+'*'+self.stack_2_eqn(f)
                                  for i,(f,c) in enumerate(zip(bi,coef))
                                  if coef[i] != 0])
                 elif hasattr(ml,'feature_importances_'):
@@ -628,13 +529,13 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
                     # model = 'importance:feature'+sep
 
                     model += sep.join(
-                        [str(round(c,3))+':'+stack_2_eqn(f)
+                        [str(round(c,3))+':'+self.stack_2_eqn(f)
                          for i,(f,c) in enumerate(zip(bi,sfi))
                          if round(sfi[i],3) != 0])
                 else:
-                    return sep.join(stacks_2_eqns(self._best_inds))
+                    return sep.join(self.stacks_2_eqns(self._best_inds))
             else:
-                return sep.join(stacks_2_eqns(self._best_inds))
+                return sep.join(self.stacks_2_eqns(self._best_inds))
         else:
             return 'original features'
 
@@ -642,7 +543,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, BaseEstimator):
 
     def representation(self):
         """return stacks_2_eqns output"""
-        return stacks_2_eqns(self._best_inds)
+        return self.stacks_2_eqns(self._best_inds)
 
     def valid_loc(self,F=None):
         """returns the indices of individuals with valid fitness."""
@@ -818,12 +719,13 @@ def main():
                         type=bool, help='Weight attributes for incuded in'
                         ' features based on ML scores. Default: off')
 
-    parser.add_argument('-ms', action='store', dest='MAX_STALL',default=10,
+    parser.add_argument('-ms', action='store', dest='MAX_STALL',default=100,
                         type=positive_integer, help='If model CV does not '
                         'improve for this many generations, end optimization.')
 
-    parser.add_argument('--weight_parents', action='store_true',dest='WEIGHT_PARENTS',default=False,
-                        help='Feature importance determines parent pressure for selection.')
+    parser.add_argument('--weight_parents', action='store_true',
+                        dest='WEIGHT_PARENTS',default=True,
+                        help='Feature importance weights parent selection.')
 
     parser.add_argument('--lex_size', action='store_true',dest='LEX_SIZE',default=False,
                         help='Size mediated parent selection for lexicase survival.')
@@ -865,6 +767,10 @@ def main():
                         type=str,
                         help='Feature output type. f: float, b: boolean.')
 
+    parser.add_argument('-ops', action='store', dest='OPS', default=None,
+                        type=str,
+                        help='Specify operators separated by commas')
+
     parser.add_argument('--class', action='store_true', dest='CLASSIFICATION',
                         default=False,
                         help='Conduct classification rather than regression.')
@@ -885,7 +791,7 @@ def main():
                         help='Don''t use optimized c libraries.')
 
     parser.add_argument('-s', action='store', dest='RANDOM_STATE',
-                        default=np.random.randint(4294967295),
+                        default=None,
                         type=int,
                         help='Random number generator seed for reproducibility.'
                         'Note that using multi-threading may make exact results'
@@ -925,7 +831,7 @@ def main():
     input_data.rename(columns={'Label': 'label','Class':'label','class':'label',
                                'target':'label'}, inplace=True)
 
-    RANDOM_STATE = args.RANDOM_STATE if args.RANDOM_STATE > 0 else None
+    RANDOM_STATE = args.RANDOM_STATE
 
     train_i, test_i = train_test_split(input_data.index,
                                        stratify = None,
@@ -955,7 +861,8 @@ def main():
                   fit_choice = args.FIT_CHOICE,boolean=args.BOOLEAN,
                   classification=args.CLASSIFICATION,clean = args.CLEAN,
                   track_diversity=args.TRACK_DIVERSITY,mdr=args.MDR,
-                  otype=args.OTYPE,c=args.c, weight_parents = args.WEIGHT_PARENTS, lex_size = args.LEX_SIZE)
+                  otype=args.OTYPE,c=args.c, lex_size = args.LEX_SIZE,
+                  weight_parents = args.WEIGHT_PARENTS,operators=args.OPS)
 
     learner.fit(training_features, training_labels)
     # pdb.set_trace()
