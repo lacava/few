@@ -718,7 +718,7 @@ def main():
                         type=bool, help='Weight attributes for incuded in'
                         ' features based on ML scores. Default: off')
 
-    parser.add_argument('-ms', action='store', dest='MAX_STALL',default=10,
+    parser.add_argument('-ms', action='store', dest='MAX_STALL',default=100,
                         type=positive_integer, help='If model CV does not '
                         'improve for this many generations, end optimization.')
 
