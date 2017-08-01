@@ -96,9 +96,8 @@ void epsilon_lexicase(const ExtMat & F, int n, int d,
   for (int i = 0; i<epsilon.size(); ++i)
     epsilon(i) = mad(F.col(i));
 
-vector<int> ind_locs(n);
-if(lex_size){
-    char message[200];
+  vector<int> ind_locs(n);
+  if(lex_size){
     //randomly select a size from sizes
     int max_index = sizes.size();
     int random_index = rand() % max_index;
