@@ -103,3 +103,24 @@ def test_lexicase_survival_shapes():
         i.fitness_vec = np.random.rand(10,1)
     offspring,locs = few.lexicase(pop.individuals,num_selections=1,survival=True)
     assert len(offspring) == 1;
+
+def test_lex_size():
+    """test_selection.py: lex_size flag on/off"""
+
+    few = FEW(seed_with_ml=False,population_size=257, lex_size=True)
+
+    Fitness_mat = np.random.rand(257,10)
+    size_mat = np.random.randint(1,100,size=257)
+
+    locs = few.epsilon_lexicase(Fitness_mat,size_mat,num_selections=100,
+                                          survival=True)
+    assert len(locs) == 100
+
+    few = FEW(seed_with_ml=False,population_size=257, lex_size=False)
+
+    Fitness_mat = np.random.rand(257,10)
+    size_mat = np.random.rand(257,1)
+
+    locs = few.epsilon_lexicase(Fitness_mat,size_mat,num_selections=100,
+                                          survival=True)
+    assert len(locs) == 100

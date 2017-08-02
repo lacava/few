@@ -81,7 +81,7 @@ static random_device rd;
 static mt19937 gen(rd());
 //extern "C"
 void epsilon_lexicase(const ExtMat & F, int n, int d,
-  int num_selections,  ExtVec& locs)
+  int num_selections,  ExtVec& locs, bool lex_size, ExtVec& sizes)
 {
   // training cases
   // ExtMat T (F, n, d);
@@ -96,15 +96,28 @@ void epsilon_lexicase(const ExtMat & F, int n, int d,
   for (int i = 0; i<epsilon.size(); ++i)
     epsilon(i) = mad(F.col(i));
 
+  vector<int> ind_locs;
+  if(lex_size){
+    //randomly select a size from sizes
+    int max_index = sizes.size();
+    int random_index = rand() % max_index;
 
-
-  // individual locations
-  vector<int> ind_locs(n);
-  iota(ind_locs.begin(),ind_locs.end(),0);
+    // individual locations
+    int j=0;
+    for(int i=0;i<max_index;i++){
+      if(sizes[i]<=sizes[random_index])
+        ind_locs.push_back(i);
+    }
+    
+  }
+  else{
+    // individual locations
+    ind_locs.resize(n);
+    iota(ind_locs.begin(),ind_locs.end(),0);
+  }
 
   // temporary winner pool
   vector<int> winner;
-
   for (int i = 0; i<num_selections; ++i){
     //cout << "selection " << i << "\n";
     // perform selection
@@ -121,7 +134,7 @@ void epsilon_lexicase(const ExtMat & F, int n, int d,
       winner.resize(0);
       // minimum error on case
       double minfit;
-      for (int j = 0; j< can_locs.size(); ++j){
+      for (int j = 0; j<can_locs.size(); ++j){
         if (j==0 || F(can_locs[j],cases.back())<minfit )
           minfit = F(can_locs[j],cases.back());
         }
