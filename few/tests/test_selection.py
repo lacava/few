@@ -110,7 +110,7 @@ def test_lex_size():
     few = FEW(seed_with_ml=False,population_size=257, lex_size=True)
 
     Fitness_mat = np.random.rand(257,10)
-    size_mat = np.random.rand(257,1)
+    size_mat = np.random.randint(1,100,size=257)
 
     locs = few.epsilon_lexicase(Fitness_mat,size_mat,num_selections=100,
                                           survival=True)
