@@ -72,8 +72,8 @@ class EvaluationMixin(object):
         '^2': lambda n,features,stack_float,stack_bool,labels: stack_float.pop()**2,
         '^3': lambda n,features,stack_float,stack_bool,labels: stack_float.pop()**3,
         'sqrt': lambda n,features,stack_float,stack_bool,labels: np.sqrt(np.abs(stack_float.pop())),
-        'gauss': lambda n,features,stack_float,stack_bool,labels: np.exp(-stack_float.pop()**2),
-        'gauss2': lambda n,features,stack_float,stack_bool,labels: np.exp(-(stack_float.pop()**2+stack_float.pop()**2)),
+        #'gauss': lambda n,features,stack_float,stack_bool,labels: np.exp(-stack_float.pop()**2),
+        #'gauss2': lambda n,features,stack_float,stack_bool,labels: np.exp(-(stack_float.pop()**2+stack_float.pop()**2)),
         # 'rbf': lambda n,features,stack_float,stack_bool,labels: np.exp(-(np.norm(stack_float.pop()-stack_float.pop())**2)/2)
     # bool operations
         '!': lambda n,features,stack_float,stack_bool,labels: np.logical_not(stack_bool.pop()),
