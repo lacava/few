@@ -201,13 +201,13 @@ class PopMixin(object):
                 # this is needed because svm has a bug that throws valueerror
                 #on attribute check
                 seed_with_raw_features=True
-            elif (hasattr(self.ml.named_steps['ml'],'coef_') or
-                  hasattr(self.ml.named_steps['ml'],'feature_importances_')):
+            elif (hasattr(self.pipeline.named_steps['ml'],'coef_') or
+                  hasattr(self.pipeline.named_steps['ml'],'feature_importances_')):
                 # add model components with non-zero coefficients to initial
                 # population, in order of coefficient size
-                coef = (self.ml.named_steps['ml'].coef_ if
-                        hasattr(self.ml.named_steps['ml'],'coef_') else
-                        self.ml.named_steps['ml'].feature_importances_)
+                coef = (self.pipeline.named_steps['ml'].coef_ if
+                        hasattr(self.pipeline.named_steps['ml'],'coef_') else
+                        self.pipeline.named_steps['ml'].feature_importances_)
                 # compress multiple coefficients for each feature into single
                 # numbers (occurs with multiclass classification)
                 if len(coef.shape)>1:
