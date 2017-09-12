@@ -23,10 +23,10 @@ class VariationMixin(object):
             self.ml_type != 'SVC' and self.ml_type != 'SVR'):
             # this is needed because svm has a bug that throws valueerror on
             # attribute check
-            if hasattr(self.ml.named_steps['ml'],'coef_'):
+            if hasattr(self.pipeline.named_steps['ml'],'coef_'):
                 # for l1 regularization, filter individuals with 0 coefficients
                 if self.weight_parents:
-                    weights = self.ml.named_steps['ml'].coef_
+                    weights = self.pipeline.named_steps['ml'].coef_
                     if len(weights.shape)>1: # handle multi-coefficient models
                         weights = [np.mean(abs(c)) for c in weights.transpose()]
                     # softmax transformation of the weights
@@ -36,12 +36,12 @@ class VariationMixin(object):
                                               self.population_size, p=weights)))
                 else:
                     offspring = copy.deepcopy(list(
-                        x for i,x in zip(self.ml.named_steps['ml'].coef_,
+                        x for i,x in zip(self.pipeline.named_steps['ml'].coef_,
                                          self.valid(parents)) if  (i != 0).any()))
-            elif hasattr(self.ml.named_steps['ml'],'feature_importances_'):
+            elif hasattr(self.pipeline.named_steps['ml'],'feature_importances_'):
                 # for tree methods, filter our individuals with 0 feature importance
                 if self.weight_parents:
-                    weights = self.ml.named_steps['ml'].feature_importances_
+                    weights = self.pipeline.named_steps['ml'].feature_importances_
                     # softmax transformation of the weights
                     weights = np.exp(weights)/np.sum(np.exp(weights))
                     offspring = copy.deepcopy(list(
@@ -49,7 +49,7 @@ class VariationMixin(object):
                                          self.population_size, p=weights)))
                 else:
                     offspring = copy.deepcopy(list(
-                        x for i,x in zip(self.ml.named_steps['ml'].feature_importances_,
+                        x for i,x in zip(self.pipeline.named_steps['ml'].feature_importances_,
                                          self.valid(parents)) if  i != 0))
             else:
                 offspring = copy.deepcopy(self.valid(parents))

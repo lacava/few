@@ -60,7 +60,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                  scoring_function=None, disable_update_check=False,
                  elitism=True, boolean = False,classification=False,clean=False,
                  track_diversity=False,mdr=False,otype='f',c=True,
-                 weight_parents=True,operators=None, lex_size=False):
+                 weight_parents=True,operators=None, lex_size=False,normalize=True):
                 # sets up GP.
 
         # Save params to be recalled later by get_params()
@@ -107,24 +107,25 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         self.boolean = boolean
         self.classification = classification
         self.clean = clean
-        self.ml = Pipeline([('standardScaler',StandardScaler()), ('ml', ml)])
-        self.ml_type = type(self.ml.named_steps['ml']).__name__
+        self.ml = ml
+        #self.pipeline = Pipeline([('standardScaler',StandardScaler()), ('ml', ml)])
+        self.ml_type = type(self.ml).__name__
         self.track_diversity = track_diversity
         self.mdr = mdr
         self.otype = otype
-
+        self.normalize = normalize
+        
         # if otype is b, boolean functions must be turned on
         if self.otype=='b':
             self.boolean = True
 
         # instantiate sklearn estimator according to specified machine learner
-        if self.ml.named_steps['ml'] is None:
+        if self.ml is None:
             if self.classification:
-                self.ml = Pipeline([('standardScaler',StandardScaler()),
-                                    ('ml',LogisticRegression(solver='sag'))])
+                self.ml = LogisticRegression(solver='sag')
             else:
-                self.ml = Pipeline([('standardScaler',StandardScaler()),
-                                    ('ml',LassoLarsCV())])
+                self.ml = LassoLarsCV()
+
         if not self.scoring_function:
             if self.classification:
                 self.scoring_function = accuracy_score
@@ -144,7 +145,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                             #classification
                             type(DistanceClassifier()): 'silhouette',
             })
-            self.fit_choice = tmp_dict[type(self.ml.named_steps['ml'])]
+            self.fit_choice = tmp_dict[type(self.ml)]
 
         # Columns to always ignore when in an operator
         self.non_feature_columns = ['label', 'group', 'guess']
@@ -188,12 +189,17 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                 print('{}\t=\t{}'.format(arg, self.get_params()[arg]))
             print('')
 
+        # re-initialize pipeline (needs to be here rather than init for GridSearchCV)
+        if self.normalize:
+            self.pipeline = Pipeline([('standardScaler',StandardScaler()), ('ml', self.ml)])
+        else:
+            self.pipeline = Pipeline([('ml',self.ml)])
         ######################################################### initial model
         # fit to original data
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             self._best_score = np.mean(
-                                   [self.ml.fit(features[train],labels[train]).
+                                   [self.pipeline.fit(features[train],labels[train]).
                                    score(features[test],labels[test])
                                    for train, test in KFold().split(features,
                                                                      labels)])
@@ -242,7 +248,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         # order = 'F')
 
         # calculate fitness of individuals
-        # fitnesses = list(map(lambda I: fitness(I,labels,self.ml),X))
+        # fitnesses = list(map(lambda I: fitness(I,labels,self.pipeline),X))
         self.F = self.calc_fitness(self.X,labels,self.fit_choice,self.sel)
 
         #with Parallel(n_jobs=10) as parallel:
@@ -286,7 +292,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                 try:
                     if self.valid_loc():
                         tmp_score =  np.mean(
-                            [self.ml.fit(
+                            [self.pipeline.fit(
                             self.X[self.valid_loc(),:].transpose()[train],
                             labels[train]).
                             score(self.X[self.valid_loc(),:].transpose()[test],
@@ -312,7 +318,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
 
             #################################################### save best model
             if self.valid_loc() and tmp_score > self._best_score:
-                self._best_estimator = copy.deepcopy(self.ml)
+                self._best_estimator = copy.deepcopy(self.pipeline)
                 self._best_score = tmp_score
                 stall_count = 0;
                 self._best_inds = copy.deepcopy(self.valid())
@@ -374,7 +380,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
             # training data
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                self._best_estimator = self.ml.fit(features,labels)
+                self._best_estimator = self.pipeline.fit(features,labels)
         else:
             # fit final estimator to all the training data
             with warnings.catch_warnings():
@@ -778,6 +784,9 @@ def main():
     parser.add_argument('--mdr', action='store_true',dest='MDR',default=False,
                         help='Use MDR nodes.')
 
+    parser.add_argument('--nonorm', action='store_false',dest='NORMALIZE',default=True,
+                        help='Disable standard scaler preprocessor.')
+
     parser.add_argument('--diversity', action='store_true',
                         dest='TRACK_DIVERSITY', default=False,
                         help='Store diversity of feature transforms each gen.')
@@ -862,7 +871,8 @@ def main():
                   classification=args.CLASSIFICATION,clean = args.CLEAN,
                   track_diversity=args.TRACK_DIVERSITY,mdr=args.MDR,
                   otype=args.OTYPE,c=args.c, lex_size = args.LEX_SIZE,
-                  weight_parents = args.WEIGHT_PARENTS,operators=args.OPS)
+                  weight_parents = args.WEIGHT_PARENTS,operators=args.OPS,
+                  normalize=args.NORMALIZE)
 
     learner.fit(training_features, training_labels)
     # pdb.set_trace()
