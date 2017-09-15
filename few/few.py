@@ -199,8 +199,9 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             self._best_score = np.mean(
-                                   [self.pipeline.fit(features[train],labels[train]).
-                                   score(features[test],labels[test])
+                                   [self.scoring_function(labels[test],
+                                       self.pipeline.fit(features[train],labels[train]).
+                                                     predict(features[test]))
                                    for train, test in KFold().split(features,
                                                                      labels)])
 
@@ -292,11 +293,9 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                 try:
                     if self.valid_loc():
                         tmp_score =  np.mean(
-                            [self.pipeline.fit(
-                            self.X[self.valid_loc(),:].transpose()[train],
-                            labels[train]).
-                            score(self.X[self.valid_loc(),:].transpose()[test],
-                                  labels[test])
+                            [self.scoring_function(labels[test], self.pipeline.fit(
+                            self.X[self.valid_loc(),:].transpose()[train], labels[train]).
+                            predict(self.X[self.valid_loc(),:].transpose()[test]))
                                     for train, test in KFold().split(features,
                                                                      labels)])
 
@@ -309,10 +308,10 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                     print("First ten entries labels:",labels[:10])
                     print("equations:",self.stacks_2_eqns(self.pop.individuals))
                     print("FEW parameters:",self.get_params())
-                    if self.verbosity > 1: print("---\ndetailed error message:",
+                    print("---\ndetailed error message:",
                                                  detail)
-                    raise(ValueError)
-
+                    raise(detail)
+                
             if self.verbosity > 1:
                 print("current ml validation score:",tmp_score)
 
@@ -508,7 +507,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
             if self.ml_type != 'SVC' and self.ml_type != 'SVR':
             # this is need because svm has a bug that throws valueerror on
             # attribute check
-
+                
                 if hasattr(ml,'coef_'):
                     if len(ml.coef_.shape)==1:
                         s = np.argsort(np.abs(ml.coef_))[::-1]
