@@ -393,11 +393,12 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
             # return np.asarray(Parallel(n_jobs=10)(delayed(self.out)(I,x,labels,self.otype) for I in inds)).transpose()
             return np.asarray(
                 [self.out(I,x,labels,self.otype) for I in inds]).transpose()
-        else:
+        elif self._best_inds:
             # return np.asarray(Parallel(n_jobs=10)(delayed(self.out)(I,x,labels,self.otype) for I in self._best_inds)).transpose()
             return np.asarray(
                 [self.out(I,x,labels,self.otype) for I in self._best_inds]).transpose()
-
+        else:
+            return x
 
     def impute_data(self,x):
         """Imputes data set containing Nan values"""
