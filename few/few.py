@@ -60,7 +60,8 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                  scoring_function=None, disable_update_check=False,
                  elitism=True, boolean = False,classification=False,clean=False,
                  track_diversity=False,mdr=False,otype='f',c=True,
-                 weight_parents=True,operators=None, lex_size=False,normalize=True):
+                 weight_parents=True,operators=None, lex_size=False,normalize=True,
+                 names=None):
                 # sets up GP.
 
         # Save params to be recalled later by get_params()
@@ -114,7 +115,8 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         self.mdr = mdr
         self.otype = otype
         self.normalize = normalize
-        
+        self.names = names
+        self.eqn_dict = self.get_eqn_dict()
         # if otype is b, boolean functions must be turned on
         if self.otype=='b':
             self.boolean = True
@@ -194,6 +196,11 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
             self.pipeline = Pipeline([('standardScaler',StandardScaler()), ('ml', self.ml)])
         else:
             self.pipeline = Pipeline([('ml',self.ml)])
+        
+        # makes column names if none were specified at initialization
+        if self.names is None:
+            self.names = ['x_'+str(i) for i in np.arange(features.shape[1])]
+
         ######################################################### initial model
         # fit to original data
         with warnings.catch_warnings():
