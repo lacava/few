@@ -105,7 +105,7 @@ class VariationMixin(object):
                                                         self.max_depth+1),
                               self.otype)
             offspring[-1].stack = list(reversed(offspring[-1].stack))
-
+        
         return offspring,elite,elite_index
 
     def cross(self,p_i,p_j, max_depth = 2):

@@ -251,11 +251,10 @@ class PopMixin(object):
 
         else: # don't seed with ML
             for I in pop.individuals:
-                depth = self.random_state.randint(self.min_depth,
-                                                  self.max_depth+1)
+                depth = self.random_state.randint(self.min_depth,self.max_depth_init)
                 self.make_program(I.stack,self.func_set,self.term_set,depth,
                              self.otype)
-                # print(I.stack)
+                #print(I.stack)
                 I.stack = list(reversed(I.stack))
 
         return pop

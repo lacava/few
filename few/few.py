@@ -22,7 +22,7 @@ from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import cross_val_score, train_test_split, KFold
-from sklearn.metrics import r2_score, accuracy_score
+from sklearn.metrics import r2_score, accuracy_score, roc_auc_score
 from sklearn.preprocessing import Imputer, StandardScaler
 from sklearn.utils import check_random_state
 from DistanceClassifier import DistanceClassifier
@@ -60,7 +60,8 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                  scoring_function=None, disable_update_check=False,
                  elitism=True, boolean = False,classification=False,clean=False,
                  track_diversity=False,mdr=False,otype='f',c=True,
-                 weight_parents=True,operators=None, lex_size=False,normalize=True):
+                 weight_parents=True,operators=None, lex_size=False,normalize=True,
+                 names=None):
                 # sets up GP.
 
         # Save params to be recalled later by get_params()
@@ -114,7 +115,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         self.mdr = mdr
         self.otype = otype
         self.normalize = normalize
-        
+        self.names = names        
         # if otype is b, boolean functions must be turned on
         if self.otype=='b':
             self.boolean = True
@@ -194,11 +195,24 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
             self.pipeline = Pipeline([('standardScaler',StandardScaler()), ('ml', self.ml)])
         else:
             self.pipeline = Pipeline([('ml',self.ml)])
+
+        # set variable names if they haven't been set
+        if self.names is None:
+            self.names = ['x_'+str(i) for i in np.arange(features.shape[1])]
+
         ######################################################### initial model
         # fit to original data
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            self._best_score = np.mean(
+            if self.scoring_function == roc_auc_score:
+                self._best_score = np.mean(
+                                   [self.scoring_function(labels[test],
+                                       self.pipeline.fit(features[train],labels[train]).
+                                                     decision_function(features[test]))
+                                   for train, test in KFold().split(features,
+                                                                     labels)])
+            else:
+                self._best_score = np.mean(
                                    [self.scoring_function(labels[test],
                                        self.pipeline.fit(features[train],labels[train]).
                                                      predict(features[test]))
@@ -251,7 +265,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         # calculate fitness of individuals
         # fitnesses = list(map(lambda I: fitness(I,labels,self.pipeline),X))
         self.F = self.calc_fitness(self.X,labels,self.fit_choice,self.sel)
-
+        #pdb.set_trace()
         #with Parallel(n_jobs=10) as parallel:
         ####################
 
@@ -269,33 +283,47 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
             if self.track_diversity:
                 self.get_diversity(self.X)
 
+            # mid verbosity printouts
             if self.verbosity > 1:
-                print(".",end='')
-            if self.verbosity > 1:
-                print(str(g)+".)",end='')
-            # if self.verbosity > 1:
-            #   print("population:",stacks_2_eqns(self.pop.individuals))
-            if self.verbosity > 2:
-                print("pop fitnesses:", ["%0.2f" % np.mean(f) for f in self.F])
-            if self.verbosity > 1:
+                
+                print("generation", str(g))          
+            
                 print("median fitness pop: %0.2f" % np.median(
                         [np.mean(f) for f in self.F]))
-            if self.verbosity > 1:
+            
                 print("best fitness pop: %0.2f" % np.min(
                     [np.mean(f) for f in self.F]))
-            if self.verbosity > 1 and self.track_diversity:
-                print("feature diversity: %0.2f" % self.diversity[-1])
-            if self.verbosity > 1: print("ml fitting...")
+                if self.track_diversity:
+                    print("feature diversity: %0.2f" % self.diversity[-1])
+
+            # high verbosity printouts    
+            if self.verbosity > 2:
+                eqns = self.stacks_2_eqns(self.pop.individuals)
+                fs = [np.mean(f) for f in self.F] 
+                print("population:",[("%0.2f" % f, eqns[i]) for f,i in 
+                                     zip(np.sort(fs), np.argsort(fs))])
+                #print("pop fitnesses:", ["%0.2f" % np.mean(f) for f in self.F])
+            
             ####################################################### fit ml model
+            if self.verbosity > 1: print("ml fitting...")
+
             tmp_score=0
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 try:
                     if self.valid_loc():
-                        tmp_score =  np.mean(
-                            [self.scoring_function(labels[test], self.pipeline.fit(
-                            self.X[self.valid_loc(),:].transpose()[train], labels[train]).
-                            predict(self.X[self.valid_loc(),:].transpose()[test]))
+                        if self.scoring_function == roc_auc_score:
+                            tmp_score =  np.mean(
+                                [self.scoring_function(labels[test], self.pipeline.fit(
+                                self.X[self.valid_loc(),:].transpose()[train], labels[train]).
+                                decision_function(self.X[self.valid_loc(),:].transpose()[test]))
+                                    for train, test in KFold().split(features,
+                                                                     labels)])
+                        else:
+                            tmp_score =  np.mean(
+                                [self.scoring_function(labels[test], self.pipeline.fit(
+                                self.X[self.valid_loc(),:].transpose()[train], labels[train]).
+                                predict(self.X[self.valid_loc(),:].transpose()[test]))
                                     for train, test in KFold().split(features,
                                                                      labels)])
 
@@ -343,10 +371,10 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
 
             ########################################################### survival
             if self.verbosity > 2: print("survival..")
-            survivors,survivor_index = self.survival(self.pop.individuals,
-                                                     offspring,elite,
-                                                     elite_index,F=self.F,
-                                                     F_offspring=F_offspring)
+            survivors,survivor_index = self.survival(self.pop.individuals, offspring, 
+                                                     elite, elite_index,
+                                                     X = self.X, X_O=X_offspring,
+                                                     F=self.F, F_O=F_offspring)
             # set survivors
             self.pop.individuals[:] = survivors
             self.X = np.vstack((self.X, X_offspring))[survivor_index]

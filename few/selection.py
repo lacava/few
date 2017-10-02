@@ -16,7 +16,7 @@ class SurvivalMixin(object):
     """
     class for implementing survival methods.
     """
-    def survival(self,parents,offspring,elite=None,elite_index=None,X=None,F=None,F_offspring=None):
+    def survival(self,parents,offspring,elite=None,elite_index=None,X=None,X_O=None,F=None,F_O=None):
         """routes to the survival method, returns survivors"""
         if self.sel == 'tournament':
             survivors, survivor_index = self.tournament(parents + offspring, self.tourn_size, num_selections = len(parents))
@@ -26,13 +26,13 @@ class SurvivalMixin(object):
             # survivors, survivor_index = self.epsilon_lexicase(parents + offspring, num_selections = len(parents), survival = True)
             if self.lex_size:
                 sizes = [len(i.stack) for i in (parents + offspring)]
-                survivor_index = self.epsilon_lexicase(np.vstack((F,F_offspring)), sizes, num_selections = F.shape[0], survival = True)
+                survivor_index = self.epsilon_lexicase(np.vstack((F,F_O)), sizes, num_selections = F.shape[0], survival = True)
                 survivors = [(parents+ offspring)[s] for s in survivor_index]
             else:
-                survivor_index = self.epsilon_lexicase(np.vstack((F,F_offspring)), [], num_selections = F.shape[0], survival = True)
+                survivor_index = self.epsilon_lexicase(np.vstack((F,F_O)), [], num_selections = F.shape[0], survival = True)
                 survivors = [(parents+ offspring)[s] for s in survivor_index]
         elif self.sel == 'deterministic_crowding':
-            survivors, survivor_index = self.deterministic_crowding(parents,offspring,X,X_offspring)
+            survivors, survivor_index = self.deterministic_crowding(parents,offspring,X,X_O)
         elif self.sel == 'random':
             # pdb.set_trace()
             survivor_index = self.random_state.permutation(np.arange(2*len(parents)))[:len(parents)]
@@ -67,27 +67,15 @@ class SurvivalMixin(object):
 
         return winners,locs
 
-    def lexicase(self,individuals, num_selections=None, epsilon = False, survival = False):
+    def lexicase(self,individuals, num_selections=None, survival = False):
         """conducts lexicase selection for de-aggregated fitness vectors"""
         if num_selections is None:
             num_selections = len(individuals)
         winners = []
         locs = []
 
-        if epsilon: # use epsilon lexicase selection
-            # calculate epsilon thresholds based on median absolute deviation (MAD)
-            mad_for_case = np.empty([len(individuals[0].fitness_vec),1])
-            global_best_val_for_case = np.empty([len(individuals[0].fitness_vec),1])
-            for i in np.arange(len(individuals[0].fitness_vec)):
-                mad_for_case[i] = self.mad(np.asarray(list(map(lambda x: x.fitness_vec[i], individuals))))
-                global_best_val_for_case[i] = min(map(lambda x: x.fitness_vec[i], individuals))
-            # convert fitness values to pass/fail based on epsilon distance
-            for I in individuals:
-                fail_condition = np.array(I.fitness_vec > global_best_val_for_case[:,0] + mad_for_case[:,0]) #[f > global_best_val_for_case+mad_for_case for f in I.fitness_vec]
-                I.fitness_vec = fail_condition.astype(int)
-
         for i in np.arange(num_selections):
-
+            print('num inds:',len(individuals))
             candidates = individuals
             can_locs = range(len(individuals))
             cases = list(np.arange(len(individuals[0].fitness_vec)))
@@ -173,7 +161,7 @@ class SurvivalMixin(object):
             # get parent locations
             p_loc = [j for j,p in enumerate(parents) if p.id in offspring[c1].parentid]
             if len(p_loc) != 2:
-                pdb.set_trace()
+                continue
             # if child is more correlated with its non-root parent
             if r2_score(X_parents[p_loc[0]],X_offspring[c1]) + r2_score(X_parents[p_loc[1]],X_offspring[c2]) < r2_score(X_parents[p_loc[0]],X_offspring[c2]) + r2_score(X_parents[p_loc[1]],X_offspring[c1]):
                 # swap offspring

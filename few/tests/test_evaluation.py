@@ -17,7 +17,7 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 """
 # unit tests for evaluation methods.
 from few import FEW
-from few.evaluation import divs
+from few.evaluation import divs, inertia, separation 
 from few.population import *
 from sklearn.datasets import load_boston
 import numpy as np
@@ -131,12 +131,13 @@ def test_calc_fitness_shape():
 def test_inertia():
     """test_evaluation.py: inertia works"""
     import pdb
+    
     # perfect inertia
     x = np.hstack((np.zeros(50),np.ones(50)))
     y = np.hstack((np.zeros(50),np.ones(50)))
     few = FEW()
-    mean_inertia = few.inertia(x,y)
-    sample_inertia = few.inertia(x,y,samples=True)
+    mean_inertia = inertia(x,y)
+    sample_inertia = inertia(x,y,samples=True)
     assert(mean_inertia==0)
     assert(np.mean(sample_inertia)==mean_inertia)
 
@@ -144,8 +145,8 @@ def test_inertia():
     x = np.hstack((np.ones(25),np.zeros(25),np.ones(25),np.zeros(25)))
     y = np.hstack((np.zeros(50),np.ones(50)))
 
-    mean_inertia = few.inertia(x,y)
-    sample_inertia = few.inertia(x,y,samples=True)
+    mean_inertia = inertia(x,y)
+    sample_inertia = inertia(x,y,samples=True)
     print('mean_inertia:',mean_inertia)
     print('sample_inertia',sample_inertia)
     assert(mean_inertia==0.25)
@@ -157,8 +158,8 @@ def test_separation():
     x = np.hstack((np.zeros(50),np.ones(50)))
     y = np.hstack((np.zeros(50),np.ones(50)))
     few = FEW()
-    mean_separation = few.separation(x,y)
-    sample_separation = few.separation(x,y,samples=True)
+    mean_separation = separation(x,y)
+    sample_separation = separation(x,y,samples=True)
     print('mean_separation:',mean_separation)
     print('sample_separation',sample_separation)
     assert(mean_separation==1)
@@ -168,8 +169,8 @@ def test_separation():
     x = np.hstack((np.ones(50),np.zeros(50)))
     y = np.hstack((np.zeros(50),np.ones(50)))
 
-    mean_separation = few.separation(x,y)
-    sample_separation = few.separation(x,y,samples=True)
+    mean_separation = separation(x,y)
+    sample_separation = separation(x,y,samples=True)
     print('mean_separation:',mean_separation)
     print('sample_separation',sample_separation)
     assert(mean_separation==1)
@@ -179,8 +180,8 @@ def test_separation():
     x = np.hstack((np.ones(25),np.zeros(25),np.ones(25),np.zeros(25)))
     y = np.hstack((np.zeros(50),np.ones(50)))
 
-    mean_separation = few.separation(x,y)
-    sample_separation = few.separation(x,y,samples=True)
+    mean_separation = separation(x,y)
+    sample_separation = separation(x,y,samples=True)
     print('mean_separation:',mean_separation)
     print('sample_separation',sample_separation)
     assert(mean_separation==0.25)

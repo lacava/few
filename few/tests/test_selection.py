@@ -88,10 +88,11 @@ def test_lexicase_survival_shapes():
     few = FEW(seed_with_ml=False,population_size=257)
     few.term_set = term_set
     pop = few.init_pop()
-
+    few.names = ['x_'+str(i) for i in np.arange(n_features)]
     for i in pop.individuals:
         i.fitness_vec = list(np.random.rand(10,1))
-
+    
+    print ('pop:',few.stacks_2_eqns(pop.individuals))    
     offspring,locs = few.lexicase(pop.individuals,num_selections=100,survival=True)
     assert len(offspring) == 100
 

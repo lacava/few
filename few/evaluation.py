@@ -14,7 +14,7 @@ import sys
 from sklearn.metrics.pairwise import pairwise_distances
 # from profilehooks import profile
 from sklearn.externals.joblib import Parallel, delayed
-
+from sklearn.feature_selection import f_classif, f_regression
 # safe division
 def divs(x,y):
     """safe division"""
@@ -109,7 +109,9 @@ class EvaluationMixin(object):
     'fisher': lambda y,yhat: 1 - fisher(yhat,y),
     'accuracy': lambda y,yhat: 1 - accuracy_score(yhat,y),
     'random': lambda y,yhat: self.random_state.rand(),
-    'roc_auc': lambda y,yhat: 1 - roc_auc_score(y,yhat)
+    'roc_auc': lambda y,yhat: 1 - roc_auc_score(y,yhat),
+    'pclass': lambda y,yhat: f_classif(yhat.reshape(-1,1),y)[1],
+    'preg':  lambda y,yhat: f_regression(yhat.reshape(-1,1),y)[1],
     # 'relief': lambda y,yhat: 1-ReliefF(n_jobs=-1).fit(yhat.reshape(-1,1),y).feature_importances_
     }
     #
@@ -223,90 +225,90 @@ class EvaluationMixin(object):
         else:
             # return list(map(lambda yhat: self.f[fit_choice](labels,yhat),X))
             return np.asarray([self.f[fit_choice](labels,yhat) for yhat in X],
-                            order='F').transpose()
+                            order='F').reshape(-1)
 
             # return list(Parallel(n_jobs=-1)(delayed(self.f[fit_choice])(labels,yhat) for yhat in X))
 
-    def inertia(self,X,y,samples=False):
-        """ return the within-class squared distance from the centroid"""
-        # pdb.set_trace()
-        if samples:
-            # return within-class distance for each sample
-            inertia = np.zeros(y.shape)
-            for label in np.unique(y):
-                inertia[y==label] = (X[y==label] - np.mean(X[y==label])) ** 2
+def inertia(X,y,samples=False):
+    """ return the within-class squared distance from the centroid"""
+    # pdb.set_trace()
+    if samples:
+        # return within-class distance for each sample
+        inertia = np.zeros(y.shape)
+        for label in np.unique(y):
+            inertia[y==label] = (X[y==label] - np.mean(X[y==label])) ** 2
 
-        else: # return aggregate score
-            inertia = 0
-            for i,label in enumerate(np.unique(y)):
-                inertia += np.sum((X[y==label] - np.mean(X[y==label])) ** 2)/len(y[y==label])
-            inertia = inertia/len(np.unique(y))
+    else: # return aggregate score
+        inertia = 0
+        for i,label in enumerate(np.unique(y)):
+            inertia += np.sum((X[y==label] - np.mean(X[y==label])) ** 2)/len(y[y==label])
+        inertia = inertia/len(np.unique(y))
 
-        return inertia
+    return inertia
 
-    def separation(self,X,y,samples=False):
-        """ return the sum of the between-class squared distance"""
-        # pdb.set_trace()
-        num_classes = len(np.unique(y))
-        total_dist = (X.max()-X.min())**2
-        if samples:
-            # return intra-class distance for each sample
-            separation = np.zeros(y.shape)
-            for label in np.unique(y):
-                for outsider in np.unique(y[y!=label]):
-                    separation[y==label] += (X[y==label] - np.mean(X[y==outsider])) ** 2
+def separation(X,y,samples=False):
+    """ return the sum of the between-class squared distance"""
+    # pdb.set_trace()
+    num_classes = len(np.unique(y))
+    total_dist = (X.max()-X.min())**2
+    if samples:
+        # return intra-class distance for each sample
+        separation = np.zeros(y.shape)
+        for label in np.unique(y):
+            for outsider in np.unique(y[y!=label]):
+                separation[y==label] += (X[y==label] - np.mean(X[y==outsider])) ** 2
 
-            #normalize between 0 and 1
-            print('separation:',separation)
-            print('num_classes:',num_classes)
-            print('total_dist:',total_dist)
-            separation = separation#/separation.max()
+        #normalize between 0 and 1
+        print('separation:',separation)
+        print('num_classes:',num_classes)
+        print('total_dist:',total_dist)
+        separation = separation#/separation.max()
 
-            print('separation after normalization:',separation)
+        print('separation after normalization:',separation)
 
-        else:
-            # return aggregate score
-            separation = 0
-            for i,label in enumerate(np.unique(y)):
-                for outsider in np.unique(y[y!=label]):
-                    separation += np.sum((X[y==label] - np.mean(X[y==outsider])) ** 2)/len(y[y==label])
-            separation = separation/len(np.unique(y))
+    else:
+        # return aggregate score
+        separation = 0
+        for i,label in enumerate(np.unique(y)):
+            for outsider in np.unique(y[y!=label]):
+                separation += np.sum((X[y==label] - np.mean(X[y==outsider])) ** 2)/len(y[y==label])
+        separation = separation/len(np.unique(y))
 
-        return separation
+    return separation
 
-    def pairwise(self,iterable):
-        "s -> (s0,s1), (s1,s2), (s2, s3), ..."
-        a, b = it.tee(iterable)
-        next(b, None)
-        return zip(a, b)
+def pairwise(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = it.tee(iterable)
+    next(b, None)
+    return zip(a, b)
 
 
-    def fisher(self,yhat,y,samples=False):
-        """Fisher criterion"""
-        classes = np.unique(y)
-        mu = np.zeros(len(classes))
-        v = np.zeros(len(classes))
-        # pdb.set_trace()
-        for c in classes.astype(int):
-            mu[c] = np.mean(yhat[y==c])
-            v[c] = np.var(yhat[y==c])
+def fisher(yhat,y,samples=False):
+    """Fisher criterion"""
+    classes = np.unique(y)
+    mu = np.zeros(len(classes))
+    v = np.zeros(len(classes))
+    # pdb.set_trace()
+    for c in classes.astype(int):
+        mu[c] = np.mean(yhat[y==c])
+        v[c] = np.var(yhat[y==c])
 
-        if not samples:
-            fisher = 0
-            for c1,c2 in pairwise(classes.astype(int)):
-                fisher += np.abs(mu[c1] - mu[c2])/np.sqrt(v[c1]+v[c2])
-        else:
-            # lexicase version
-            fisher = np.zeros(len(yhat))
-            # get closests classes to each class (min mu distance)
-            mu_d = pairwise_distances(mu.reshape(-1,1))
-            min_mu=np.zeros(len(classes),dtype=int)
-            for i in np.arange(len(min_mu)):
-                min_mu[i] = np.argsort(mu_d[i])[1]
-            # for c1, pairwise(classes.astype(int)):
-            #     min_mu[c1] = np.argmin()
-            for i,l in enumerate(yhat.astype(int)):
-                fisher[i] = np.abs(l - mu[min_mu[y[i]]])/np.sqrt(v[y[i]]+v[min_mu[y[i]]])
+    if not samples:
+        fisher = 0
+        for c1,c2 in pairwise(classes.astype(int)):
+            fisher += np.abs(mu[c1] - mu[c2])/np.sqrt(v[c1]+v[c2])
+    else:
+        # lexicase version
+        fisher = np.zeros(len(yhat))
+        # get closests classes to each class (min mu distance)
+        mu_d = pairwise_distances(mu.reshape(-1,1))
+        min_mu=np.zeros(len(classes),dtype=int)
+        for i in np.arange(len(min_mu)):
+            min_mu[i] = np.argsort(mu_d[i])[1]
+        # for c1, pairwise(classes.astype(int)):
+        #     min_mu[c1] = np.argmin()
+        for i,l in enumerate(yhat.astype(int)):
+            fisher[i] = np.abs(l - mu[min_mu[y[i]]])/np.sqrt(v[y[i]]+v[min_mu[y[i]]])
 
-        # pdb.set_trace()
-        return fisher
+    # pdb.set_trace()
+    return fisher
