@@ -103,6 +103,9 @@ class SurvivalMixin(object):
     def epsilon_lexicase(self, F, sizes, num_selections=None, survival = False):
         """conducts epsilon lexicase selection for de-aggregated fitness vectors"""
         # pdb.set_trace()
+        if num_selections is None:
+                num_selections = F.shape[0]
+
         if self.c: # use c library
             # define c types
             locs = np.empty(num_selections,dtype='int32',order='F')
@@ -113,9 +116,7 @@ class SurvivalMixin(object):
                 ep_lex(F,F.shape[0],F.shape[1],num_selections,locs,self.lex_size,np.array([]))
             return locs
         else: # use python version
-            if num_selections is None:
-                num_selections = F.shape[0]
-
+            
             locs = []
             individual_locs = np.arange(F.shape[0])
             # calculate epsilon thresholds based on median absolute deviation (MAD)

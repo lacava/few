@@ -56,20 +56,20 @@ def test_lexicase_shapes():
 
 def test_epsilon_lexicase_shapes():
     """test_selection.py: epsilon lexicase selection returns correct shape"""
-
-    few = FEW(seed_with_ml=False,population_size=257)
+    np.random.seed(42)
+    few = FEW(seed_with_ml=False,population_size=257,lex_size=False)
     few.term_set = [node('x',loc=0)]
     pop = few.init_pop()
-    offspring,locs = few.lexicase(pop.individuals, epsilon=True)
+    offspring = few.epsilon_lexicase(np.random.rand(257,100),[])
     assert len(offspring) == 257
 
     # smaller popsize than tournament size
-    few = FEW(seed_with_ml=False,population_size=2)
+    few = FEW(seed_with_ml=False,population_size=2,lex_size=False)
     few.term_set = [node('x',loc=0)]
     pop = few.init_pop()
-    offspring,locs = few.lexicase(pop.individuals,epsilon=True)
+    offspring = few.epsilon_lexicase(np.random.rand(2,100),[])
     assert len(offspring) == 2;
-    assert len(locs) == 2;
+    
 
 def test_lexicase_survival_shapes():
     """test_selection.py: lexicase survival returns correct shape"""
