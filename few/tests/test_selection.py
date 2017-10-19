@@ -41,17 +41,19 @@ def test_tournament_shapes():
 
 def test_lexicase_shapes():
     """test_selection.py: lexicase selection returns correct shape"""
+    np.random.seed(42)
     few = FEW(seed_with_ml=False,population_size=257)
     few.term_set = [node('x',loc=0)]
     pop = few.init_pop()
-    offspring,locs = few.lexicase(pop.individuals)
+    offspring = few.lexicase(np.random.rand(257,100))
     assert len(offspring) == 257
 
     # smaller popsize than tournament size
+    np.random.seed(42)
     few = FEW(seed_with_ml=False,population_size=2)
     few.term_set = [node('x',loc=0)]
     pop = few.init_pop()
-    offspring,locs = few.lexicase(pop.individuals)
+    offspring = few.lexicase(np.random.rand(2,100))
     assert len(offspring) == 2;
 
 def test_epsilon_lexicase_shapes():
@@ -69,41 +71,6 @@ def test_epsilon_lexicase_shapes():
     pop = few.init_pop()
     offspring = few.epsilon_lexicase(np.random.rand(2,100),[])
     assert len(offspring) == 2;
-    
-
-def test_lexicase_survival_shapes():
-    """test_selection.py: lexicase survival returns correct shape"""
-    # func_set = [node('+'), node('-'), node('*'), node('/'), node('sin'),
-    #                  node('cos'), node('exp'),node('log'), node('^2'),
-    #                  node('^3'), node('sqrt')]
-    # terminal set
-    term_set = []
-    n_features = 3
-    # numbers represent column indices of features
-    # for i in np.arange(n_features):
-    #     term_set.append(node('x',loc=i)) # features
-    term_set = [node('x',loc=i) for i in np.arange(n_features)]
-        # term_set.append(('erc',0,np.random.rand())) # ephemeral random constants
-
-    few = FEW(seed_with_ml=False,population_size=257)
-    few.term_set = term_set
-    pop = few.init_pop()
-    few.names = ['x_'+str(i) for i in np.arange(n_features)]
-    for i in pop.individuals:
-        i.fitness_vec = list(np.random.rand(10,1))
-    
-    print ('pop:',few.stacks_2_eqns(pop.individuals))    
-    offspring,locs = few.lexicase(pop.individuals,num_selections=100,survival=True)
-    assert len(offspring) == 100
-
-    # smaller popsize than tournament size
-    ew = FEW(seed_with_ml=False,population_size=2)
-    few.term_set = term_set
-    pop = few.init_pop()
-    for i in pop.individuals:
-        i.fitness_vec = np.random.rand(10,1)
-    offspring,locs = few.lexicase(pop.individuals,num_selections=1,survival=True)
-    assert len(offspring) == 1;
 
 def test_lex_size():
     """test_selection.py: lex_size flag on/off"""

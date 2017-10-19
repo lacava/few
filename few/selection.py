@@ -21,7 +21,8 @@ class SurvivalMixin(object):
         if self.sel == 'tournament':
             survivors, survivor_index = self.tournament(parents + offspring, self.tourn_size, num_selections = len(parents))
         elif self.sel == 'lexicase':
-            survivors, survivor_index = self.lexicase(parents + offspring, num_selections = len(parents), survival = True)
+            survivor_index = self.lexicase(np.vstack((F,F_O)), num_selections = len(parents), survival = True)
+            survivors = [(parents+ offspring)[s] for s in survivor_index]
         elif self.sel == 'epsilon_lexicase':
             # survivors, survivor_index = self.epsilon_lexicase(parents + offspring, num_selections = len(parents), survival = True)
             if self.lex_size:
@@ -67,38 +68,62 @@ class SurvivalMixin(object):
 
         return winners,locs
 
-    def lexicase(self,individuals, num_selections=None, survival = False):
+    def lexicase(self,F, num_selections=None, survival = False):
         """conducts lexicase selection for de-aggregated fitness vectors"""
         if num_selections is None:
-            num_selections = len(individuals)
+            num_selections = F.shape[0]
         winners = []
         locs = []
 
+        individual_locs = np.arange(F.shape[0])
+                
         for i in np.arange(num_selections):
-            print('num inds:',len(individuals))
-            candidates = individuals
-            can_locs = range(len(individuals))
-            cases = list(np.arange(len(individuals[0].fitness_vec)))
+            can_locs = individual_locs
+            cases = list(np.arange(F.shape[1]))
             self.random_state.shuffle(cases)
             # pdb.set_trace()
-            while len(cases) > 0 and len(candidates) > 1:
+            while len(cases) > 0 and len(can_locs) > 1:
                 # get best fitness for case among candidates
-                # print("candidates:",stacks_2_eqns(candidates),"locations:",can_locs)
-                # print("fitnesses for case "+str(cases[0])+":",[x.fitness_vec[cases[0]] for x in candidates])
-                best_val_for_case = min([x.fitness_vec[cases[0]] for x in candidates])
-                # print("best_val_for_case:",best_val_for_case)
+                best_val_for_case = np.min(F[can_locs,cases[0]])
                 # filter individuals without an elite fitness on this case
-                # tmp_c,tmp_l = zip(*((x,l) for x,l in zip(candidates,can_locs) if x.fitness_vec[cases[0]] == best_val_for_case))
-                candidates,can_locs = zip(*((x,l) for x,l in zip(candidates,can_locs) if x.fitness_vec[cases[0]] == best_val_for_case))
+                can_locs = [l for l in can_locs if F[l,cases[0]] <= best_val_for_case ]
                 cases.pop(0)
 
-            choice = self.random_state.randint(len(candidates))
-            winners.append(copy.deepcopy(candidates[choice]))
+            choice = self.random_state.randint(len(can_locs))
             locs.append(can_locs[choice])
             if survival: # filter out winners from remaining selection pool
-                individuals = list(filter(lambda x: x.stack != candidates[choice].stack, individuals))
+                individual_locs = [i for i in individual_locs if i != can_locs[choice]]
 
-        return winners, locs
+        while len(locs) < num_selections:
+            locs.append(individual_locs[0])
+
+        return locs
+
+#        for i in np.arange(num_selections):
+#            print('num inds:',len(individuals))
+#            candidates = individuals
+#            can_locs = range(len(individuals))
+#            cases = list(np.arange(len(individuals[0].fitness_vec)))
+#            self.random_state.shuffle(cases)
+#            # pdb.set_trace()
+#            while len(cases) > 0 and len(candidates) > 1:
+#                # get best fitness for case among candidates
+#                # print("candidates:",stacks_2_eqns(candidates),"locations:",can_locs)
+#                # print("fitnesses for case "+str(cases[0])+":",[x.fitness_vec[cases[0]] for x in candidates])
+#                best_val_for_case = min([x.fitness_vec[cases[0]] for x in candidates])
+#                # print("best_val_for_case:",best_val_for_case)
+#                # filter individuals without an elite fitness on this case
+#                # tmp_c,tmp_l = zip(*((x,l) for x,l in zip(candidates,can_locs) if x.fitness_vec[cases[0]] == best_val_for_case))
+#                candidates,can_locs = zip(*((x,l) for x,l in zip(candidates,can_locs) if x.fitness_vec[cases[0]] == best_val_for_case))
+#                cases.pop(0)
+#
+#            choice = self.random_state.randint(len(candidates))
+#            winners.append(copy.deepcopy(candidates[choice]))
+#            locs.append(can_locs[choice])
+#            if survival: # filter out winners from remaining selection pool
+#                individuals = list(filter(lambda x: x.stack != candidates[choice].stack, individuals))
+#
+#        return winners, locs
 
     def epsilon_lexicase(self, F, sizes, num_selections=None, survival = False):
         """conducts epsilon lexicase selection for de-aggregated fitness vectors"""
