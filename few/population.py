@@ -45,7 +45,6 @@ eqn_dict = {
     'xor_b': lambda n,stack_eqn,names: '(' + stack_eqn.pop() + ' XOR ' + stack_eqn.pop() + ')',
     'xor_f': lambda n,stack_eqn,names: '(' + stack_eqn.pop() + ' XOR ' + stack_eqn.pop() + ')',
 
-}
 def run_MDR(n,stack_float,labels=None):
     """run utility function for MDR nodes."""
     # need to check that tmp is categorical
@@ -145,6 +144,41 @@ class Pop(object):
 class PopMixin(object):
     """methods for constructing features."""
     ######################################################## printing equations
+    def get_eqn_dict(self):
+        return {
+            '+': lambda n,stack_eqn: '(' + stack_eqn.pop() + '+' + stack_eqn.pop() + ')',
+            '-': lambda n,stack_eqn: '(' + stack_eqn.pop() + '-' + stack_eqn.pop()+ ')',
+            '*': lambda n,stack_eqn: '(' + stack_eqn.pop() + '*' + stack_eqn.pop()+ ')',
+            '/': lambda n,stack_eqn: '(' + stack_eqn.pop() + '/' + stack_eqn.pop()+ ')',
+            'sin': lambda n,stack_eqn: 'sin(' + stack_eqn.pop() + ')',
+            'cos': lambda n,stack_eqn: 'cos(' + stack_eqn.pop() + ')',
+            'exp': lambda n,stack_eqn: 'exp(' + stack_eqn.pop() + ')',
+            'log': lambda n,stack_eqn: 'log(' + stack_eqn.pop() + ')',
+            '^2': lambda n,stack_eqn: '(' + stack_eqn.pop() + '^2)',
+            '^3': lambda n,stack_eqn: '(' + stack_eqn.pop() + '^3)',
+            'sqrt': lambda n,stack_eqn: 'sqrt(|' + stack_eqn.pop() + '|)',
+            # 'rbf': lambda n,stack_eqn: 'exp(-||' + stack_eqn.pop()-stack_eqn.pop() '||^2/2)',
+            'x':  lambda n,stack_eqn: self.names[n.loc],
+            'k': lambda n,stack_eqn: str(n.value),
+            'mdr2': lambda n,stack_eqn: 'MDR(' + stack_eqn.pop() + ',' + stack_eqn.pop() + ')',
+            # bool operations
+            '!': lambda n,stack_eqn: '(!' + stack_eqn.pop() + ')',
+            '&': lambda n,stack_eqn: '(' + stack_eqn.pop() + '&' + stack_eqn.pop() + ')',
+            '|': lambda n,stack_eqn: '(' + stack_eqn.pop() + '|' + stack_eqn.pop() + ')',
+            '==': lambda n,stack_eqn: '(' + stack_eqn.pop() + '==' + stack_eqn.pop() + ')',
+            '>_f': lambda n,stack_eqn: '(' + stack_eqn.pop() + '>' + stack_eqn.pop() + ')',
+            '<_f': lambda n,stack_eqn: '(' + stack_eqn.pop() + '<' + stack_eqn.pop() + ')',
+            '>=_f': lambda n,stack_eqn: '(' + stack_eqn.pop() + '>=' + stack_eqn.pop() + ')',
+            '<=_f': lambda n,stack_eqn: '(' + stack_eqn.pop() + '<=' + stack_eqn.pop() + ')',
+            '>_b': lambda n,stack_eqn: '(' + stack_eqn.pop() + '>' + stack_eqn.pop() + ')',
+            '<_b': lambda n,stack_eqn: '(' + stack_eqn.pop() + '<' + stack_eqn.pop() + ')',
+            '>=_b': lambda n,stack_eqn: '(' + stack_eqn.pop() + '>=' + stack_eqn.pop() + ')',
+            '<=_b': lambda n,stack_eqn: '(' + stack_eqn.pop() + '<=' + stack_eqn.pop() + ')',
+            'xor_b': lambda n,stack_eqn: '(' + stack_eqn.pop() + ' XOR ' + stack_eqn.pop() + ')',
+            'xor_f': lambda n,stack_eqn: '(' + stack_eqn.pop() + ' XOR ' + stack_eqn.pop() + ')',
+
+            }
+
     def eval_eqn(self,n,stack_eqn):
         if len(stack_eqn) >= n.arity['f']+n.arity['b']:
             stack_eqn.append(eqn_dict[n.name](n,stack_eqn,self.names))

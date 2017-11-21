@@ -116,6 +116,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         self.otype = otype
         self.normalize = normalize
         self.names = names        
+
         # if otype is b, boolean functions must be turned on
         if self.otype=='b':
             self.boolean = True
