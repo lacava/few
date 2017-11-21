@@ -61,7 +61,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                  elitism=True, boolean = False,classification=False,clean=False,
                  track_diversity=False,mdr=False,otype='f',c=True,
                  weight_parents=True,operators=None, lex_size=False,normalize=True,
-                 names=None):
+                 names=None,dtypes=None):
                 # sets up GP.
 
         # Save params to be recalled later by get_params()
@@ -115,8 +115,11 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         self.mdr = mdr
         self.otype = otype
         self.normalize = normalize
-        self.names = names        
-
+        self.names = names                      # variable names
+        if dtypes is not None:
+            self.dtypes = dtypes.split(',')         # variable data types
+        else:
+            self.dtypes = None
         # if otype is b, boolean functions must be turned on
         if self.otype=='b':
             self.boolean = True
@@ -200,7 +203,9 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         # set variable names if they haven't been set
         if self.names is None:
             self.names = ['x_'+str(i) for i in np.arange(features.shape[1])]
-
+        # set variable data types if they haven't been set
+        if self.dtypes is None:
+            self.dtypes = ['f' for i in np.arange(features.shape[1])]
         ######################################################### initial model
         # fit to original data
         with warnings.catch_warnings():
@@ -226,7 +231,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
 
         # create terminal set
         for i in np.arange(self.n_features):
-            self.term_set.append(node('x',loc=i)) # features
+            self.term_set.append(node('x',loc=i,otype=self.dtypes[i])) # features
             # add ephemeral random constants if flag
             if self.erc: # ephemeral random constants
                 self.term_set.append(node('k',value=self.random_state.rand()))
@@ -805,7 +810,11 @@ def main():
     parser.add_argument('-ops', action='store', dest='OPS', default=None,
                         type=str,
                         help='Specify operators separated by commas')
-
+    
+    parser.add_argument('-dtypes', action='store', dest='DTYPES', default=None,
+                        type=str,
+                        help='Specify datafile types separated by a comma')
+    
     parser.add_argument('--class', action='store_true', dest='CLASSIFICATION',
                         default=False,
                         help='Conduct classification rather than regression.')
@@ -880,7 +889,7 @@ def main():
 
     training_features = input_data.loc[train_i].drop('label', axis=1).values
     training_labels = input_data.loc[train_i, 'label'].values
-
+    
     testing_features = input_data.loc[test_i].drop('label', axis=1).values
     testing_labels = input_data.loc[test_i, 'label'].values
 
@@ -901,7 +910,7 @@ def main():
                   track_diversity=args.TRACK_DIVERSITY,mdr=args.MDR,
                   otype=args.OTYPE,c=args.c, lex_size = args.LEX_SIZE,
                   weight_parents = args.WEIGHT_PARENTS,operators=args.OPS,
-                  normalize=args.NORMALIZE)
+                  normalize=args.NORMALIZE, dtypes = args.DTYPES)
 
     learner.fit(training_features, training_labels)
     # pdb.set_trace()

@@ -67,7 +67,7 @@ def run_MDR(n,stack_float,labels=None):
 
 class node(object):
     """node in program"""
-    def __init__(self,name,loc=None,value=None):
+    def __init__(self,name,loc=None,value=None,otype=None):
         """defines properties of a node given its name"""
         self.name = name
         self.arity = {None:0}
@@ -93,18 +93,21 @@ class node(object):
         # mixed
             'mdr2':'f','if':('f','b'),'ife':('f','b')
         }[name]
-        self.out_type = {
-        # float operations
-            '+': 'f','-': 'f','*': 'f','/': 'f','sin': 'f','cos': 'f','exp': 'f',
-            'log': 'f','x':'f','k': 'f','^2': 'f','^3': 'f','sqrt': 'f',
-            # 'rbf': ,
-        # bool operations
-            '!': 'b', '&': 'b','|': 'b','==': 'b','>_f': 'b','<_f': 'b','>=_f': 'b',
-            '<=_f': 'b','>_b': 'b','<_b': 'b','>=_b': 'b','<=_b': 'b','xor_f':'b',
-            'xor_b':'b',
-        # mixed
-            'mdr2':'b','if':'f','ife':'f'
-        }[name]
+        if otype is None:
+            self.out_type = {
+            # float operations
+                '+': 'f','-': 'f','*': 'f','/': 'f','sin': 'f','cos': 'f','exp': 'f',
+                'log': 'f','x':'f','k': 'f','^2': 'f','^3': 'f','sqrt': 'f',
+                # 'rbf': ,
+            # bool operations
+                '!': 'b', '&': 'b','|': 'b','==': 'b','>_f': 'b','<_f': 'b','>=_f': 'b',
+                '<=_f': 'b','>_b': 'b','<_b': 'b','>=_b': 'b','<=_b': 'b','xor_f':'b',
+                'xor_b':'b',
+            # mixed
+                'mdr2':'b','if':'f','ife':'f'
+            }[name]
+        else:
+            self.out_type = otype 
 
         if 'mdr' in self.name:
             self.model = MDR()
