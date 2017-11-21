@@ -43,7 +43,8 @@ eqn_dict = {
     '>=_b': lambda n,stack_eqn,names: '(' + stack_eqn.pop() + '>=' + stack_eqn.pop() + ')',
     '<=_b': lambda n,stack_eqn,names: '(' + stack_eqn.pop() + '<=' + stack_eqn.pop() + ')',
     'xor_b': lambda n,stack_eqn,names: '(' + stack_eqn.pop() + ' XOR ' + stack_eqn.pop() + ')',
-    'xor_f': lambda n,stack_eqn,names: '(' + stack_eqn.pop() + ' XOR ' + stack_eqn.pop() + ')',
+    'xor_f': lambda n,stack_eqn,names: '(' + stack_eqn.pop() + ' XOR ' + stack_eqn.pop() + ')'
+    }
 
 def run_MDR(n,stack_float,labels=None):
     """run utility function for MDR nodes."""
