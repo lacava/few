@@ -629,24 +629,17 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         self.diversity.append(1-np.mean(feature_correlations))
 
     def roc_auc_cv(self,features,labels):
-        """returns an roc auc score depending on the underlying estimator."""
-        #if self.ml_type in ['SVC', 'LinearSVC', 'LogisticRegression', 'LogisticRegressionCV',
-        #       'SGDClassifier', 'GradientBoostingClassifier']:   
-
+        """returns an roc auc score depending on the underlying estimator."""        
         if callable(getattr(self.ml, "decision_function", None)):
-            tmp= np.mean([self.scoring_function(labels[test],
+            return np.mean([self.scoring_function(labels[test],
                             self.pipeline.fit(features[train],labels[train]).
                                          decision_function(features[test]))
                             for train, test in KFold().split(features, labels)])
-            print('roc_auc_score',tmp)
-            return tmp
         elif callable(getattr(self.ml, "predict_proba", None)):
-            tmp= np.mean([self.scoring_function(labels[test],
+            return np.mean([self.scoring_function(labels[test],
                             self.pipeline.fit(features[train],labels[train]).
                                             predict_proba(features[test])[:,1])
-                            for train, test in KFold().split(features, labels)])
-            print('roc_auc_score',tmp)
-            return tmp
+                            for train, test in KFold().split(features, labels)]) 
         else:
             raise ValueError("ROC AUC score won't work with " + self.ml_type + ". No "
                     "decision_function or predict_proba method found for this learner.")
