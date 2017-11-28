@@ -188,11 +188,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                 self.population_size = int(self.population_size)
 
         if self.verbosity >0: print("population size:",self.population_size)
-        # print few settings
-        if self.verbosity > 1:
-            for arg in self.get_params():
-                print('{}\t=\t{}'.format(arg, self.get_params()[arg]))
-            print('')
+        
 
         # re-initialize pipeline (needs to be here rather than init for GridSearchCV)
         if self.normalize:
@@ -206,29 +202,7 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         # set variable data types if they haven't been set
         if self.dtypes is None:
             self.dtypes = ['f' for i in np.arange(features.shape[1])]
-        ######################################################### initial model
-        # fit to original data
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            if self.scoring_function == roc_auc_score:
-                self._best_score = np.mean(
-                                   [self.scoring_function(labels[test],
-                                       self.pipeline.fit(features[train],labels[train]).
-                                                     decision_function(features[test]))
-                                   for train, test in KFold().split(features,
-                                                                     labels)])
-            else:
-                self._best_score = np.mean(
-                                   [self.scoring_function(labels[test],
-                                       self.pipeline.fit(features[train],labels[train]).
-                                                     predict(features[test]))
-                                   for train, test in KFold().split(features,
-                                                                     labels)])
-
-        initial_score = self._best_score
-        if self.verbosity > 0:
-            print("initial ML CV: {:1.3f}".format(self._best_score))
-
+        
         # create terminal set
         for i in np.arange(self.n_features):
             self.term_set.append(node('x',loc=i,otype=self.dtypes[i])) # features
@@ -247,6 +221,31 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
         if self.mdr:
             self.func_set += [node('mdr2')]
 
+        # print few settings
+        if self.verbosity > 1:
+            for arg in self.get_params():
+                print('{}\t=\t{}'.format(arg, self.get_params()[arg]))
+            print('')
+        
+        ######################################################### initial model
+        # fit to original data
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            if self.scoring_function == roc_auc_score:
+                self._best_score = self.roc_auc_cv(features,labels)
+            else:
+                self._best_score = np.mean(
+                                   [self.scoring_function(labels[test],
+                                       self.pipeline.fit(features[train],labels[train]).
+                                                     predict(features[test]))
+                                   for train, test in KFold().split(features,
+                                                                     labels)])
+
+        initial_score = self._best_score
+        if self.verbosity > 0:
+            print("initial ML CV: {:1.3f}".format(self._best_score))
+
+        
         ############################################# Create initial population
         # for now, force seed_with_ml to be off if otype is 'b', since data
         # types are assumed to be float
@@ -319,12 +318,8 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
                 try:
                     if self.valid_loc():
                         if self.scoring_function == roc_auc_score:
-                            tmp_score =  np.mean(
-                                [self.scoring_function(labels[test], self.pipeline.fit(
-                                self.X[self.valid_loc(),:].transpose()[train], labels[train]).
-                                decision_function(self.X[self.valid_loc(),:].transpose()[test]))
-                                    for train, test in KFold().split(features,
-                                                                     labels)])
+                            tmp_score =  self.roc_auc_cv(self.X[self.valid_loc(),:].transpose(),
+                                                         labels)
                         else:
                             tmp_score =  np.mean(
                                 [self.scoring_function(labels[test], self.pipeline.fit(
@@ -424,11 +419,13 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
     def transform(self,x,inds=None,labels = None):
         """return a transformation of x using population outputs"""
         if inds:
-            # return np.asarray(Parallel(n_jobs=10)(delayed(self.out)(I,x,labels,self.otype) for I in inds)).transpose()
+            # return np.asarray(Parallel(n_jobs=10)(delayed(self.out)(I,x,labels,self.otype) 
+            #                           for I in inds)).transpose()
             return np.asarray(
                 [self.out(I,x,labels,self.otype) for I in inds]).transpose()
         elif self._best_inds:
-            # return np.asarray(Parallel(n_jobs=10)(delayed(self.out)(I,x,labels,self.otype) for I in self._best_inds)).transpose()
+            # return np.asarray(Parallel(n_jobs=10)(delayed(self.out)(I,x,labels,self.otype) 
+            #                                   for I in self._best_inds)).transpose()
             return np.asarray(
                 [self.out(I,x,labels,self.otype) for I in self._best_inds]).transpose()
         else:
@@ -630,6 +627,29 @@ class FEW(SurvivalMixin, VariationMixin, EvaluationMixin, PopMixin,
             feature_correlations[i] = max(0.0,r2_score(X[0],X[i]))
         # pdb.set_trace()
         self.diversity.append(1-np.mean(feature_correlations))
+
+    def roc_auc_cv(self,features,labels):
+        """returns an roc auc score depending on the underlying estimator."""
+        #if self.ml_type in ['SVC', 'LinearSVC', 'LogisticRegression', 'LogisticRegressionCV',
+        #       'SGDClassifier', 'GradientBoostingClassifier']:   
+
+        if callable(getattr(self.ml, "decision_function", None)):
+            tmp= np.mean([self.scoring_function(labels[test],
+                            self.pipeline.fit(features[train],labels[train]).
+                                         decision_function(features[test]))
+                            for train, test in KFold().split(features, labels)])
+            print('roc_auc_score',tmp)
+            return tmp
+        elif callable(getattr(self.ml, "predict_proba", None)):
+            tmp= np.mean([self.scoring_function(labels[test],
+                            self.pipeline.fit(features[train],labels[train]).
+                                            predict_proba(features[test])[:,1])
+                            for train, test in KFold().split(features, labels)])
+            print('roc_auc_score',tmp)
+            return tmp
+        else:
+            raise ValueError("ROC AUC score won't work with " + self.ml_type + ". No "
+                    "decision_function or predict_proba method found for this learner.")
 
 def positive_integer(value):
     """Ensures that the provided value is a positive integer;
