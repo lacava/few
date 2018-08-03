@@ -10,7 +10,7 @@ from Cython.Build import cythonize
 import importlib
 try:
     importlib.import_module('eigency')
-except ImportError:
+except (ImportError, AttributeError):
     try:
         import pip
         pip.main(['install', 'eigency'])
