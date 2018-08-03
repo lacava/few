@@ -32,7 +32,7 @@ class VariationMixin(object):
                     # softmax transformation of the weights
                     weights = np.exp(weights)/np.sum(np.exp(weights))
                     offspring = copy.deepcopy(
-                        list(np.random.choice(self.valid(parents),
+                        list(self.random_state.choice(self.valid(parents),
                                               self.population_size, p=weights)))
                 else:
                     offspring = copy.deepcopy(list(
@@ -45,7 +45,7 @@ class VariationMixin(object):
                     # softmax transformation of the weights
                     weights = np.exp(weights)/np.sum(np.exp(weights))
                     offspring = copy.deepcopy(list(
-                        np.random.choice(self.valid(parents),
+                        self.random_state.choice(self.valid(parents),
                                          self.population_size, p=weights)))
                 else:
                     offspring = copy.deepcopy(list(
