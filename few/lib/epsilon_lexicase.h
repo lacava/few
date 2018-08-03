@@ -161,7 +161,7 @@ void epsilon_lexicase(const ExtMat & F, int n, int d,
 
     // pick a winner from can_locs
     locs(i) = *select_randomly(can_locs.begin(),can_locs.end(),gen);
-    // remove the winner from ind_locs
+    // survival: remove the winner from ind_locs
     for (auto l = ind_locs.begin(); l!=ind_locs.end();){
       if (*l == locs(i))
         l = ind_locs.erase(l);

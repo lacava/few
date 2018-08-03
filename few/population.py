@@ -214,13 +214,13 @@ class PopMixin(object):
                 raise ValueError('no ts. ntype:'+ntype+'. term_set out_types:'+
                                  ','.join([t.out_type for t in term_set]))
 
-            stack.append(ts[np.random.choice(len(ts))])
+            stack.append(ts[self.random_state.choice(len(ts))])
         else:
             fs = [f for f in func_set if (f.out_type==ntype
                                           and (f.in_type=='f' or max_d>1))]
             if len(fs)==0:
                 print('ntype:',ntype,'\nfunc_set:',[f.name for f in func_set])
-            stack.append(fs[np.random.choice(len(fs))])
+            stack.append(fs[self.random_state.choice(len(fs))])
             tmp = copy.copy(stack[-1])
 
             for i in np.arange(tmp.arity['f']):
@@ -273,7 +273,7 @@ class PopMixin(object):
                 for i,p in enumerate(pop.individuals):
                     if i < self.n_features:
                         p.stack = [node('x',
-                                        loc=np.random.randint(self.n_features))]
+                                        loc=self.random_state.randint(self.n_features))]
                     else:
                         # make program if pop is bigger than n_features
                         self.make_program(p.stack,self.func_set,self.term_set,

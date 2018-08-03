@@ -10,10 +10,10 @@ from Cython.Build import cythonize
 import importlib
 try:
     importlib.import_module('eigency')
-except ImportError:
+except (ImportError, AttributeError):
     try:
-        import pip
-        pip.main(['install', 'eigency'])
+        from pip._internal import main 
+        main(['install', 'eigency'])
     except ImportError:
         raise ImportError('The eigency library must be installed before FEW. '
                           'Automatic install with pip failed.')
