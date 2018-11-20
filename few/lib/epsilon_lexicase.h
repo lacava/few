@@ -21,6 +21,7 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 #include  <iterator>
 #include "Eigen/Dense"
 #include <Python.h>
+#include <numeric> 
 
 using namespace Eigen;
 using namespace std;
