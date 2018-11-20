@@ -33,6 +33,15 @@ package_version = calculate_version()
 #                     depends = ['Eigen/Dense.h'],
 #                     extra_compile_args = ['-std=c++0x']
 #                     )
+
+# check if windows or *nix
+from sys import platform
+print('platform:',platform)
+if platform  == 'win32':
+    eca = ''
+else:
+    eca = '-std=c++0x'
+
 setup(
     name='FEW',
     version=package_version,
@@ -76,6 +85,6 @@ This project is hosted at https://github.com/lacava/few
                                     sources=["few/lib/few_lib.pyx"],
                                     include_dirs=[".", "./few/lib"] +
                                     eigency.get_includes(),
-                                    extra_compile_args = ['-std=c++0x'])],
+                                    extra_compile_args = [eca])],
                                     language="c++")
 )
