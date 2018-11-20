@@ -22,6 +22,7 @@ the FEW library. If not, see http://www.gnu.org/licenses/.
 #include "Eigen/Dense"
 #include <Python.h>
 #include <numeric> 
+#include <algorithm>
 
 using namespace Eigen;
 using namespace std;
